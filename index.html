@@ -2184,10 +2184,14 @@ function pickChoices(){
   for(const w of player.weapons){const d=WEAPON_DEFS[w.id];if(!d.evolved&&w.lv<d.maxLv){const ns=w.lv+1;
     ch.push({type:'weapon',weaponId:w.id,tag:`★UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }}
-  // New attack skills (only Normal-tier randomly-pickable; S-tier comes via main weapon slot)
+  // NEW SKILL pool: main weapons (katana/bat/shotgun/lightchaser/force/
+  // drill/soccer + S-tier lightChaserS/forceS/chaosBlade) are EXCLUDED —
+  // they only enter via the Characters → Main Weapon slot. Kunai stays
+  // as a fallback so a run without a main weapon still has options.
   if(player.weapons.length<6){
     const owned=new Set(player.weapons.map(w=>w.id));
-    for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer']){
+    const BATTLE_NEW_SKILL_POOL=['kunai'];
+    for(const id of BATTLE_NEW_SKILL_POOL){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
         ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
           apply:()=>{player.weapons.push({id,lv:1,timer:0});if(!save.records.weaponsUsed)save.records.weaponsUsed=[];if(!save.records.weaponsUsed.includes(id))save.records.weaponsUsed.push(id);}});
