@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Vampire Survivors Clone</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 1280, H = 720;
+
+// ── Game State ──
+let state = 'title'; // title, playing, levelup, gameover, clear
+let gameTime = 0;
+const CLEAR_TIME = 300; // 5 minutes for testing
+let lastTime = 0;
+let dt = 0;
+
+// ── Input ──
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ── Camera ──
+const camera = { x: 0, y: 0 };
+
+// ── Player ──
+const player = {
+  x: 0, y: 0, radius: 16,
+  speed: 200, maxHp: 100, hp: 100,
+  level: 1, xp: 0, xpToNext: 10,
+  attackSpeed: 1, bulletDamage: 10, bulletSpeed: 400, bulletPierce: 1,
+  bulletCount: 1, attackTimer: 0, attackInterval: 0.8,
+  invincibleTimer: 0,
+};
+
+// ── Bullets ──
+let bullets = [];
+
+// ── Enemies ──
+let enemies = [];
+let enemySpawnTimer = 0;
+
+// ── XP Gems ──
+let gems = [];
+
+// ── Particles ──
+let particles = [];
+
+// ── Level Up Choices ──
+let levelUpChoices = [];
+let selectedChoice = -1;
+
+// ── Upgrades Definition ──
+const upgrades = [
+  { name: 'Attack Speed UP', desc: 'Firing rate +20%', apply: () => { player.attackInterval *= 0.8; } },
+  { name: 'Move Speed UP', desc: 'Movement speed +15%', apply: () => { player.speed *= 1.15; } },
+  { name: 'Max HP UP', desc: 'Max HP +20, heal 20', apply: () => { player.maxHp += 20; player.hp = Math.min(player.hp + 20, player.maxHp); } },
+  { name: 'Damage UP', desc: 'Bullet damage +5', apply: () => { player.bulletDamage += 5; } },
+  { name: 'Bullet Speed UP', desc: 'Bullet speed +20%', apply: () => { player.bulletSpeed *= 1.2; } },
+  { name: 'Bullet Count UP', desc: '+1 bullet per volley', apply: () => { player.bulletCount += 1; } },
+  { name: 'Pierce UP', desc: 'Bullets pierce +1 enemy', apply: () => { player.bulletPierce += 1; } },
+  { name: 'Heal', desc: 'Recover 30 HP', apply: () => { player.hp = Math.min(player.hp + 30, player.maxHp); } },
+];
+
+// ── Reset ──
+function resetGame() {
+  player.x = 0; player.y = 0;
+  player.speed = 200; player.maxHp = 100; player.hp = 100;
+  player.level = 1; player.xp = 0; player.xpToNext = 10;
+  player.attackSpeed = 1; player.bulletDamage = 10;
+  player.bulletSpeed = 400; player.bulletPierce = 1;
+  player.bulletCount = 1; player.attackTimer = 0;
+  player.attackInterval = 0.8; player.invincibleTimer = 0;
+  bullets = []; enemies = []; gems = []; particles = [];
+  gameTime = 0; enemySpawnTimer = 0;
+  camera.x = 0; camera.y = 0;
+}
+
+// ── Spawn Enemies ──
+function spawnEnemy() {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 500 + Math.random() * 200;
+  const timeFactor = Math.min(gameTime / CLEAR_TIME, 1);
+  const hpBase = 20 + timeFactor * 80;
+  const speedBase = 50 + timeFactor * 70;
+  enemies.push({
+    x: player.x + Math.cos(angle) * dist,
+    y: player.y + Math.sin(angle) * dist,
+    radius: 12 + Math.random() * 6,
+    hp: hpBase + Math.random() * 20,
+    maxHp: hpBase + 20,
+    speed: speedBase + Math.random() * 30,
+    damage: 10 + timeFactor * 15,
+    flashTimer: 0,
+    color: `hsl(${Math.random() * 60 + 260}, 70%, 50%)`,
+  });
+}
+
+// ── Shoot ──
+function shootBullets() {
+  const count = player.bulletCount;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + gameTime * 0.5;
+    bullets.push({
+      x: player.x, y: player.y, radius: 5,
+      vx: Math.cos(angle) * player.bulletSpeed,
+      vy: Math.sin(angle) * player.bulletSpeed,
+      damage: player.bulletDamage,
+      pierce: player.bulletPierce,
+      life: 2.0,
+    });
+  }
+}
+
+// ── Spawn Particles ──
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 50 + Math.random() * 150;
+    particles.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      life: 0.3 + Math.random() * 0.4, maxLife: 0.5,
+      radius: 2 + Math.random() * 3, color,
+    });
+  }
+}
+
+// ── Pick Random Choices ──
+function pickLevelUpChoices() {
+  const shuffled = [...upgrades].sort(() => Math.random() - 0.5);
+  levelUpChoices = shuffled.slice(0, 3);
+  selectedChoice = -1;
+}
+
+// ── Distance ──
+function dist(a, b) {
+  const dx = a.x - b.x, dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+// ── UPDATE ──
+function update() {
+  if (state !== 'playing') return;
+
+  // Player movement
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['W'] || keys['ArrowUp']) dy = -1;
+  if (keys['s'] || keys['S'] || keys['ArrowDown']) dy = 1;
+  if (keys['a'] || keys['A'] || keys['ArrowLeft']) dx = -1;
+  if (keys['d'] || keys['D'] || keys['ArrowRight']) dx = 1;
+  if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+  player.x += dx * player.speed * dt;
+  player.y += dy * player.speed * dt;
+
+  // Camera
+  camera.x = player.x - W / 2;
+  camera.y = player.y - H / 2;
+
+  // Timer
+  gameTime += dt;
+  if (gameTime >= CLEAR_TIME) { state = 'clear'; return; }
+
+  // Invincibility
+  if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
+
+  // Auto attack
+  player.attackTimer += dt;
+  if (player.attackTimer >= player.attackInterval) {
+    player.attackTimer = 0;
+    shootBullets();
+  }
+
+  // Enemy spawning
+  const timeFactor = Math.min(gameTime / CLEAR_TIME, 1);
+  const spawnInterval = Math.max(0.15, 1.5 - timeFactor * 1.35);
+  enemySpawnTimer += dt;
+  while (enemySpawnTimer >= spawnInterval) {
+    enemySpawnTimer -= spawnInterval;
+    const count = 1 + Math.floor(timeFactor * 3);
+    for (let i = 0; i < count; i++) spawnEnemy();
+  }
+
+  // Update bullets
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    b.life -= dt;
+    if (b.life <= 0) { bullets.splice(i, 1); continue; }
+
+    // Bullet vs enemies
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const e = enemies[j];
+      if (dist(b, e) < b.radius + e.radius) {
+        e.hp -= b.damage;
+        e.flashTimer = 0.1;
+        spawnParticles(e.x, e.y, '#fff', 3);
+        b.pierce--;
+        if (b.pierce <= 0) { bullets.splice(i, 1); break; }
+      }
+    }
+  }
+
+  // Update enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const angle = Math.atan2(player.y - e.y, player.x - e.x);
+    e.x += Math.cos(angle) * e.speed * dt;
+    e.y += Math.sin(angle) * e.speed * dt;
+    e.flashTimer = Math.max(0, e.flashTimer - dt);
+
+    // Dead
+    if (e.hp <= 0) {
+      spawnParticles(e.x, e.y, e.color, 8);
+      // Drop XP gem
+      gems.push({
+        x: e.x, y: e.y, radius: 5,
+        value: 1 + Math.floor(timeFactor * 3),
+        bobTimer: Math.random() * Math.PI * 2,
+      });
+      enemies.splice(i, 1);
+      continue;
+    }
+
+    // Enemy vs player
+    if (dist(e, player) < e.radius + player.radius) {
+      if (player.invincibleTimer <= 0) {
+        player.hp -= e.damage;
+        player.invincibleTimer = 0.5;
+        spawnParticles(player.x, player.y, '#f44', 6);
+        if (player.hp <= 0) {
+          player.hp = 0;
+          state = 'gameover';
+          return;
+        }
+      }
+    }
+  }
+
+  // Remove off-screen enemies (too far)
+  enemies = enemies.filter(e => dist(e, player) < 1200);
+
+  // Update gems
+  for (let i = gems.length - 1; i >= 0; i--) {
+    const g = gems[i];
+    g.bobTimer += dt * 3;
+    // Magnet effect when close
+    const d = dist(g, player);
+    if (d < 100) {
+      const angle = Math.atan2(player.y - g.y, player.x - g.x);
+      const magnetSpeed = 300;
+      g.x += Math.cos(angle) * magnetSpeed * dt;
+      g.y += Math.sin(angle) * magnetSpeed * dt;
+    }
+    if (d < player.radius + g.radius + 5) {
+      player.xp += g.value;
+      gems.splice(i, 1);
+      // Level up check
+      while (player.xp >= player.xpToNext) {
+        player.xp -= player.xpToNext;
+        player.level++;
+        player.xpToNext = Math.floor(player.xpToNext * 1.5);
+        pickLevelUpChoices();
+        state = 'levelup';
+        return;
+      }
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.95;
+    p.vy *= 0.95;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// ── DRAW ──
+function draw() {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, W, H);
+
+  if (state === 'title') {
+    drawTitle();
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  // Ground grid
+  drawGrid();
+
+  // Gems
+  for (const g of gems) {
+    const bob = Math.sin(g.bobTimer) * 3;
+    const gradient = ctx.createRadialGradient(g.x, g.y + bob, 0, g.x, g.y + bob, g.radius * 3);
+    gradient.addColorStop(0, 'rgba(0, 255, 150, 0.8)');
+    gradient.addColorStop(1, 'rgba(0, 255, 150, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y + bob, g.radius * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f6';
+    ctx.beginPath();
+    ctx.arc(g.x, g.y + bob, g.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Bullets
+  for (const b of bullets) {
+    ctx.fillStyle = '#ff0';
+    ctx.shadowColor = '#ff0';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Enemies
+  for (const e of enemies) {
+    ctx.fillStyle = e.flashTimer > 0 ? '#fff' : e.color;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+    ctx.fill();
+    // Enemy HP bar
+    const hpRatio = e.hp / e.maxHp;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(e.x - 15, e.y - e.radius - 8, 30, 4);
+    ctx.fillStyle = '#f44';
+    ctx.fillRect(e.x - 15, e.y - e.radius - 8, 30 * hpRatio, 4);
+  }
+
+  // Player
+  const blink = player.invincibleTimer > 0 && Math.floor(player.invincibleTimer * 10) % 2;
+  if (!blink) {
+    // Player glow
+    const glow = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.radius * 2);
+    glow.addColorStop(0, 'rgba(100, 200, 255, 0.3)');
+    glow.addColorStop(1, 'rgba(100, 200, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius * 2, 0, Math.PI * 2);
+    ctx.fill();
+    // Player body
+    ctx.fillStyle = '#4af';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(player.x - 5, player.y - 4, 4, 0, Math.PI * 2);
+    ctx.arc(player.x + 5, player.y - 4, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(player.x - 4, player.y - 4, 2, 0, Math.PI * 2);
+    ctx.arc(player.x + 6, player.y - 4, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Particles
+  for (const p of particles) {
+    const alpha = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  // ── HUD ──
+  drawHUD();
+
+  // ── Overlays ──
+  if (state === 'levelup') drawLevelUp();
+  if (state === 'gameover') drawGameOver();
+  if (state === 'clear') drawClear();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  const gridSize = 80;
+  const startX = Math.floor(camera.x / gridSize) * gridSize;
+  const startY = Math.floor(camera.y / gridSize) * gridSize;
+  for (let x = startX; x < camera.x + W + gridSize; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, camera.y); ctx.lineTo(x, camera.y + H); ctx.stroke();
+  }
+  for (let y = startY; y < camera.y + H + gridSize; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(camera.x, y); ctx.lineTo(camera.x + W, y); ctx.stroke();
+  }
+}
+
+function drawHUD() {
+  // HP bar (top-left)
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(15, 15, 204, 24);
+  ctx.fillStyle = '#333';
+  ctx.fillRect(17, 17, 200, 20);
+  const hpRatio = player.hp / player.maxHp;
+  const hpColor = hpRatio > 0.5 ? '#4f4' : hpRatio > 0.25 ? '#fa0' : '#f44';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(17, 17, 200 * hpRatio, 20);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`HP ${Math.ceil(player.hp)} / ${player.maxHp}`, 117, 32);
+
+  // Timer (top-right)
+  const minutes = Math.floor(gameTime / 60);
+  const seconds = Math.floor(gameTime % 60);
+  const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(W - 120, 15, 105, 30);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(timeStr, W - 67, 37);
+
+  // Level (top-center)
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(W / 2 - 50, 15, 100, 28);
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Lv.${player.level}`, W / 2, 35);
+
+  // XP bar (bottom)
+  const xpBarW = W - 40;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(18, H - 35, xpBarW + 4, 20);
+  ctx.fillStyle = '#333';
+  ctx.fillRect(20, H - 33, xpBarW, 16);
+  const xpRatio = player.xp / player.xpToNext;
+  ctx.fillStyle = '#0af';
+  ctx.fillRect(20, H - 33, xpBarW * xpRatio, 16);
+  ctx.fillStyle = '#fff';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`XP ${player.xp} / ${player.xpToNext}`, W / 2, H - 22);
+
+  // Enemy count
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(15, 48, 120, 22);
+  ctx.fillStyle = '#f88';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Enemies: ${enemies.length}`, 22, 63);
+}
+
+function drawTitle() {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, W, H);
+  // Title
+  ctx.fillStyle = '#f44';
+  ctx.font = 'bold 60px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('VAMPIRE SURVIVORS', W / 2, H / 2 - 80);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '20px monospace';
+  ctx.fillText('CLONE', W / 2, H / 2 - 40);
+  // Instructions
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px monospace';
+  ctx.fillText('WASD / Arrow Keys to move', W / 2, H / 2 + 30);
+  ctx.fillText('Survive for 5 minutes!', W / 2, H / 2 + 60);
+  // Start
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 24px monospace';
+  const pulse = 0.7 + Math.sin(Date.now() / 300) * 0.3;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press SPACE or ENTER to start', W / 2, H / 2 + 140);
+  ctx.globalAlpha = 1;
+}
+
+function drawLevelUp() {
+  // Dim overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+  // Title
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('LEVEL UP!', W / 2, 150);
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px monospace';
+  ctx.fillText('Choose an upgrade (1, 2, or 3)', W / 2, 190);
+
+  // Choices
+  for (let i = 0; i < levelUpChoices.length; i++) {
+    const c = levelUpChoices[i];
+    const bx = W / 2 - 180 + i * 180 - 80;
+    const by = 230;
+    const bw = 160;
+    const bh = 180;
+    const hover = selectedChoice === i;
+    ctx.fillStyle = hover ? 'rgba(100, 180, 255, 0.4)' : 'rgba(50, 50, 80, 0.9)';
+    ctx.strokeStyle = hover ? '#4af' : '#666';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 10);
+    ctx.fill();
+    ctx.stroke();
+    // Number
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${i + 1}`, bx + bw / 2, by + 45);
+    // Name
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px monospace';
+    wrapText(c.name, bx + bw / 2, by + 80, bw - 20, 18);
+    // Desc
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px monospace';
+    wrapText(c.desc, bx + bw / 2, by + 120, bw - 20, 16);
+  }
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let ty = y;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxWidth && line !== '') {
+      ctx.fillText(line.trim(), x, ty);
+      line = word + ' ';
+      ty += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line.trim(), x, ty);
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#f44';
+  ctx.font = 'bold 50px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAME OVER', W / 2, H / 2 - 40);
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px monospace';
+  const mins = Math.floor(gameTime / 60);
+  const secs = Math.floor(gameTime % 60);
+  ctx.fillText(`Survived: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}  Level: ${player.level}`, W / 2, H / 2 + 10);
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 22px monospace';
+  const pulse = 0.7 + Math.sin(Date.now() / 300) * 0.3;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press SPACE or ENTER to restart', W / 2, H / 2 + 80);
+  ctx.globalAlpha = 1;
+}
+
+function drawClear() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#0f0';
+  ctx.font = 'bold 50px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU SURVIVED!', W / 2, H / 2 - 40);
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px monospace';
+  ctx.fillText(`Level: ${player.level}`, W / 2, H / 2 + 10);
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 22px monospace';
+  const pulse = 0.7 + Math.sin(Date.now() / 300) * 0.3;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press SPACE or ENTER to restart', W / 2, H / 2 + 80);
+  ctx.globalAlpha = 1;
+}
+
+// ── Input Handling ──
+window.addEventListener('keydown', e => {
+  if (state === 'title') {
+    if (e.key === ' ' || e.key === 'Enter') {
+      resetGame();
+      state = 'playing';
+    }
+  } else if (state === 'levelup') {
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const idx = parseInt(e.key) - 1;
+      if (idx < levelUpChoices.length) {
+        levelUpChoices[idx].apply();
+        state = 'playing';
+      }
+    }
+  } else if (state === 'gameover' || state === 'clear') {
+    if (e.key === ' ' || e.key === 'Enter') {
+      resetGame();
+      state = 'playing';
+    }
+  }
+});
+
+// Mouse/touch for level up
+canvas.addEventListener('click', e => {
+  if (state === 'levelup') {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    for (let i = 0; i < levelUpChoices.length; i++) {
+      const bx = W / 2 - 180 + i * 180 - 80;
+      const by = 230;
+      if (mx >= bx && mx <= bx + 160 && my >= by && my <= by + 180) {
+        levelUpChoices[i].apply();
+        state = 'playing';
+        break;
+      }
+    }
+  } else if (state === 'title' || state === 'gameover' || state === 'clear') {
+    if (state === 'title') { resetGame(); }
+    else { resetGame(); }
+    state = 'playing';
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (state === 'levelup') {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    selectedChoice = -1;
+    for (let i = 0; i < levelUpChoices.length; i++) {
+      const bx = W / 2 - 180 + i * 180 - 80;
+      const by = 230;
+      if (mx >= bx && mx <= bx + 160 && my >= by && my <= by + 180) {
+        selectedChoice = i;
+        break;
+      }
+    }
+  }
+});
+
+// ── Game Loop ──
+function gameLoop(timestamp) {
+  if (lastTime === 0) lastTime = timestamp;
+  dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update();
+  draw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
