@@ -199,7 +199,8 @@ function audioInit(){
 }
 function audioToggleMute(){
   AUDIO.muted=!AUDIO.muted;
-  if(AUDIO.master)AUDIO.master.gain.value=AUDIO.muted?0:0.3;
+  if(AUDIO.master)AUDIO.master.gain.value=AUDIO.muted?0:(AUDIO.bossPlaying?0.06:0.3);
+  if(AUDIO.bossBGM)AUDIO.bossBGM.muted=AUDIO.muted;
   const b=document.getElementById('muteBtn');if(b)b.textContent=AUDIO.muted?'🔇':'🔊';
   try{localStorage.setItem('dada_muted',AUDIO.muted?'1':'0');}catch(e){}
 }
@@ -244,6 +245,69 @@ function bgmStop(){
   if(AUDIO.bgmTimer){clearInterval(AUDIO.bgmTimer);AUDIO.bgmTimer=null;}
   for(const n of AUDIO.bgmNodes){try{n.stop();}catch(e){}try{n.disconnect();}catch(e){}}
   AUDIO.bgmNodes=[];
+  // Also stop boss BGM if active
+  bgmStopBoss(true);
+}
+
+/* Boss BGM: HTMLAudio file, fades in/out over chapter BGM */
+AUDIO.bossBGM=null;AUDIO.bossPlaying=false;AUDIO.savedChapter=null;
+AUDIO.fadeTimers=[];
+function bgmAudioFade(audio,from,to,dur,done){
+  if(!audio)return;
+  const steps=30,intv=dur/steps;let i=0;
+  audio.volume=Math.max(0,Math.min(1,from));
+  const t=setInterval(()=>{
+    i++;
+    audio.volume=Math.max(0,Math.min(1,from+(to-from)*(i/steps)));
+    if(i>=steps){clearInterval(t);AUDIO.fadeTimers=AUDIO.fadeTimers.filter(x=>x!==t);if(done)done();}
+  },intv);
+  AUDIO.fadeTimers.push(t);
+}
+function bgmInitBoss(){
+  if(AUDIO.bossBGM)return;
+  try{
+    const a=new Audio('assets/bgm/Steel_Against_Gravity.mp3');
+    a.loop=true;a.volume=0;a.preload='auto';
+    a.addEventListener('error',()=>{AUDIO.bossBGM=null;});
+    AUDIO.bossBGM=a;
+  }catch(e){AUDIO.bossBGM=null;}
+}
+function bgmStartBoss(chap){
+  if(AUDIO.muted)return;
+  bgmInitBoss();
+  if(!AUDIO.bossBGM)return;
+  if(AUDIO.bossPlaying)return;
+  AUDIO.bossPlaying=true;
+  AUDIO.savedChapter=chap||AUDIO.savedChapter;
+  // Fade out chapter BGM volume via master? Cleaner: stop chapter BGM cleanly
+  if(AUDIO.master){
+    const startVol=AUDIO.master.gain.value;
+    const t=AUDIO.ctx.currentTime;
+    AUDIO.master.gain.cancelScheduledValues(t);
+    AUDIO.master.gain.setValueAtTime(startVol,t);
+    AUDIO.master.gain.linearRampToValueAtTime(0.06,t+1.0);
+  }
+  // Fade in boss track
+  try{AUDIO.bossBGM.currentTime=0;}catch(e){}
+  const p=AUDIO.bossBGM.play();
+  if(p&&p.catch)p.catch(()=>{});
+  bgmAudioFade(AUDIO.bossBGM,0,0.7,1500);
+}
+function bgmStopBoss(silent){
+  if(!AUDIO.bossPlaying){if(AUDIO.bossBGM){try{AUDIO.bossBGM.pause();}catch(e){}}return;}
+  AUDIO.bossPlaying=false;
+  // Fade out boss track and resume chapter master volume
+  bgmAudioFade(AUDIO.bossBGM,AUDIO.bossBGM.volume,0,silent?200:1500,()=>{
+    try{AUDIO.bossBGM.pause();}catch(e){}
+  });
+  if(AUDIO.master&&!silent){
+    const t=AUDIO.ctx.currentTime;
+    AUDIO.master.gain.cancelScheduledValues(t);
+    AUDIO.master.gain.setValueAtTime(AUDIO.master.gain.value,t);
+    AUDIO.master.gain.linearRampToValueAtTime(AUDIO.muted?0:0.3,t+1.5);
+  } else if(AUDIO.master&&silent){
+    AUDIO.master.gain.value=AUDIO.muted?0:0.3;
+  }
 }
 function bgmStart(chap){
   if(!AUDIO.ctx)return;
@@ -1652,6 +1716,7 @@ function updateBattle(){
     if(gameTime>=sc.time&&!bossesSpawned.includes(i)){
       bossesSpawned.push(i);
       spawnBossByKey(sc.key);SFX.bossSpawn();
+      bgmStartBoss(save.selectedChapter);
     }
   }
 
@@ -1735,7 +1800,7 @@ function updateBattle(){
         const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
         if(save.equipment.length<50){const id=makeEquip(sl,'gray');runEquipsDropped.push(save.equipment.find(x=>x.id===id));}
       }
-      if(e.isBoss){chests2.push({x:e.x,y:e.y,radius:18,bob:0});if(bossActive===e)bossActive=null;save.records.bossesKilled=(save.records.bossesKilled||0)+1;}
+      if(e.isBoss){chests2.push({x:e.x,y:e.y,radius:18,bob:0});if(bossActive===e)bossActive=null;save.records.bossesKilled=(save.records.bossesKilled||0)+1;bgmStopBoss();}
       enemies.splice(i,1);continue;
     }
     if(dist2(e,player)<e.radius+player.radius&&player.invTimer<=0){
