@@ -392,7 +392,6 @@ function defaultSave(){
     gachaPity:0,gachaTotal:0,sgachaPity:0,
     eqIdCounter:0,
     basetech:0,cores:0,
-    shopDaily:{date:'',purchased:{}},
     daily:{date:'',progress:{battle:0,kills:0,gacha:0,survive3:0,levelup5:0},claimed:{battle:false,kills:false,gacha:false,survive3:false,levelup5:false}},
     records:{totalBattles:0,totalKills:0,totalPlayTime:0,longestSurvival:0,highestLevel:1,totalEvolutions:0,achievements:{},weaponsUsed:[],bossesKilled:0,chaptersCleared:{},gachaTotal:0,mythicCount:0},
   };
@@ -413,7 +412,7 @@ function saveSave(){localStorage.setItem(SAVE_KEY,JSON.stringify(save));}
 save=loadSave();
 if(save.basetech===undefined)save.basetech=0;
 if(save.cores===undefined)save.cores=0;
-if(!save.shopDaily)save.shopDaily={date:'',purchased:{}};
+delete save.shopDaily;
 for(const e of save.equipment){if(e.level===undefined)e.level=1;if(e.sub===undefined)e.sub=0;if(e.astral===undefined)e.astral=0;}
 
 /* ═══════════════════════════════════════════════════════
@@ -614,7 +613,7 @@ window.claimAchievement=function(key){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Shop','Pets','Chapters','Daily','Records'];
+const tabs=['Characters','Equipment','Gacha','Pets','Chapters','Daily','Records'];
 let currentTab='Characters';
 
 function showHome(){
@@ -640,7 +639,6 @@ function renderHome(){
     case'Characters':renderChars(panel);break;
     case'Equipment':renderEquip(panel);break;
     case'Gacha':renderGacha(panel);break;
-    case'Shop':renderShop(panel);break;
     case'Pets':renderPets(panel);break;
     case'Chapters':renderChapters(panel);break;
     case'Daily':renderDaily(panel);break;
@@ -926,22 +924,83 @@ window.astralForge=function(id){
 };
 
 /* ── Gacha ── */
+let showGachaRates=false;
+window.toggleGachaRates=function(){showGachaRates=!showGachaRates;renderHome();};
+
 function renderGacha(p){
+  const rates={
+    normal:[{r:'gray',pct:50},{r:'green',pct:30},{r:'blue',pct:15},{r:'purple',pct:4},{r:'gold',pct:1}],
+    s:[{r:'purple',pct:40},{r:'gold',pct:40},{r:'red',pct:20}],
+  };
   let h=`<div style="text-align:center">
     <h3 style="color:#4af">📦 Normal Gacha</h3>
     <p style="font-size:11px;color:#aaa;margin:6px 0">Gray 50% | Green 30% | Blue 15% | Purple 4% | Gold 1%</p>
-    <button class="btn btn-blue" onclick="doGacha('normal',1)" style="margin:6px">1× Pull (100G)</button>
-    <button class="btn btn-blue" onclick="doGacha('normal',10)" style="margin:6px">10× Pull (500G)</button>
+    <button class="btn btn-blue" onclick="doGacha('normal',1)" style="margin:6px">1× Pull (100💰)</button>
+    <button class="btn btn-blue" onclick="doGacha('normal',10)" style="margin:6px">10× Pull (500💰)</button>
     <h3 style="color:#c6f;margin-top:18px">✨ S-Rank Gacha</h3>
     <p style="font-size:11px;color:#aaa;margin:6px 0">Purple 40% | Gold 40% | Red 20%</p>
     <p style="font-size:13px;color:#fa0;margin:8px 0">🎯 Pity: <b style="color:#f44">${save.sgachaPity}/50</b> → Red Guaranteed</p>
     <div class="bar-bg" style="max-width:300px;margin:0 auto"><div class="bar-fill" style="width:${(save.sgachaPity/50)*100}%;background:linear-gradient(90deg,#a0f,#f44)"></div></div>
-    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:10px">1× Pull (300G)</button>
-    <button class="btn btn-purple" onclick="doGacha('s',10)" style="margin:6px">10× Pull (2680G)</button>
+    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:10px">1× Pull (300💰)</button>
+    <button class="btn btn-purple" onclick="doGacha('s',10)" style="margin:6px">10× Pull (2680💰)</button>
     <p style="font-size:11px;color:#888;margin-top:14px">Total pulls: ${save.gachaTotal}</p>
+
+    <div style="margin-top:14px">
+      <button class="btn btn-orange" style="padding:6px 16px;font-size:12px" onclick="toggleGachaRates()">${showGachaRates?'▲ 排出アイテム確認を閉じる':'▼ 排出アイテム確認'}</button>
+    </div>`;
+
+  if(showGachaRates){
+    const slots=Object.keys(SLOT_NAMES);
+    h+=`<div style="text-align:left;max-width:760px;margin:14px auto 0;background:rgba(0,0,0,.35);border-radius:10px;padding:14px">
+      <div style="text-align:center;color:#fa0;font-weight:bold;margin-bottom:8px">📋 ALL POSSIBLE DROPS</div>
+      <div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:12px">Each pull rolls a rank, then a random slot (each ${(100/slots.length).toFixed(1)}%)</div>`;
+    for(const[gname,gkey,gcolor]of[['📦 Normal','normal','#4af'],['✨ S-Rank','s','#c6f']]){
+      h+=`<div style="margin:10px 0">
+        <div style="color:${gcolor};font-weight:bold;margin-bottom:6px;font-size:13px">${gname}</div>`;
+      for(const r of rates[gkey]){
+        h+=`<div style="margin:6px 0;padding:6px 8px;background:rgba(255,255,255,.04);border-left:3px solid ${RANK_COLORS[r.r]};border-radius:4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="color:${RANK_COLORS[r.r]};font-weight:bold">${RANK_NAMES[r.r]}</span>
+            <span style="color:#ff0;font-size:12px">${r.pct}%</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">`;
+        for(const sl of slots){
+          h+=`<div class="equip-slot rank-${r.r}" style="width:50px;height:54px;padding:2px;animation:none">
+            <div style="font-size:18px;line-height:1">${SLOT_ICONS[sl]}</div>
+            <div style="font-size:8px;color:#ddd">${SLOT_NAMES[sl]}</div>
+          </div>`;
+        }
+        h+=`</div></div>`;
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // Material mini-shop (only currency users: Astral Forge)
+  h+=`<div style="margin:18px auto 0;max-width:480px;background:rgba(0,0,0,.3);border:1px solid #444;border-radius:10px;padding:12px">
+    <div style="color:#9bf;font-weight:bold;font-size:12px;text-align:center;margin-bottom:8px">🛒 Astral Materials Shop</div>
+    <div style="display:flex;justify-content:center;gap:6px;font-size:11px;color:#aaa;margin-bottom:8px">
+      Owned: ⚙ <b style="color:#9bf">${save.basetech}</b> &nbsp;|&nbsp; 💎 <b style="color:#fa0">${save.cores}</b>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-blue" style="padding:8px;font-size:12px" onclick="buyMaterial('bt')">⚙ Basetech ×100<br><span style="font-size:11px;color:#ff0">300💰</span></button>
+      <button class="btn btn-orange" style="padding:8px;font-size:12px" onclick="buyMaterial('core')">💎 Core ×5<br><span style="font-size:11px;color:#ff0">500💰</span></button>
+    </div>
+  </div>
   </div>`;
   p.innerHTML=h;
 }
+
+window.buyMaterial=function(kind){
+  if(kind==='bt'){
+    if(save.coins<300){flashMsg('Need 300💰');return;}
+    save.coins-=300;save.basetech+=100;saveSave();renderHome();SFX.coin();
+  } else if(kind==='core'){
+    if(save.coins<500){flashMsg('Need 500💰');return;}
+    save.coins-=500;save.cores+=5;saveSave();renderHome();SFX.coin();
+  }
+};
 
 window.doGacha=function(type,count){
   const cost=type==='normal'?(count===1?100:500):(count===1?300:2680);
@@ -1047,140 +1106,6 @@ function flashAstralForge(star){
     document.body.appendChild(s);setTimeout(()=>s.remove(),2500);
   }
   setTimeout(()=>{ov.remove();tx.remove();},1500);
-}
-
-/* ── Shop ── */
-function checkShopDaily(){
-  const today=new Date().toISOString().slice(0,10);
-  if(save.shopDaily.date!==today){
-    // Pre-roll daily slots so they're stable across renders
-    const slots=Object.keys(SLOT_NAMES);
-    const pickSlot=()=>slots[Math.floor(Math.random()*slots.length)];
-    save.shopDaily={date:today,purchased:{},
-      items:{
-        gray:[pickSlot(),pickSlot(),pickSlot(),pickSlot(),pickSlot()],
-        green:[pickSlot(),pickSlot(),pickSlot()],
-        blue:[pickSlot(),pickSlot()],
-        purple:[pickSlot()],
-      }};
-    saveSave();
-  }
-  if(!save.shopDaily.items){
-    const slots=Object.keys(SLOT_NAMES);
-    save.shopDaily.items={gray:[slots[0],slots[1],slots[2],slots[3],slots[4]],green:[slots[0],slots[1],slots[2]],blue:[slots[0],slots[1]],purple:[slots[0]]};
-  }
-}
-function shopBuy(rank,idx,cost){
-  checkShopDaily();
-  const key=rank+'_'+idx;
-  if(save.shopDaily.purchased[key]){flashMsg('Already purchased');return;}
-  if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
-  if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
-  const slot=save.shopDaily.items[rank][idx];
-  save.coins-=cost;save.shopDaily.purchased[key]=true;
-  makeEquip(slot,rank);
-  saveSave();renderHome();SFX.coin();
-}
-function shopBuySpecial(item,cost){
-  if(item==='gold'||item==='red'){
-    if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
-    if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
-    const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
-    save.coins-=cost;makeEquip(sl,item);saveSave();renderHome();SFX.gacha();flashRankUp(item);
-  } else if(item==='basetech'){
-    if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
-    save.coins-=cost;save.basetech+=100;saveSave();renderHome();SFX.coin();
-  }
-}
-function shopBuyAll(rank,cost){
-  checkShopDaily();
-  const items=save.shopDaily.items[rank];
-  for(let i=0;i<items.length;i++){
-    const k=rank+'_'+i;
-    if(!save.shopDaily.purchased[k]&&save.coins>=cost&&save.equipment.length<50)shopBuy(rank,i,cost);
-  }
-}
-window.shopBuy=shopBuy;window.shopBuySpecial=shopBuySpecial;window.shopBuyAll=shopBuyAll;
-
-let shopTab='daily';
-window.setShopTab=function(t){shopTab=t;renderHome();};
-function shopResetCountdown(){
-  // Time until next UTC midnight
-  const now=new Date();
-  const tomorrow=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1));
-  let s=Math.max(0,Math.floor((tomorrow-now)/1000));
-  const h=Math.floor(s/3600);s%=3600;
-  const m=Math.floor(s/60);s%=60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-
-function renderShop(p){
-  checkShopDaily();
-  const tabs=[{k:'daily',l:'🏪 Daily'},{k:'special',l:'⭐ Special'}];
-  let h=`<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px">`;
-  for(const t of tabs)h+=`<button class="btn ${shopTab===t.k?'btn-orange':''}" style="padding:6px 16px;font-size:13px;background:${shopTab===t.k?'':'#333'}" onclick="setShopTab('${t.k}')">${t.l}</button>`;
-  h+='</div>';
-
-  if(shopTab==='daily'){
-    h+=`<div style="text-align:center;margin-bottom:10px">
-      <div style="color:#fa0;font-weight:bold;font-size:14px">🏪 DAILY SHOP</div>
-      <div style="color:#9bf;font-size:12px;margin-top:3px">Resets in: <b id="shopCountdown" style="color:#ff0">${shopResetCountdown()}</b></div>
-    </div>`;
-    const tiers=[
-      {rank:'gray',cost:30},
-      {rank:'green',cost:80},
-      {rank:'blue',cost:200},
-      {rank:'purple',cost:500},
-    ];
-    for(const t of tiers){
-      const items=save.shopDaily.items[t.rank];
-      const remaining=items.filter((_,i)=>!save.shopDaily.purchased[t.rank+'_'+i]).length;
-      h+=`<div style="margin:14px 0">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:0 4px">
-          <div style="color:${RANK_COLORS[t.rank]};font-weight:bold;font-size:14px">${RANK_NAMES[t.rank]} <span style="color:#aaa;font-size:11px">(${remaining}/${items.length})</span></div>
-          ${remaining>0?`<button class="btn btn-blue" style="padding:4px 14px;font-size:12px" onclick="shopBuyAll('${t.rank}',${t.cost})">Buy All</button>`:''}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`;
-      for(let i=0;i<items.length;i++){
-        const slot=items[i];const sold=save.shopDaily.purchased[t.rank+'_'+i];
-        h+=`<div class="game-card rank-${t.rank}" style="${sold?'opacity:.3;cursor:default;animation:none;filter:grayscale(1)':'cursor:pointer'};text-align:center;padding:12px 8px;margin:0" ${sold?'':`onclick="shopBuy('${t.rank}',${i},${t.cost})"`}>
-          <div style="font-size:36px;line-height:1">${SLOT_ICONS[slot]}</div>
-          <div style="font-size:11px;color:${RANK_COLORS[t.rank]};font-weight:bold;margin-top:4px">${SLOT_NAMES[slot]}</div>
-          <div style="font-size:10px;color:#aaa">${RANK_NAMES[t.rank]}</div>
-          <div style="margin-top:6px;padding:4px 0;background:${sold?'#444':'rgba(255,200,0,.15)'};border-radius:6px;color:${sold?'#999':'#ff0'};font-weight:bold;font-size:12px">${sold?'✓ SOLD':t.cost+'💰'}</div>
-        </div>`;
-      }
-      h+='</div></div>';
-    }
-  } else {
-    h+='<div style="text-align:center;color:#fa0;font-weight:bold;margin-bottom:14px">⭐ SPECIAL SHOP</div>';
-    const special=[
-      {item:'gold',cost:1500,label:'Random Gold Equip',rank:'gold',icon:'🏆',desc:'Random slot, Gold rank'},
-      {item:'red',cost:5000,label:'Random Mythic Equip',rank:'red',icon:'💎',desc:'Random slot, Mythic rank'},
-      {item:'basetech',cost:300,label:'100 Basetech',rank:'blue',icon:'⚙️',desc:'Used for Astral Forge'},
-    ];
-    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
-    for(const s of special){
-      const can=save.coins>=s.cost;
-      h+=`<div class="game-card rank-${s.rank}" style="text-align:center;padding:16px 10px;margin:0;cursor:pointer" onclick="shopBuySpecial('${s.item}',${s.cost})">
-        <div style="font-size:44px;line-height:1">${s.icon}</div>
-        <div style="font-size:13px;color:${RANK_COLORS[s.rank]};font-weight:bold;margin-top:6px">${s.label}</div>
-        <div style="font-size:10px;color:#aaa;margin:4px 0 8px">${s.desc}</div>
-        <div style="padding:6px 0;background:${can?'rgba(255,200,0,.2)':'#444'};border-radius:6px;color:${can?'#ff0':'#888'};font-weight:bold;font-size:13px">${s.cost.toLocaleString()}💰</div>
-      </div>`;
-    }
-    h+='</div>';
-  }
-  p.innerHTML=h;
-  // Live countdown tick
-  if(shopTab==='daily'){
-    if(window._shopTimer)clearInterval(window._shopTimer);
-    window._shopTimer=setInterval(()=>{
-      const el=document.getElementById('shopCountdown');
-      if(!el){clearInterval(window._shopTimer);return;}
-      el.textContent=shopResetCountdown();
-    },1000);
-  } else if(window._shopTimer){clearInterval(window._shopTimer);window._shopTimer=null;}
 }
 
 /* ── Pets ── */
