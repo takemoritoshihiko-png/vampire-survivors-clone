@@ -1540,7 +1540,7 @@ let player,bullets,enemies,gems,coins2,particles,chests2,weaponProjectiles;
 let lightningFx,whipFx,dmgPopups,deadFx;
 let bossActive,bossesSpawned,deathEntity,deathWarnTimer;
 let levelUpFlash=0,runLevelUps=0,playerMoving=false,playerDmgFlash=0,energyDrinks,resetFlash=0;
-let bossVictoryT=0,bossVictoryX=0,bossVictoryY=0,equipPopups;
+let bossVictoryT=0,bossVictoryX=0,bossVictoryY=0,equipPopups,fireZones;
 let enemySpawnTimer,pendingLvl,levelUpChoices,selectedChoice;
 let waveText,waveTimer,lastWaveMin;
 let runGold,runKills,runEquipsDropped;
@@ -1606,31 +1606,63 @@ const WEAPON_DEFS={
     desc:()=>'4 blackholes + chain blast',evolved:true,from:'forceS'},
   chaosJudge:{name:'混沌の断罪',icon:'☠️',color:'#f44',sprite:'weapon_chaos',maxLv:1,
     desc:()=>'80% execute / 20% on boss + omni-wave',evolved:true,from:'chaosBlade'},
+
+  /* === SUB-SKILLS (level-up pool) === */
+  molotov:{name:'火炎瓶',icon:'🍾',color:'#f80',maxLv:5,sub:true,
+    cd:[2.0,2.0,2.0,2.0,2.0],radius:[40,50,50,50,50],dur:[2,2,3,3,3],count:[1,1,1,2,2],dmgMul:[1,1,1.2,1.2,1.4],
+    desc:s=>`★${s} ${({1:'40r fire 2s',2:'+10r area',3:'+1s, +20% dmg',4:'2 throws',5:'burst on expire'})[s]}`,evolved:false},
+  boomerang:{name:'ブーメラン',icon:'🪃',color:'#a63',maxLv:5,sub:true,
+    cd:[3.0,2.5,2.5,2.5,2.5],size:[6,6,8,8,8],count:[1,1,1,2,3],dmgMul:[1,1,1.2,1.2,1.3],pierce:[1,1,1,1,5],
+    desc:s=>`★${s} ${({1:'3s throw, 2 hits',2:'-0.5s CD',3:'+30% size, +20% dmg',4:'2 throws',5:'3 throws + pierce'})[s]}`,evolved:false},
+  garlic:{name:'ガーリック',icon:'🧄',color:'#fff',maxLv:5,sub:true,
+    radius:[60,70,70,90,90],dmgMul:[1,1,1.3,1.3,1.3],kb:[0,0,0,1,1],slow:[0,0,0,0,1],
+    desc:s=>`★${s} ${({1:'60r aura',2:'+10r',3:'+30% dmg',4:'+20r, knockback',5:'slow inside'})[s]}`,evolved:false},
+  bible:{name:'聖書',icon:'📖',color:'#a0f',maxLv:5,sub:true,
+    orbits:[2,2,3,4,6],spd:[3,3.6,3.6,3.6,6],dmgMul:[1,1,1.2,1.2,1.2],orbitR:90,
+    desc:s=>`★${s} ${({1:'2 books orbit',2:'+20% spd',3:'3 books, +20% dmg',4:'4 books',5:'6 books, 2× spd'})[s]}`,evolved:false},
+  lightning:{name:'ライトニング',icon:'⚡',color:'#ff8',maxLv:5,sub:true,
+    cd:[2.0,1.8,1.6,1.4,1.0],targets:[1,2,3,5,99],chain:[0,1,2,2,3],dmgMul:[1,1,1.1,1.2,1.4],
+    desc:s=>`★${s} ${({1:'1 random',2:'2 + chain',3:'3 + chain×2',4:'5 strikes',5:'all on screen'})[s]}`,evolved:false},
+  drone:{name:'ドローン',icon:'🤖',color:'#888',maxLv:5,sub:true,
+    drones:[1,1,2,2,3],cd:[0.6,0.5,0.5,0.4,0.35],dmgMul:[1,1,1.2,1.2,1.4],missile:[0,0,0,0,1],
+    desc:s=>`★${s} ${({1:'1 drone',2:'+20% atk spd',3:'2 drones, +20% dmg',4:'+20% atk spd',5:'3 drones + missiles'})[s]}`,evolved:false},
+
+  /* === SUB-SKILL evolved === */
+  hellfire:{name:'地獄火炎',icon:'🔥',color:'#f44',maxLv:1,sub:true,
+    desc:()=>'3× area, poison, guaranteed burst',evolved:true,from:'molotov'},
+  quantumBoomerang:{name:'量子ブーメラン',icon:'💫',color:'#0ff',maxLv:1,sub:true,
+    desc:()=>'Teleport-homing, infinite flight',evolved:true,from:'boomerang'},
+  soulEater:{name:'ソウルイーター',icon:'💀',color:'#0f0',maxLv:1,sub:true,
+    desc:()=>'2× radius, 0.5HP/s regen, auto-XP',evolved:true,from:'garlic'},
+  unholyBible:{name:'邪悪な聖典',icon:'📕',color:'#a0f',maxLv:1,sub:true,
+    desc:()=>'6 books, 3× spd, 3× dmg',evolved:true,from:'bible'},
+  thunderWrath:{name:'雷神の怒り',icon:'⛈️',color:'#ff0',maxLv:1,sub:true,
+    desc:()=>'All enemies, chain unlimited, 3s CD',evolved:true,from:'lightning'},
+  destroyer:{name:'破壊者',icon:'💥',color:'#fa0',maxLv:1,sub:true,
+    desc:()=>'3 fused drones, lock-on missile barrage',evolved:true,from:'drone'},
 };
 
 const PASSIVE_DEFS={
-  ninjaScroll:{name:'究極忍法書',icon:'📜',color:'#fa0',evolveTarget:'kunai',maxLv:1,
-    desc:()=>'XP +20%',apply:p=>{p.xpMult*=1.2;}},
-  kogaScroll:{name:'甲賀忍法書',icon:'🥷',color:'#a8f',evolveTarget:'katana',maxLv:1,
-    desc:()=>'ATK +10%',apply:p=>{p.might*=1.10;}},
-  fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',evolveTarget:'bat',maxLv:1,
-    desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.2);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.2),p.maxHp);}},
-  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',evolveTarget:'shotgun',maxLv:1,
-    desc:()=>'Skill area +15%',apply:p=>{p.areaMult=(p.areaMult||1)*1.15;}},
-  laserGen:{name:'レーザー発振器',icon:'🔆',color:'#0ff',evolveTarget:'lightchaser',maxLv:1,
-    desc:()=>'All CD -10%',apply:p=>{p.cdReduction+=0.10;}},
-  gauntlet:{name:'外付け籠手',icon:'🥊',color:'#a0f',evolveTarget:'force',maxLv:1,
-    desc:()=>'Force duration +30%',apply:p=>{p.forceDur=(p.forceDur||1)+0.3;}},
-  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',evolveTarget:'drill',maxLv:1,
-    desc:()=>'Drill homing',apply:p=>{p.drillHoming=true;}},
-  quantumEngine:{name:'量子エンジン',icon:'🟦',color:'#fff',evolveTarget:'soccer',maxLv:1,
-    desc:()=>'+3 bounces',apply:p=>{p.extraBounces=(p.extraBounces||0)+3;}},
+  gauntlet:{name:'外付け籠手',icon:'🥊',color:'#a0f',evolveTarget:'molotov',maxLv:1,
+    desc:()=>'Duration +30%',apply:p=>{p.subDur=(p.subDur||1)+0.3;}},
+  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',evolveTarget:'boomerang',maxLv:1,
+    desc:()=>'Area +15%',apply:p=>{p.areaMult=(p.areaMult||1)*1.15;}},
+  attractorb:{name:'Attractorb',icon:'🧲',color:'#0ff',evolveTarget:'garlic',maxLv:1,
+    desc:()=>'XP magnet +30%',apply:p=>{p.magnetRange*=1.3;}},
+  emptyTome:{name:'EmptyTome',icon:'📚',color:'#fa0',evolveTarget:'bible',maxLv:1,
+    desc:()=>'CD -8%',apply:p=>{p.cdReduction+=0.08;}},
+  thunderGen:{name:'雷発生器',icon:'🔌',color:'#ff0',evolveTarget:'lightning',maxLv:1,
+    desc:()=>'CD -10%',apply:p=>{p.cdReduction+=0.10;}},
+  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',evolveTarget:'drone',maxLv:1,
+    desc:()=>'Drone auto-lock nearest',apply:p=>{p.droneLock=true;}},
   energyCube:{name:'エナジーキューブ',icon:'⚡',color:'#0ff',evolveTarget:null,maxLv:1,
     desc:()=>'All CD -15%',apply:p=>{p.cdReduction+=0.15;}},
   hollowPoint:{name:'強力銃弾',icon:'💥',color:'#f44',evolveTarget:null,maxLv:1,
     desc:()=>'ATK +15%',apply:p=>{p.might*=1.15;}},
   forceField:{name:'フォースフィールド',icon:'🛡️',color:'#88f',evolveTarget:null,maxLv:1,
-    desc:()=>'Damage barrier (touch dmg)',apply:p=>{p.forceField=true;}},
+    desc:()=>'Damage barrier',apply:p=>{p.forceField=true;}},
+  fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',evolveTarget:null,maxLv:1,
+    desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.2);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.2),p.maxHp);}},
 };
 
 const ENEMY_TYPES={
@@ -1644,18 +1676,12 @@ const ENEMY_TYPES={
 };
 
 const EVOLUTIONS=[
-  {weapon:'kunai',passive:'ninjaScroll',evolved:'spiritBlade'},
-  {weapon:'katana',passive:'kogaScroll',evolved:'yotou'},
-  {weapon:'bat',passive:'fitnessGuide',evolved:'lucille'},
-  {weapon:'shotgun',passive:'highExplosive',evolved:'hyperShot'},
-  {weapon:'lightchaser',passive:'laserGen',evolved:'swordArray'},
-  {weapon:'force',passive:'gauntlet',evolved:'forceMastery'},
-  {weapon:'drill',passive:'precision',evolved:'vibrationDrill'},
-  {weapon:'soccer',passive:'quantumEngine',evolved:'quantumBall'},
-  // S-rank evolves: same aux but on S weapon → S-evo
-  {weapon:'lightChaserS',passive:'laserGen',evolved:'sLightArray'},
-  {weapon:'forceS',passive:'gauntlet',evolved:'voidLord'},
-  {weapon:'chaosBlade',passive:'kogaScroll',evolved:'chaosJudge'},
+  {weapon:'molotov',passive:'gauntlet',evolved:'hellfire'},
+  {weapon:'boomerang',passive:'highExplosive',evolved:'quantumBoomerang'},
+  {weapon:'garlic',passive:'attractorb',evolved:'soulEater'},
+  {weapon:'bible',passive:'emptyTome',evolved:'unholyBible'},
+  {weapon:'lightning',passive:'thunderGen',evolved:'thunderWrath'},
+  {weapon:'drone',passive:'precision',evolved:'destroyer'},
 ];
 
 function distXY(ax,ay,bx,by){const d1=ax-bx,d2=ay-by;return Math.sqrt(d1*d1+d2*d2);}
@@ -1669,7 +1695,10 @@ const _BASE_DMG={
   lightChaserS:22,forceS:35,chaosBlade:24,
   spiritBlade:18,yotou:24,lucille:22,hyperShot:14,swordArray:22,
   forceMastery:38,vibrationDrill:30,quantumBall:22,
-  sLightArray:32,voidLord:50,chaosJudge:36};
+  sLightArray:32,voidLord:50,chaosJudge:36,
+  // Sub-skills
+  molotov:6,boomerang:14,garlic:5,bible:12,lightning:25,drone:9,
+  hellfire:14,quantumBoomerang:24,soulEater:14,unholyBible:30,thunderWrath:40,destroyer:30};
 function wDmg(w){const def=WEAPON_DEFS[w.id];const base=_BASE_DMG[w.id]||10;
   const mul=(def.dmgMul&&def.dmgMul[w.lv-1])||1;
   return base*mul*player.might;
@@ -1747,7 +1776,7 @@ function initBattle(){
   }
 
   bullets=[];enemies=[];gems=[];coins2=[];particles=[];chests2=[];energyDrinks=[];
-  weaponProjectiles=[];lightningFx=[];whipFx=[];dmgPopups=[];deadFx=[];
+  weaponProjectiles=[];lightningFx=[];whipFx=[];dmgPopups=[];deadFx=[];fireZones=[];
   levelUpFlash=0;runLevelUps=0;playerMoving=false;playerDmgFlash=0;
   resetFlash=0;bossVictoryT=0;equipPopups=[];
   bossActive=null;bossesSpawned=[];deathEntity=null;deathWarnTimer=0;
@@ -2043,17 +2072,127 @@ function updateWeapons(){
         }
       }
     }
+    /* === SUB-SKILLS === */
+    else if(w.id==='molotov'||w.id==='hellfire'){
+      const isEv=w.id==='hellfire';
+      const baseCd=isEv?1.5:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const cnt=isEv?2:def.count[s-1];
+      const baseRad=(isEv?60:def.radius[s-1])*(player.areaMult||1)*(isEv?3:1);
+      const baseDur=(isEv?3:def.dur[s-1])*(player.subDur||1);
+      for(let i=0;i<cnt;i++){
+        const tgt=nearestEnemy();
+        const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x)+(i-(cnt-1)/2)*0.2:Math.atan2(player.lastDy,player.lastDx);
+        const dist=tgt?Math.min(distXY(player.x,player.y,tgt.x,tgt.y),300):220;
+        const tx=player.x+Math.cos(ang)*dist,ty=player.y+Math.sin(ang)*dist;
+        fireZones.push({x:tx,y:ty,radius:baseRad,life:baseDur,maxLife:baseDur,dmg:dmg*0.6,wid:w.id,
+          burst:isEv||s>=5,poison:isEv,tickT:0});
+        // Throwing arc particle
+        for(let p=0;p<4;p++)particles.push({x:player.x,y:player.y,vx:Math.cos(ang)*200+rnd(-30,30),vy:Math.sin(ang)*200+rnd(-30,30)-50,life:.5,maxLife:.5,radius:3,color:'#f80'});
+      }
+    }
+    else if(w.id==='boomerang'||w.id==='quantumBoomerang'){
+      const isEv=w.id==='quantumBoomerang';
+      const baseCd=isEv?2.0:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const cnt=isEv?2:def.count[s-1];
+      const sz=isEv?12:def.size[s-1];
+      const tgt=nearestEnemy();
+      const baseAng=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):Math.atan2(player.lastDy,player.lastDx);
+      const spd=350;
+      for(let i=0;i<cnt;i++){
+        const ang=baseAng+(i-(cnt-1)/2)*0.4;
+        bullets.push({x:player.x,y:player.y,radius:sz,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+          damage:dmg,pierce:isEv?99:def.pierce[s-1]*2,life:isEv?6:1.6,color:def.color,wid:w.id,kind:'boomerang',
+          angle:ang,phase:'out',spinT:0,homing:isEv,returning:false});
+      }
+    }
+    else if(w.id==='garlic'||w.id==='soulEater'){
+      // Always-on aura, ticks every 0.4s
+      w.timer+=dt2;if(w.timer<0.4)continue;w.timer=0;
+      const isEv=w.id==='soulEater';
+      const r=(isEv?120:def.radius[s-1])*(player.areaMult||1);
+      for(const e of enemies){
+        const d=dist2(e,player);
+        if(d<r+e.radius){
+          applyDmg(e,dmg,w.id);
+          if(s>=4||isEv){const a=Math.atan2(e.y-player.y,e.x-player.x);e.kbx=Math.cos(a)*15;e.kby=Math.sin(a)*15;e.kbT=0.05;}
+          if(s>=5||isEv)e.poisoned=2.0;
+        }
+      }
+      if(isEv){
+        player.hp=Math.min(player.maxHp,player.hp+0.5*0.4);
+        for(const g of gems){if(dist2(g,player)<r){g.x=player.x;g.y=player.y;}}
+      }
+    }
+    else if(w.id==='bible'||w.id==='unholyBible'){
+      // Orbit logic in updateOrbits
+      w.timer=0;
+    }
+    else if(w.id==='lightning'||w.id==='thunderWrath'){
+      const isEv=w.id==='thunderWrath';
+      const baseCd=isEv?3.0:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      let tgts;
+      if(isEv){tgts=enemies.filter(e=>dist2(e,player)<900);}
+      else{
+        const tn=def.targets[s-1];
+        tgts=enemies.filter(e=>dist2(e,player)<700).sort(()=>Math.random()-.5).slice(0,Math.min(tn,enemies.length));
+      }
+      const chainCount=isEv?99:def.chain[s-1];
+      for(const e of tgts){
+        applyDmg(e,dmg,w.id);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3});
+        let cur=e;const hit=new Set([e]);
+        for(let c=0;c<chainCount;c++){
+          let near=null,nd=Infinity;
+          for(const e2 of enemies){if(hit.has(e2))continue;const d=distXY(cur.x,cur.y,e2.x,e2.y);if(d<nd&&d<200){nd=d;near=e2;}}
+          if(!near)break;
+          applyDmg(near,dmg*0.7,w.id);lightningFx.push({x:near.x,y:near.y,life:.25,maxLife:.25});
+          hit.add(near);cur=near;
+        }
+      }
+    }
+    else if(w.id==='drone'||w.id==='destroyer'){
+      const isEv=w.id==='destroyer';
+      const baseCd=isEv?0.3:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const droneN=isEv?3:def.drones[s-1];
+      const missile=isEv||(def.missile&&def.missile[s-1]);
+      const homing=isEv||player.droneLock;
+      for(let i=0;i<droneN;i++){
+        const ang2=gameTime*1.5+i*Math.PI*2/droneN;
+        const dx=player.x+Math.cos(ang2)*40;
+        const dy=player.y+Math.sin(ang2)*40-10;
+        const tgt=nearestEnemy();
+        if(!tgt)continue;
+        const ang=Math.atan2(tgt.y-dy,tgt.x-dx);
+        const spd=isEv?500:380;
+        fireBullet({x:dx,y:dy,radius:isEv?5:3,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+          damage:dmg*(isEv?1.4:1),pierce:isEv?3:1,life:isEv?2.0:1.2,
+          color:missile?'#fff':def.color,wid:w.id,kind:missile?'missile':'pellet',angle:ang,homing});
+      }
+    }
   }
 }
 
-/* Bat orbits + lucille burn */
+/* Orbits: bat/lucille + bible/unholyBible */
 function updateOrbits(){
-  const bw=getW('bat')||getW('lucille');if(!bw){weaponProjectiles=[];return;}
-  const def=WEAPON_DEFS[bw.id];const isEv=bw.id==='lucille';
-  const cnt=isEv?5:def.orbits[bw.lv-1];
-  const baseSpd=isEv?(def.spd?def.spd[4]*3:9):def.spd[bw.lv-1];
+  const bw=getW('bat')||getW('lucille')||getW('bible')||getW('unholyBible');
+  if(!bw){weaponProjectiles=[];return;}
+  const def=WEAPON_DEFS[bw.id];
+  const isLuc=bw.id==='lucille';
+  const isBible=bw.id==='bible'||bw.id==='unholyBible';
+  const isUnholy=bw.id==='unholyBible';
+  let cnt,baseSpd;
+  if(isLuc){cnt=5;baseSpd=(def.spd?def.spd[4]*3:9);}
+  else if(isUnholy){cnt=6;baseSpd=def.spd?def.spd[4]*3:18;}
+  else{cnt=def.orbits[bw.lv-1];baseSpd=def.spd[bw.lv-1];}
   const oR=def.orbitR||90;
-  const dmg=wDmg(bw);
+  const dmg=wDmg(bw)*(isUnholy?3:1);
   while(weaponProjectiles.length<cnt)weaponProjectiles.push({angle:weaponProjectiles.length*(Math.PI*2/cnt),hc:{}});
   while(weaponProjectiles.length>cnt)weaponProjectiles.pop();
   for(const o of weaponProjectiles){
@@ -2061,17 +2200,51 @@ function updateOrbits(){
     for(let i=0;i<enemies.length;i++){const e=enemies[i];
       if(distXY(o.x,o.y,e.x,e.y)<14+e.radius){if(!o.hc[i]||o.hc[i]<=0){
         applyDmg(e,dmg,bw.id);o.hc[i]=.25;
-        if(isEv){e.burnT=3.0;e.burnDmg=dmg*0.4;}
+        if(isLuc){e.burnT=3.0;e.burnDmg=dmg*0.4;}
       }}
     }
     for(const k in o.hc){o.hc[k]-=dt2;if(o.hc[k]<=0)delete o.hc[k];}
   }
   // ★5 / lucille AoE pulse around player every 2s
-  if((bw.id==='bat'&&bw.lv===5)||isEv){
+  if((bw.id==='bat'&&bw.lv===5)||isLuc){
     bw.aoeT=(bw.aoeT||0)+dt2;
     if(bw.aoeT>=2){bw.aoeT=0;
       for(const e of enemies)if(dist2(e,player)<140)applyDmg(e,dmg*0.6,bw.id);
       whipFx.push({x:player.x,y:player.y,dir:0,area:140,life:.25,maxLife:.25,color:def.color});
+    }
+  }
+}
+
+/* Fire zones (molotov puddles) */
+function updateFireZones(){
+  for(let i=fireZones.length-1;i>=0;i--){
+    const z=fireZones[i];
+    z.life-=dt2;z.tickT-=dt2;
+    if(z.tickT<=0){
+      z.tickT=0.3;
+      for(const e of enemies)if(distXY(z.x,z.y,e.x,e.y)<z.radius+e.radius){
+        applyDmg(e,z.dmg,z.wid);
+        if(z.poison)e.poisoned=2.0;
+      }
+      if(Math.random()<0.5)particles.push({x:z.x+rnd(-z.radius,z.radius),y:z.y+rnd(-z.radius,z.radius),vx:rnd(-10,10),vy:-rnd(20,40),life:.5,maxLife:.5,radius:3,color:'#f80'});
+    }
+    if(z.life<=0){
+      if(z.burst){
+        for(const e of enemies)if(distXY(z.x,z.y,e.x,e.y)<z.radius*1.4)applyDmg(e,z.dmg*4,z.wid);
+        lightningFx.push({x:z.x,y:z.y,life:.3,maxLife:.3,kind:'explosion'});
+        for(let p=0;p<10;p++)particles.push({x:z.x,y:z.y,vx:rnd(-150,150),vy:rnd(-150,150),life:.5,maxLife:.5,radius:3,color:'#f60'});
+      }
+      fireZones.splice(i,1);
+    }
+  }
+}
+
+/* Poison DOT */
+function updatePoison(){
+  for(const e of enemies){
+    if(e.poisoned>0){
+      e.hp-=2*dt2;e.poisoned-=dt2;
+      if(Math.random()<0.15)spawnParticles2(e.x,e.y,'#0f0',1);
     }
   }
 }
@@ -2152,15 +2325,12 @@ function updatePet(){
 }
 
 function readyEvolutions(){
-  // Returns array of evolutions ready to fire (weapon ★5 + matching aux owned)
+  // Returns array of evolutions ready to fire (sub-skill ★5 + matching aux owned)
   const ready=[];
   for(const evo of EVOLUTIONS){
     const w=getW(evo.weapon),p=getP(evo.passive);
     if(w&&w.lv>=5&&p&&!w.evolvedDone)ready.push({...evo,w,p});
   }
-  // Destroyer special
-  const dA=getW('droneA'),dB=getW('droneB');
-  if(dA&&dB&&dA.lv>=5&&dB.lv>=5&&!dA.evolvedDone)ready.push({weapon:'droneA',passive:null,evolved:'destroyer',w:dA,p:null});
   return ready;
 }
 function evolutionReady(){return readyEvolutions().length>0;}
@@ -2180,20 +2350,21 @@ function pickChoices(){
     selectedChoice=-1;return;
   }
   const ch=[];
-  // Attack skill ★UP
-  for(const w of player.weapons){const d=WEAPON_DEFS[w.id];if(!d.evolved&&w.lv<d.maxLv){const ns=w.lv+1;
-    ch.push({type:'weapon',weaponId:w.id,tag:`★UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
-  }}
-  // NEW SKILL pool: main weapons (katana/bat/shotgun/lightchaser/force/
-  // drill/soccer + S-tier lightChaserS/forceS/chaosBlade) are EXCLUDED —
-  // they only enter via the Characters → Main Weapon slot. Kunai stays
-  // as a fallback so a run without a main weapon still has options.
-  if(player.weapons.length<6){
+  // Sub-skill ★UP (skip the main weapon — that's controlled from the Characters slot only)
+  for(const w of player.weapons){
+    if(w.id===player.mainWeaponId)continue;
+    const d=WEAPON_DEFS[w.id];
+    if(!d||!d.sub||d.evolved||w.lv>=d.maxLv)continue;
+    const ns=w.lv+1;
+    ch.push({type:'weapon',weaponId:w.id,tag:`⭐ STAR UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,star:ns,apply:()=>{w.lv++;}});
+  }
+  // NEW SUB SKILL pool — only the 6 sub-skills enter the level-up trio
+  if(player.weapons.length<7){
     const owned=new Set(player.weapons.map(w=>w.id));
-    const BATTLE_NEW_SKILL_POOL=['kunai'];
+    const BATTLE_NEW_SKILL_POOL=['molotov','boomerang','garlic','bible','lightning','drone'];
     for(const id of BATTLE_NEW_SKILL_POOL){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
-        ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
+        ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,star:1,
           apply:()=>{player.weapons.push({id,lv:1,timer:0});if(!save.records.weaponsUsed)save.records.weaponsUsed=[];if(!save.records.weaponsUsed.includes(id))save.records.weaponsUsed.push(id);}});
       }
     }
@@ -2203,21 +2374,20 @@ function pickChoices(){
     const owned=new Set(player.passives.map(p=>p.id));
     for(const id of Object.keys(PASSIVE_DEFS)){
       if(!owned.has(id)){const d=PASSIVE_DEFS[id];
-        const evolveTag=d.evolveTarget?` [EVO: ${WEAPON_DEFS[d.evolveTarget].icon} ${WEAPON_DEFS[d.evolveTarget].name}]`:'';
-        ch.push({type:'passive',tag:'AUX',name:d.name,desc:d.desc()+evolveTag,color:d.color,icon:d.icon,evolveTarget:d.evolveTarget,apply:()=>{player.passives.push({id,lv:1});d.apply(player);}});
+        const evolveTag=d.evolveTarget&&WEAPON_DEFS[d.evolveTarget]?` [EVO: ${WEAPON_DEFS[d.evolveTarget].icon} ${WEAPON_DEFS[d.evolveTarget].name}]`:'';
+        ch.push({type:'passive',tag:'PASSIVE',name:d.name,desc:d.desc()+evolveTag,color:d.color,icon:d.icon,evolveTarget:d.evolveTarget,apply:()=>{player.passives.push({id,lv:1});d.apply(player);}});
       }
     }
   }
+  // Status-up choices
+  ch.push({type:'stat',tag:'STAT UP',name:'+10% Speed',desc:'Move faster',color:'#8ff',icon:'👟',apply:()=>{player.baseSpeed*=1.1;player.speed*=1.1;}});
+  ch.push({type:'stat',tag:'STAT UP',name:'+20% MaxHP',desc:'Heal +20% & raise cap',color:'#f88',icon:'❤️',apply:()=>{const inc=Math.floor(player.maxHp*0.2);player.maxHp+=inc;player.hp=Math.min(player.maxHp,player.hp+inc);}});
+  ch.push({type:'stat',tag:'STAT UP',name:'+15% XP Gain',desc:'Faster level up',color:'#0af',icon:'⭐',apply:()=>{player.xpMult*=1.15;}});
+  ch.push({type:'stat',tag:'STAT UP',name:'+25% Magnet',desc:'Larger XP pickup',color:'#0ff',icon:'🧲',apply:()=>{player.magnetRange*=1.25;}});
   // Heal
   if(player.hp<player.maxHp*.9)ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
-  // Main-weapon bias: 50% chance to ensure the main weapon's choice (★UP or NEW SKILL) is one of the picks
   ch.sort(()=>Math.random()-.5);
-  let picks=ch.slice(0,3);
-  if(player.mainWeaponId&&Math.random()<0.5){
-    const mwChoice=ch.find(c=>c.type==='weapon'&&(c.weaponId===player.mainWeaponId));
-    if(mwChoice&&!picks.includes(mwChoice)){picks[picks.length-1]=mwChoice;picks.sort(()=>Math.random()-.5);}
-  }
-  levelUpChoices=picks;selectedChoice=-1;
+  levelUpChoices=ch.slice(0,3);selectedChoice=-1;
 }
 
 function openChest2(){
@@ -2306,7 +2476,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
-  updateWeapons();updateOrbits();updateBurns();updateForceField();updatePet();
+  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();
 
   // Spawn
   const tf=Math.min(gameTime/clearTime,1);
@@ -2331,6 +2501,22 @@ function updateBattle(){
         const turn=Math.max(-3*dt2,Math.min(3*dt2,da));
         const na=ca+turn;
         b.vx=Math.cos(na)*sp;b.vy=Math.sin(na)*sp;b.angle=na;
+      }
+    }
+    // Boomerang: fly out then return to player
+    if(b.kind==='boomerang'){
+      b.spinT=(b.spinT||0)+dt2;
+      if(b.phase==='out'){
+        // After 0.6s or when slowing, switch to return
+        b.life=Math.max(b.life,0.5);
+        if(b.spinT>0.6){b.phase='return';}
+      } else {
+        const a=Math.atan2(player.y-b.y,player.x-b.x);
+        const sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+        const targetSp=Math.max(sp,360);
+        b.vx=Math.cos(a)*targetSp;b.vy=Math.sin(a)*targetSp;
+        // Catch when close to player
+        if(distXY(b.x,b.y,player.x,player.y)<player.radius+10&&!b.homing){bullets.splice(i,1);continue;}
       }
     }
     // Blackhole: decelerate, pull enemies, burst on ttl
@@ -2519,7 +2705,9 @@ function drawEnemy(e){
       if(e.typeId==='ghost')ctx.globalAlpha=0.75+Math.sin(gameTime*3+e.st)*0.15;
       if(e.flashTimer>0)ctx.filter='brightness(3) saturate(0)';
       if(e.isElite){ctx.shadowColor='#ff0';ctx.shadowBlur=18;}
+      if(e.poisoned>0){ctx.filter='hue-rotate(80deg) saturate(1.5)';}
       ctx.drawImage(sp,e.x-sz/2,e.y-sz/2+eBob,sz,sz);
+      if(e.poisoned>0)ctx.filter='none';
       ctx.shadowBlur=0;
       if(e.flashTimer>0)ctx.filter='none';
       ctx.globalAlpha=1;
@@ -2764,6 +2952,17 @@ function drawBattle(){
   const mr=MAP_RENDERERS[save.selectedChapter]||MAP_RENDERERS[1];
   mr();
 
+  // Garlic / Soul Eater aura
+  const gw=getW('garlic')||getW('soulEater');
+  if(gw){
+    const isEv=gw.id==='soulEater';
+    const r=(isEv?120:gw.lv?WEAPON_DEFS.garlic.radius[gw.lv-1]:60)*(player.areaMult||1);
+    const wob=Math.sin(gameTime*3)*4;
+    ctx.fillStyle=isEv?'rgba(0,255,0,0.10)':'rgba(255,255,255,0.10)';
+    ctx.beginPath();ctx.arc(player.x,player.y,r+wob,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=isEv?'rgba(80,255,80,0.45)':'rgba(255,255,255,0.4)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(player.x,player.y,r+wob,0,Math.PI*2);ctx.stroke();
+  }
   // Force-field aura (aux)
   if(player.forceField){
     ctx.globalAlpha=.12;ctx.fillStyle='#88f';
@@ -2805,6 +3004,15 @@ function drawBattle(){
 
   for(const c of chests2){const b=Math.sin(c.bob)*3;ctx.fillStyle='#fa0';ctx.strokeStyle='#840';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(c.x-14,c.y-12+b,28,24,4);ctx.fill();ctx.stroke();ctx.fillStyle='#ff0';ctx.fillRect(c.x-3,c.y-4+b,6,8);ctx.shadowColor='#fa0';ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;}
 
+  // Fire zones (molotov puddles)
+  for(const z of fireZones){
+    const a=Math.min(1,z.life);
+    const wob=Math.sin(gameTime*6+z.x)*2;
+    ctx.fillStyle=`rgba(255,80,0,${a*0.4})`;ctx.beginPath();ctx.arc(z.x,z.y,z.radius+wob,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(255,200,0,${a*0.6})`;ctx.beginPath();ctx.arc(z.x,z.y,z.radius*0.55,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=`rgba(255,150,40,${a})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(z.x,z.y,z.radius,0,Math.PI*2);ctx.stroke();
+  }
   for(const g of gems){const b=Math.sin(g.bob)*3;ctx.fillStyle='#0f6';ctx.shadowColor='#0f6';ctx.shadowBlur=5;ctx.beginPath();ctx.arc(g.x,g.y+b,g.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
   for(const d of energyDrinks){
     const b=Math.sin(d.bob)*3;
@@ -2902,6 +3110,19 @@ function drawBattle(){
       ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,5);ctx.lineTo(-7,-5);ctx.closePath();ctx.fill();
       ctx.fillStyle='#888';ctx.fillRect(-9,-3,4,6);
       ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='boomerang'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.spinT*15);
+      ctx.fillStyle=b.color||'#a63';ctx.shadowColor='#fa0';ctx.shadowBlur=8;
+      ctx.fillRect(-b.radius,-3,b.radius*2,6);
+      ctx.fillRect(-3,-b.radius,6,b.radius*2);
+      ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='missile'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);
+      // White smoke trail
+      for(let t=1;t<=4;t++){ctx.fillStyle=`rgba(255,255,255,${0.4-t*0.08})`;ctx.beginPath();ctx.arc(-t*4,0,3-t*0.4,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=10;
+      ctx.fillRect(-3,-2,8,4);
+      ctx.shadowBlur=0;ctx.restore();
     } else if(b.kind==='soccer'){
       ctx.save();ctx.translate(b.x,b.y);ctx.rotate(gameTime*6);
       ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=6;
@@ -2915,24 +3136,29 @@ function drawBattle(){
     }
   }
 
-  // Bat orbits (rotating sticks). Lucille gets fire trail
-  const bw=getW('bat')||getW('lucille');
+  // Bat / lucille / bible / unholyBible orbits
+  const bw=getW('bat')||getW('lucille')||getW('bible')||getW('unholyBible');
   if(bw){
     const isLuc=bw.id==='lucille';
+    const isBible=bw.id==='bible'||bw.id==='unholyBible';
     const c=isLuc?'#f44':WEAPON_DEFS[bw.id].color;
     for(const o of weaponProjectiles){
-      if(isLuc){
-        // Spawn fire particles trailing the orbit
-        if(Math.random()<0.6){
-          particles.push({x:o.x+rnd(-4,4),y:o.y+rnd(-4,4),vx:rnd(-15,15),vy:rnd(-30,-10),
-            life:.4,maxLife:.5,radius:3+Math.random()*2,color:`hsl(${10+Math.random()*30},100%,55%)`});
-        }
+      if(isLuc&&Math.random()<0.6){
+        particles.push({x:o.x+rnd(-4,4),y:o.y+rnd(-4,4),vx:rnd(-15,15),vy:rnd(-30,-10),
+          life:.4,maxLife:.5,radius:3+Math.random()*2,color:`hsl(${10+Math.random()*30},100%,55%)`});
       }
       ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.angle*1.5);
-      if(isLuc){ctx.shadowColor='#f60';ctx.shadowBlur=20;}
-      ctx.fillStyle=c;ctx.shadowColor=isLuc?'#f60':c;ctx.shadowBlur=isLuc?20:10;
-      ctx.fillRect(-3,-12,6,24);
-      ctx.fillRect(-7,-14,14,6);
+      ctx.shadowColor=isLuc?'#f60':c;ctx.shadowBlur=isLuc?20:isBible?12:10;
+      if(isBible){
+        // Book: purple rect with white pages
+        ctx.fillStyle=c;ctx.fillRect(-7,-9,14,18);
+        ctx.fillStyle='#fff';ctx.fillRect(-5,-7,10,14);
+        ctx.strokeStyle=c;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(0,7);ctx.stroke();
+      } else {
+        ctx.fillStyle=c;
+        ctx.fillRect(-3,-12,6,24);
+        ctx.fillRect(-7,-14,14,6);
+      }
       ctx.shadowBlur=0;
       ctx.restore();
     }
@@ -3194,51 +3420,51 @@ function drawHUD(){
     ctx.fillText('⚡ EVOLVE READY! Level up to fuse the skill ⚡',W/2,H-51);
   }
 
-  // Left panel: attack skills + aux
-  const px2=2,py2=8,slH=30,slW=96;
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(px2,py2,slW,6*slH+22);
-  ctx.fillStyle='#ff0';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('⚔ ATTACK',px2+5,py2+12);
-  for(let i=0;i<6;i++){
-    const y=py2+16+i*slH;const w=player.weapons[i];
-    if(w){const d=WEAPON_DEFS[w.id];
-      ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
-      if(d.evolved){ctx.strokeStyle='#fa0';ctx.lineWidth=2;ctx.shadowColor='#fa0';ctx.shadowBlur=8;}
-      else{ctx.strokeStyle=d.color;ctx.lineWidth=1;}
-      ctx.strokeRect(px2+3,y,slW-6,slH-3);ctx.shadowBlur=0;
-      const sp=SPRITES[d.sprite];
-      if(sp){
-        if(d.tier==='S'){ctx.shadowColor='#fc0';ctx.shadowBlur=10;}
-        ctx.drawImage(sp,px2+4,y+2,26,26);
-        ctx.shadowBlur=0;
-        if(d.tier==='S'){
-          ctx.fillStyle='#fc0';ctx.fillRect(px2+22,y+2,8,8);
-          ctx.fillStyle='#000';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('S',px2+26,y+8);
-        }
-      }
-      else{ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);}
-      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillText(d.name.slice(0,9),px2+30,y+12);
-      // Star display
-      if(d.evolved){ctx.fillStyle='#fa0';ctx.font='bold 9px monospace';ctx.fillText('★EVOLVED',px2+30,y+24);}
-      else{
-        ctx.font='bold 10px monospace';ctx.fillStyle='#fc0';
-        ctx.fillText('★'.repeat(w.lv)+'☆'.repeat(5-w.lv),px2+30,y+25);
-      }
-    } else {ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);}
-  }
-  const psY=py2+16+6*slH+6;
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(px2,psY-6,slW,6*slH+22);
-  ctx.fillStyle='#0ff';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('✦ AUX',px2+5,psY+5);
+  // Left panel: MAIN WEAPON / SUB SKILLS / PASSIVE
+  const px2=2,slH=30,slW=98;
+  const drawSlot=(y,w,evolveAcc)=>{
+    if(!w){ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);return;}
+    const d=WEAPON_DEFS[w.id];if(!d)return;
+    ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
+    if(d.evolved){ctx.strokeStyle='#fa0';ctx.lineWidth=2;ctx.shadowColor='#fa0';ctx.shadowBlur=8;}
+    else{ctx.strokeStyle=d.color;ctx.lineWidth=1;}
+    ctx.strokeRect(px2+3,y,slW-6,slH-3);ctx.shadowBlur=0;
+    const sp=d.sprite&&SPRITES[d.sprite];
+    if(sp){
+      if(d.tier==='S'){ctx.shadowColor='#fc0';ctx.shadowBlur=10;}
+      ctx.drawImage(sp,px2+4,y+2,26,26);ctx.shadowBlur=0;
+      if(d.tier==='S'){ctx.fillStyle='#fc0';ctx.fillRect(px2+22,y+2,8,8);ctx.fillStyle='#000';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('S',px2+26,y+8);}
+    } else {ctx.font='18px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+22);}
+    ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillText(d.name.slice(0,10),px2+32,y+12);
+    if(d.evolved){ctx.fillStyle='#fa0';ctx.font='bold 9px monospace';ctx.fillText('★EVOLVED',px2+32,y+24);}
+    else{ctx.font='bold 10px monospace';ctx.fillStyle='#fc0';ctx.fillText('★'.repeat(w.lv)+'☆'.repeat(5-w.lv),px2+32,y+25);}
+  };
+  // MAIN WEAPON section (1 slot)
+  const py2=8;
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(px2,py2,slW,slH+22);
+  ctx.fillStyle='#fc0';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('⚔ MAIN WEAPON',px2+5,py2+12);
+  const mainW=player.weapons.find(w=>w.id===player.mainWeaponId);
+  drawSlot(py2+16,mainW,null);
+  // SUB SKILLS section (6 slots)
+  const subY=py2+slH+22+6;
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(px2,subY-6,slW,6*slH+22);
+  ctx.fillStyle='#ff0';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('✦ SUB SKILLS',px2+5,subY+5);
+  const subSkills=player.weapons.filter(w=>w.id!==player.mainWeaponId);
+  for(let i=0;i<6;i++)drawSlot(subY+10+i*slH,subSkills[i]);
+  // PASSIVE section (6 slots)
+  const psY=subY+10+6*slH+6;
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(px2,psY-6,slW,6*slH+22);
+  ctx.fillStyle='#0ff';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('✧ PASSIVE',px2+5,psY+5);
   for(let i=0;i<6;i++){
     const y=psY+10+i*slH;const p=player.passives[i];
-    if(p){const d=PASSIVE_DEFS[p.id];
-      ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
+    if(p){const d=PASSIVE_DEFS[p.id];if(!d){ctx.strokeStyle='#333';ctx.strokeRect(px2+3,y,slW-6,slH-3);continue;}
+      ctx.fillStyle=d.color;ctx.globalAlpha=.22;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
       ctx.strokeStyle=d.color;ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);
-      ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);
-      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,9),px2+25,y+12);
-      // Show evolve target if any
+      ctx.font='16px serif';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText(d.icon,px2+6,y+18);
+      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,10),px2+25,y+12);
       if(d.evolveTarget){const td=WEAPON_DEFS[d.evolveTarget];const tw=getW(d.evolveTarget);
         ctx.fillStyle=tw&&tw.lv>=5?'#fa0':'#aaa';ctx.font='8px monospace';
-        ctx.fillText(`→${td.name.slice(0,5)}`,px2+25,y+25);
+        if(td)ctx.fillText(`→${td.name.slice(0,6)}`,px2+25,y+25);
       }
     } else {ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);}
   }
