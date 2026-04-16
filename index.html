@@ -3,115 +3,150 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Dada Survivor Clone</title>
+<title>Dada Survivor Complete</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:#0a0a1a;font-family:'Segoe UI',sans-serif;color:#fff;overflow:hidden;height:100vh;width:100vw}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',sans-serif}
+body{background:#0a0a1a;color:#fff;overflow:hidden;height:100vh;width:100vw;position:fixed}
 .screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto}
 .screen.active{display:flex;flex-direction:column}
 canvas{display:block;margin:0 auto}
 
 /* ─── HOME ─── */
-#home{background:linear-gradient(135deg,#0a0a2e,#1a0a2e);align-items:center;padding:16px}
-.home-title{font-size:28px;font-weight:bold;color:#f80;text-shadow:0 0 20px #f80;margin:8px 0}
-.home-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:6px 0;width:100%;max-width:900px}
-.home-card{background:rgba(255,255,255,0.06);border:1px solid #333;border-radius:10px;padding:12px;min-width:160px;flex:1;max-width:220px;text-align:center;cursor:pointer;transition:all .2s}
-.home-card:hover{border-color:#f80;background:rgba(255,200,0,0.08)}
-.home-card.selected{border-color:#f80;box-shadow:0 0 12px rgba(255,136,0,0.4)}
-.home-card .big-icon{font-size:54px;line-height:1.2;margin-bottom:6px}
+#home{background:linear-gradient(135deg,#0a0a2e,#1a0a2e,#0a1a2e);align-items:center;padding:14px 14px 100px}
+.home-title{font-size:30px;font-weight:bold;color:#f80;text-shadow:0 0 24px #f80;margin:6px 0;letter-spacing:2px}
+.coin-bar{background:rgba(0,0,0,.5);padding:8px 18px;border-radius:20px;border:2px solid #fa0;margin-bottom:8px;font-size:18px;font-weight:bold;color:#ff0;text-shadow:0 0 8px #fa0}
+.home-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:6px 0;width:100%;max-width:980px}
+.home-card{background:rgba(255,255,255,.06);border:1px solid #333;border-radius:12px;padding:12px;min-width:160px;flex:1;max-width:230px;text-align:center;cursor:pointer;transition:all .15s}
+.home-card:hover{border-color:#f80;background:rgba(255,200,0,.08);transform:translateY(-2px)}
+.home-card.selected{border-color:#f80;box-shadow:0 0 14px rgba(255,136,0,.5)}
+.home-card .big-icon{font-size:50px;line-height:1.2;margin-bottom:4px}
 .home-card h3{font-size:16px;margin-bottom:4px}
-.home-card p{font-size:11px;color:#aaa}
-.home-card .stats{font-size:11px;color:#4af;margin:4px 0}
-.btn{padding:10px 28px;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;transition:all .2s;color:#fff}
+.home-card p{font-size:11px;color:#aaa;line-height:1.3}
+.home-card .stats{font-size:11px;color:#4af;margin:4px 0;font-weight:bold}
+.btn{padding:9px 22px;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;transition:all .15s;color:#fff}
 .btn:hover{transform:scale(1.05);filter:brightness(1.2)}
 .btn-orange{background:linear-gradient(135deg,#f80,#f50)}
 .btn-blue{background:linear-gradient(135deg,#28f,#06f)}
 .btn-green{background:linear-gradient(135deg,#0a0,#080)}
 .btn-purple{background:linear-gradient(135deg,#a0f,#80f)}
 .btn-red{background:linear-gradient(135deg,#f44,#d22)}
-.btn:disabled{opacity:0.4;cursor:default;transform:none}
-.coin-display{color:#ff0;font-size:18px;font-weight:bold;text-shadow:0 0 8px #ff0}
-.tab-bar{display:flex;gap:4px;margin:8px 0;flex-wrap:wrap;justify-content:center}
-.tab-bar button{padding:8px 16px;border:1px solid #444;background:rgba(255,255,255,0.05);border-radius:8px 8px 0 0;color:#aaa;cursor:pointer;font-size:13px}
-.tab-bar button.active{background:rgba(255,255,255,0.12);color:#fff;border-bottom-color:transparent}
-.panel{background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0 0 10px 10px;padding:12px;width:100%;max-width:900px;min-height:200px}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.tab-bar{display:flex;gap:4px;margin:8px 0 0;flex-wrap:wrap;justify-content:center;width:100%;max-width:980px}
+.tab-bar button{padding:8px 14px;border:1px solid #444;background:rgba(255,255,255,.05);border-radius:8px 8px 0 0;color:#aaa;cursor:pointer;font-size:12px;font-weight:bold}
+.tab-bar button.active{background:rgba(255,255,255,.13);color:#fff;border-bottom-color:transparent}
+.panel{background:rgba(0,0,0,.35);border:1px solid #333;border-radius:0 12px 12px 12px;padding:14px;width:100%;max-width:980px;min-height:240px}
 
-/* Equipment */
-.equip-grid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-.inv-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:420px;margin:0 auto}
-.equip-slot{width:74px;height:74px;border:2px solid #444;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;cursor:pointer;position:relative;transition:all .15s;padding:2px}
+/* Floating BATTLE button */
+#battleBtn{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f80,#f33);color:#fff;border:none;padding:14px 60px;font-size:22px;font-weight:bold;border-radius:14px;cursor:pointer;box-shadow:0 6px 24px rgba(255,80,0,.6);z-index:50;letter-spacing:2px;animation:battlePulse 2s infinite}
+#battleBtn:hover{transform:translateX(-50%)scale(1.05)}
+@keyframes battlePulse{0%,100%{box-shadow:0 6px 24px rgba(255,80,0,.6)}50%{box-shadow:0 6px 36px rgba(255,140,0,.9)}}
+
+/* Equipment grid */
+.equip-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
+.inv-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:430px;margin:0 auto}
+.equip-slot{width:74px;height:80px;border:2px solid #444;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;cursor:pointer;position:relative;transition:all .15s;padding:3px}
 .equip-slot:hover{border-color:#fff;transform:scale(1.08);z-index:5}
 .equip-slot .eq-icon{font-size:24px;line-height:1}
-.equip-slot .eq-rank{font-size:8px;font-weight:bold}
-.rank-gray{border-color:#888;background:rgba(120,120,120,0.18)}
-.rank-green{border-color:#0c0;background:rgba(0,200,0,0.18)}
-.rank-blue{border-color:#08f;background:rgba(0,140,255,0.18)}
-.rank-purple{border-color:#c6f;background:rgba(180,80,255,0.20)}
-.rank-gold{border-color:#fa0;background:rgba(255,180,0,0.22);box-shadow:0 0 10px rgba(255,180,0,0.45)}
-.rank-red{border-color:#f33;background:rgba(255,40,40,0.25);box-shadow:0 0 14px rgba(255,40,40,0.55);animation:redGlow 1.6s infinite alternate}
-@keyframes redGlow{from{box-shadow:0 0 14px rgba(255,40,40,0.55)}to{box-shadow:0 0 22px rgba(255,80,80,0.9)}}
+.rank-gray{border-color:#888;background:rgba(120,120,120,.18)}
+.rank-green{border-color:#0c0;background:rgba(0,200,0,.18)}
+.rank-blue{border-color:#08f;background:rgba(0,140,255,.18)}
+.rank-purple{border-color:#c6f;background:rgba(180,80,255,.20)}
+.rank-gold{border-color:#fa0;background:rgba(255,180,0,.22);box-shadow:0 0 10px rgba(255,180,0,.45)}
+.rank-red{border-color:#f33;background:rgba(255,40,40,.25);box-shadow:0 0 14px rgba(255,40,40,.55);animation:redGlow 1.6s infinite alternate}
+@keyframes redGlow{from{box-shadow:0 0 14px rgba(255,40,40,.55)}to{box-shadow:0 0 22px rgba(255,80,80,.9)}}
+
+/* Daily / Records */
+.mission-row{display:flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid #333;border-radius:8px;padding:10px;margin:6px 0;gap:10px}
+.mission-row.done{border-color:#0a0;background:rgba(0,160,0,.1)}
+.mission-row .mi{font-size:30px}
+.mission-row .info{flex:1}
+.mission-row .info b{font-size:14px;display:block}
+.mission-row .info p{font-size:11px;color:#aaa}
+.bar-bg{height:8px;background:rgba(0,0,0,.4);border-radius:4px;overflow:hidden;margin-top:4px}
+.bar-fill{height:100%;background:linear-gradient(90deg,#0a0,#0f0);transition:width .3s}
 
 /* Result */
 #result{background:linear-gradient(135deg,#0a0a2e,#1a0a2e);align-items:center;justify-content:center;padding:20px}
-.result-box{background:rgba(0,0,0,0.4);border:1px solid #444;border-radius:16px;padding:24px;text-align:center;max-width:500px;width:100%}
-.result-box h2{font-size:24px;margin-bottom:12px}
-.result-box .stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #222;font-size:14px}
-.result-box .stat-row span:last-child{color:#ff0}
-.result-btns{display:flex;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap}
+.result-box{background:rgba(0,0,0,.5);border:2px solid #444;border-radius:18px;padding:28px;text-align:center;max-width:560px;width:100%}
+.result-box h2{font-size:28px;margin-bottom:14px}
+.result-box .stat-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #222;font-size:14px}
+.result-box .stat-row span:last-child{color:#ff0;font-weight:bold}
+.result-btns{display:flex;gap:10px;margin-top:18px;justify-content:center;flex-wrap:wrap}
+.dropped-eq{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:10px}
+.dropped-eq .equip-slot{width:54px;height:60px}
+.dropped-eq .equip-slot .eq-icon{font-size:20px}
 
-.chapter-card{min-width:160px;padding:16px;text-align:center}
-.chapter-card.locked{opacity:0.5}
+/* Chapter */
+.chapter-card{min-width:200px;padding:18px;text-align:center}
+.chapter-card.locked{opacity:.45}
 
-/* Gacha popup overlay */
-#gachaPopup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column;padding:20px;overflow-y:auto}
+/* Gacha popup */
+#gachaPopup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:100;flex-direction:column;padding:20px;overflow-y:auto}
 #gachaPopup.show{display:flex}
-.gacha-popup-title{font-size:32px;color:#fa0;text-shadow:0 0 20px #fa0;margin-bottom:20px;animation:gachaTitle .6s}
+.gacha-popup-title{font-size:34px;color:#fa0;text-shadow:0 0 20px #fa0;margin-bottom:16px;font-weight:bold;letter-spacing:2px;animation:gachaTitle .6s}
 @keyframes gachaTitle{from{transform:scale(0)rotate(-180deg);opacity:0}to{transform:scale(1)rotate(0);opacity:1}}
-.gacha-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:560px;margin:14px}
-.gacha-card{width:100px;height:130px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;animation:gachaIn .5s ease-out backwards;border-width:3px;border-style:solid;padding:6px}
+.gacha-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:600px;margin:14px}
+.gacha-card{width:104px;height:138px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;animation:cardFlip .55s ease-out backwards;border-width:3px;border-style:solid;padding:6px}
 .gacha-card .gc-icon{font-size:34px}
-.gacha-card .gc-rank{font-weight:bold;font-size:11px;margin-top:4px}
+.gacha-card .gc-rank{font-weight:bold;font-size:12px;margin-top:5px}
 .gacha-card .gc-slot{font-size:10px;color:#ddd}
-@keyframes gachaIn{0%{transform:scale(0)rotate(180deg);opacity:0}60%{transform:scale(1.15)rotate(-10deg);opacity:1}100%{transform:scale(1)rotate(0);opacity:1}}
+@keyframes cardFlip{0%{transform:rotateY(180deg)scale(0);opacity:0}55%{transform:rotateY(-15deg)scale(1.15);opacity:1}100%{transform:rotateY(0)scale(1);opacity:1}}
 .gacha-card:nth-child(1){animation-delay:0s}
-.gacha-card:nth-child(2){animation-delay:.08s}
-.gacha-card:nth-child(3){animation-delay:.16s}
-.gacha-card:nth-child(4){animation-delay:.24s}
-.gacha-card:nth-child(5){animation-delay:.32s}
-.gacha-card:nth-child(6){animation-delay:.40s}
-.gacha-card:nth-child(7){animation-delay:.48s}
-.gacha-card:nth-child(8){animation-delay:.56s}
-.gacha-card:nth-child(9){animation-delay:.64s}
-.gacha-card:nth-child(10){animation-delay:.72s}
+.gacha-card:nth-child(2){animation-delay:.07s}
+.gacha-card:nth-child(3){animation-delay:.14s}
+.gacha-card:nth-child(4){animation-delay:.21s}
+.gacha-card:nth-child(5){animation-delay:.28s}
+.gacha-card:nth-child(6){animation-delay:.35s}
+.gacha-card:nth-child(7){animation-delay:.42s}
+.gacha-card:nth-child(8){animation-delay:.49s}
+.gacha-card:nth-child(9){animation-delay:.56s}
+.gacha-card:nth-child(10){animation-delay:.63s}
+
+#rarityFlash{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:0;z-index:99;transition:opacity .25s}
+#rarityFlash.flash{animation:rarityFlash .8s}
+@keyframes rarityFlash{0%{opacity:0}30%{opacity:.7}100%{opacity:0}}
+
+#legendaryText{position:fixed;top:35%;left:50%;transform:translateX(-50%);font-size:60px;font-weight:bold;color:#f44;text-shadow:0 0 30px #f00,0 0 60px #f00;pointer-events:none;display:none;z-index:101;letter-spacing:4px}
+#legendaryText.show{display:block;animation:legPop 1.2s}
+@keyframes legPop{0%{transform:translateX(-50%)scale(0)rotate(-15deg);opacity:0}50%{transform:translateX(-50%)scale(1.2)rotate(5deg);opacity:1}100%{transform:translateX(-50%)scale(1)rotate(0);opacity:1}}
+
+/* Equipment action menu */
+#eqMenu{position:fixed;background:rgba(20,20,40,.97);border:2px solid #fa0;border-radius:10px;padding:10px;display:none;z-index:90;box-shadow:0 6px 30px rgba(0,0,0,.7)}
+#eqMenu.show{display:block}
+#eqMenu button{display:block;width:100%;margin:4px 0;padding:8px 14px;border-radius:6px;border:none;color:#fff;cursor:pointer;font-size:13px;font-weight:bold}
 </style>
 </head>
 <body>
 
-<!-- ═══ HOME SCREEN ═══ -->
+<!-- ═══ HOME ═══ -->
 <div id="home" class="screen active">
   <div class="home-title">DADA SURVIVOR</div>
-  <div class="coin-display" id="coinDisplay">💰 Coins: 0</div>
+  <div class="coin-bar" id="coinDisplay">💰 0 Coins</div>
   <div class="tab-bar" id="homeTabs"></div>
   <div class="panel" id="homePanel"></div>
 </div>
+<button id="battleBtn" onclick="startBattle()">⚔ BATTLE ⚔</button>
 
-<!-- ═══ BATTLE SCREEN ═══ -->
+<!-- ═══ BATTLE ═══ -->
 <div id="battle" class="screen">
   <canvas id="game" width="1280" height="720"></canvas>
-  <div id="joystickArea" style="position:absolute;bottom:20px;left:20px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.15);display:none">
-    <div id="joystickKnob" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);position:absolute;top:50px;left:50px"></div>
+  <div id="joystickArea" style="position:absolute;bottom:20px;left:20px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.15);display:none">
+    <div id="joystickKnob" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.2);position:absolute;top:45px;left:45px"></div>
   </div>
 </div>
 
-<!-- ═══ RESULT SCREEN ═══ -->
+<!-- ═══ RESULT ═══ -->
 <div id="result" class="screen"></div>
 
-<!-- ═══ GACHA POPUP ═══ -->
+<!-- Gacha popup -->
 <div id="gachaPopup">
   <div class="gacha-popup-title" id="gachaPopupTitle">✨ GACHA RESULT ✨</div>
   <div class="gacha-cards" id="gachaCards"></div>
   <button class="btn btn-orange" onclick="closeGachaPopup()" style="margin-top:18px">CONTINUE</button>
 </div>
+<div id="rarityFlash"></div>
+<div id="legendaryText">🎉 LEGENDARY! 🎉</div>
+<div id="eqMenu"></div>
 
 <script>
 'use strict';
@@ -119,7 +154,7 @@ canvas{display:block;margin:0 auto}
 /* ═══════════════════════════════════════════════════════
    SAVE DATA
    ═══════════════════════════════════════════════════════ */
-const SAVE_KEY='dada_survivor_v3';
+const SAVE_KEY='dada_survivor_v4';
 function defaultSave(){
   return {
     coins:0,
@@ -133,75 +168,156 @@ function defaultSave(){
     selectedChapter:1,
     gachaPity:0,gachaTotal:0,sgachaPity:0,
     eqIdCounter:0,
+    daily:{date:'',progress:{battle:0,kills:0,gacha:0},claimed:{battle:false,kills:false,gacha:false}},
+    records:{totalBattles:0,totalKills:0,totalPlayTime:0,longestSurvival:0,highestLevel:1,totalEvolutions:0,achievements:{}},
   };
 }
 let save;
-function loadSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));if(d&&typeof d.coins==='number')return d;return defaultSave();}catch(e){return defaultSave();}}
+function loadSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));if(d&&typeof d.coins==='number'){
+  // Merge missing fields
+  const def=defaultSave();
+  for(const k of Object.keys(def))if(d[k]===undefined)d[k]=def[k];
+  if(!d.daily)d.daily=def.daily;
+  if(!d.records)d.records=def.records;
+  return d;
+}return defaultSave();}catch(e){return defaultSave();}}
 function saveSave(){localStorage.setItem(SAVE_KEY,JSON.stringify(save));}
 save=loadSave();
 
 /* ═══════════════════════════════════════════════════════
-   DEFINITIONS
+   CONSTANTS
    ═══════════════════════════════════════════════════════ */
 const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
-const RANK_MULT={gray:1,green:1.5,blue:2.2,purple:3.5,gold:5,red:8};
+const RANK_PERCENT={
+  weapon:{gray:5,green:10,blue:20,purple:35,gold:55,red:80},
+  armor:{gray:5,green:10,blue:20,purple:35,gold:55,red:80},
+  boots:{gray:3,green:6,blue:10,purple:15,gold:20,red:25},
+  belt:{gray:5,green:10,blue:15,purple:22,gold:30,red:40},
+  gloves:{gray:3,green:6,blue:9,purple:13,gold:17,red:20},
+  necklace:{gray:3,green:6,blue:9,purple:13,gold:17,red:20},
+};
 const SLOT_NAMES={weapon:'Weapon',armor:'Armor',boots:'Boots',belt:'Belt',gloves:'Gloves',necklace:'Necklace'};
 const SLOT_ICONS={weapon:'⚔️',armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',necklace:'📿'};
 const SLOT_EFFECTS={weapon:'ATK',armor:'MaxHP',boots:'Speed',belt:'XP Gain',gloves:'Crit%',necklace:'CD Reduce'};
-const SLOT_BASE={weapon:5,armor:5,boots:3,belt:4,gloves:2,necklace:3};
 
 const CHARS={
-  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:100,baseHp:100,skill:'5% double coin drop',color:'#4af',outline:'#f80',letter:'C'},
-  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:130,baseHp:80,skill:'Bow range +30%',cost:500,color:'#0a0',outline:'#0f0',letter:'A'},
-  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:80,baseHp:150,skill:'Damage taken -15%',cost:1000,color:'#c22',outline:'#f44',letter:'K'},
+  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:100,baseHp:100,
+    skill:'5% double coin drop',color:'#4af',outline:'#f80',letter:'C'},
+  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:130,baseHp:80,
+    skill:'Bow range +30%',cost:500,color:'#0a0',outline:'#0f0',letter:'A'},
+  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:80,baseHp:150,
+    skill:'Damage taken -15%',cost:1000,color:'#c22',outline:'#f44',letter:'K'},
 };
 
 const PET_DEFS={
-  hachiko:{name:'Hachiko',icon:'🐕',desc:'Deals small damage to nearby enemies',color:'#fa0'},
+  hachiko:{name:'Hachiko',icon:'🐕',desc:'Orbits and dashes at enemies',color:'#fa0'},
   frog:{name:'Frog',icon:'🐸',desc:'Auto-collects XP orbs',cost:800,color:'#0f0'},
 };
 
 const CHAPTER_DEFS={
-  1:{name:'Ch.1: Graveyard',time:300,diff:1,coinMult:1,dropMult:1,clearReward:200,desc:'Survive 5 minutes'},
-  2:{name:'Ch.2: Dungeon',time:600,diff:1.5,coinMult:1.5,dropMult:1.3,clearReward:500,desc:'Survive 10 minutes',cost:500},
-  3:{name:'Ch.3: Hell',time:1200,diff:2.5,coinMult:2.5,dropMult:2,clearReward:1500,desc:'Survive 20 minutes',cost:1500},
+  1:{name:'Ch.1: Graveyard',time:300,diff:1,coinMult:1,clearReward:200,desc:'Survive 5 minutes'},
+  2:{name:'Ch.2: Dungeon',time:600,diff:1.5,coinMult:1.5,clearReward:500,desc:'Survive 10 minutes',cost:500},
+  3:{name:'Ch.3: Hell',time:1200,diff:2.5,coinMult:2.5,clearReward:1500,desc:'Survive 20 minutes',cost:1500},
 };
 
-function eqStatValue(slot,rank){return SLOT_BASE[slot]*RANK_MULT[rank];}
+/* Boss schedule (game time → boss key) */
+const BOSS_SCHEDULE=[
+  {time:300,key:'giantZombie'},
+  {time:600,key:'skeletonKing'},
+  {time:900,key:'armorLord'},
+  {time:1200,key:'demonKing'},
+  {time:1800,key:'finalBoss'},
+];
+const BOSS_DEFS={
+  giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:5000,speed:30,damage:30,xp:80,outline:'#0f0'},
+  skeletonKing:{name:'Skeleton King',color:'#eee',radius:45,hp:10000,speed:32,damage:40,xp:120,outline:'#fff'},
+  armorLord:{name:'Armor Lord',color:'#888',radius:50,hp:20000,speed:28,damage:55,xp:180,outline:'#fa0'},
+  demonKing:{name:'Demon King',color:'#e22',radius:55,hp:40000,speed:35,damage:70,xp:280,outline:'#f00',hasWings:true},
+  finalBoss:{name:'Final Boss',color:'#000',radius:60,hp:100000,speed:30,damage:100,xp:500,rainbow:true},
+};
 
+/* Daily missions */
+const DAILY_MISSIONS=[
+  {key:'battle',name:'Play 1 battle',target:1,reward:50,icon:'⚔️'},
+  {key:'kills',name:'Defeat 100 enemies',target:100,reward:80,icon:'💀'},
+  {key:'gacha',name:'Pull gacha 1 time',target:1,reward:30,icon:'🎰'},
+];
+
+/* Achievements */
+const ACHIEVEMENTS=[
+  {key:'firstBattle',name:'First Battle',desc:'Play your first battle',cond:r=>r.totalBattles>=1,reward:100},
+  {key:'kills1k',name:'Slayer',desc:'Defeat 1000 enemies',cond:r=>r.totalKills>=1000,reward:200},
+  {key:'survive5m',name:'Survivor',desc:'Survive 5 minutes',cond:r=>r.longestSurvival>=300,reward:150},
+  {key:'firstEvo',name:'Evolved',desc:'Evolve a weapon',cond:r=>r.totalEvolutions>=1,reward:300},
+  {key:'kills5k',name:'Annihilator',desc:'Defeat 5000 enemies',cond:r=>r.totalKills>=5000,reward:500},
+  {key:'survive20m',name:'Endurance',desc:'Survive 20 minutes',cond:r=>r.longestSurvival>=1200,reward:800},
+];
+
+/* Equipment helpers */
+function eqStatValue(slot,rank){return RANK_PERCENT[slot][rank];}
 function getEquippedBonus(stat){
-  for(const[sl,s]of Object.entries(SLOT_EFFECTS)){
-    if(s===stat&&save.equipped[sl]!=null){
-      const eq=save.equipment.find(e=>e.id===save.equipped[sl]);
-      if(eq)return eqStatValue(eq.slot,eq.rank);
-    }
+  for(const[sl,s]of Object.entries(SLOT_EFFECTS))if(s===stat&&save.equipped[sl]!=null){
+    const eq=save.equipment.find(e=>e.id===save.equipped[sl]);
+    if(eq)return eqStatValue(eq.slot,eq.rank);
   }
   return 0;
 }
+function makeEquip(slot,rank){const id=++save.eqIdCounter;save.equipment.push({id,slot,rank,equipped:false});return id;}
 
-function makeEquip(slot,rank){
-  const id=++save.eqIdCounter;
-  save.equipment.push({id,slot,rank,equipped:false});
-  return id;
+/* Char level cost */
+function charLvCost(curLv){
+  if(curLv===1)return 50;
+  if(curLv===2)return 120;
+  return Math.floor(120*Math.pow(2,curLv-2));
+}
+const MAX_CHAR_LV=20;
+
+/* Daily helpers */
+function checkDaily(){
+  const today=new Date().toISOString().slice(0,10);
+  if(save.daily.date!==today){
+    save.daily={date:today,progress:{battle:0,kills:0,gacha:0},claimed:{battle:false,kills:false,gacha:false}};
+    saveSave();
+  }
+}
+function dailyProgress(key,n){checkDaily();save.daily.progress[key]=(save.daily.progress[key]||0)+(n||1);saveSave();}
+window.claimDaily=function(key){
+  checkDaily();const m=DAILY_MISSIONS.find(x=>x.key===key);
+  if(!m||save.daily.claimed[key]||save.daily.progress[key]<m.target)return;
+  save.daily.claimed[key]=true;save.coins+=m.reward;saveSave();renderHome();
+};
+
+/* Records */
+function checkAchievements(){
+  let claimed=0;
+  for(const a of ACHIEVEMENTS){
+    if(!save.records.achievements[a.key]&&a.cond(save.records)){
+      save.records.achievements[a.key]=true;save.coins+=a.reward;claimed++;
+    }
+  }
+  if(claimed>0)saveSave();
+  return claimed;
 }
 
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Pets','Chapters'];
+const tabs=['Characters','Equipment','Gacha','Pets','Chapters','Daily','Records'];
 let currentTab='Characters';
 
 function showHome(){
   document.getElementById('home').classList.add('active');
   document.getElementById('battle').classList.remove('active');
   document.getElementById('result').classList.remove('active');
-  renderHome();
+  document.getElementById('battleBtn').style.display='block';
+  checkDaily();renderHome();
 }
+function hideBattleBtn(){document.getElementById('battleBtn').style.display='none';}
 
 function renderHome(){
-  document.getElementById('coinDisplay').textContent=`💰 Coins: ${save.coins}`;
+  document.getElementById('coinDisplay').textContent=`💰 ${save.coins} Coins`;
   const tb=document.getElementById('homeTabs');tb.innerHTML='';
   for(const t of tabs){
     const b=document.createElement('button');
@@ -216,6 +332,8 @@ function renderHome(){
     case'Gacha':renderGacha(panel);break;
     case'Pets':renderPets(panel);break;
     case'Chapters':renderChapters(panel);break;
+    case'Daily':renderDaily(panel);break;
+    case'Records':renderRecords(panel);break;
   }
 }
 
@@ -223,78 +341,110 @@ function renderHome(){
 function renderChars(p){
   let h='<div class="home-row">';
   for(const[id,c]of Object.entries(CHARS)){
-    const d=save.chars[id];
-    const sel=save.selectedChar===id;
-    const atk=Math.floor(c.baseAtk*(1+((d.lv-1)*0.08))+getEquippedBonus('ATK'));
-    const hp=Math.floor(c.baseHp*(1+((d.lv-1)*0.05))+getEquippedBonus('MaxHP'));
-    const upgCost=d.lv*50;
+    const d=save.chars[id];const sel=save.selectedChar===id;
+    const atk=Math.floor(c.baseAtk*(1+(d.lv-1)*0.08));
+    const hp=Math.floor(c.baseHp*(1+(d.lv-1)*0.05));
+    const cost=charLvCost(d.lv);
     h+=`<div class="home-card ${sel?'selected':''}" onclick="selectChar('${id}')">
       <div class="big-icon">${c.icon}</div>
       <h3 style="color:${c.outline}">${c.name}</h3>
-      <div class="stats">Lv${d.lv} | ATK ${atk} | HP ${hp}</div>
+      <div class="stats">Lv${d.lv}/${MAX_CHAR_LV}</div>
+      <div class="stats">⚔ ATK ${atk} | ❤ HP ${hp}</div>
       <p>${c.skill}</p>`;
     if(!d.unlocked)h+=`<button class="btn btn-orange" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();unlockChar('${id}')">Unlock ${c.cost}G</button>`;
-    else h+=`<button class="btn btn-blue" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();upgradeChar('${id}')">Lv UP (${upgCost}G)</button>`;
+    else if(d.lv<MAX_CHAR_LV)h+=`<button class="btn btn-blue" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();upgradeChar('${id}')">Lv UP (${cost}G)</button>`;
+    else h+=`<div style="color:#fa0;font-size:12px;margin-top:8px;font-weight:bold">★ MAX LEVEL ★</div>`;
     h+=`</div>`;
   }
   h+='</div>';
-  h+=`<div style="text-align:center;margin-top:14px"><button class="btn btn-orange" style="font-size:20px;padding:16px 60px" onclick="startBattle()">⚔ BATTLE ⚔</button></div>`;
   p.innerHTML=h;
 }
 window.selectChar=function(id){if(!save.chars[id].unlocked)return;save.selectedChar=id;saveSave();renderHome();};
-window.unlockChar=function(id){const cost=CHARS[id].cost||0;if(save.coins<cost)return;save.coins-=cost;save.chars[id].unlocked=true;saveSave();renderHome();};
-window.upgradeChar=function(id){const d=save.chars[id];const cost=d.lv*50;if(save.coins<cost||!d.unlocked)return;save.coins-=cost;d.lv++;saveSave();renderHome();};
+window.unlockChar=function(id){const c=CHARS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chars[id].unlocked=true;saveSave();renderHome();};
+window.upgradeChar=function(id){const d=save.chars[id];if(!d.unlocked||d.lv>=MAX_CHAR_LV)return;const c=charLvCost(d.lv);if(save.coins<c)return;save.coins-=c;d.lv++;saveSave();renderHome();};
 
 /* ── Equipment ── */
+let eqMenuOpenId=null;
 function renderEquip(p){
-  let h='<div style="text-align:center;margin-bottom:8px"><b>Equipped</b></div><div class="equip-grid" style="margin-bottom:14px">';
+  let h='<div style="text-align:center;margin-bottom:8px;color:#fa0;font-weight:bold">EQUIPPED</div><div class="equip-row">';
   for(const[slot,name]of Object.entries(SLOT_NAMES)){
     const eqId=save.equipped[slot];
     const eq=eqId!=null?save.equipment.find(e=>e.id===eqId):null;
     const rc=eq?`rank-${eq.rank}`:'';
-    const val=eq?`+${eqStatValue(eq.slot,eq.rank).toFixed(1)}% ${SLOT_EFFECTS[slot]}`:'Empty';
-    h+=`<div class="equip-slot ${rc}" onclick="${eq?`equipOrSelect(${eq.id})`:''}" title="${name}: ${val}">
+    const val=eq?`+${eqStatValue(eq.slot,eq.rank)}% ${SLOT_EFFECTS[slot]}`:'Empty';
+    h+=`<div class="equip-slot ${rc}" onclick="${eq?`openEqMenu(${eq.id},event)`:''}" title="${name}: ${val}">
       <div class="eq-icon">${SLOT_ICONS[slot]}</div>
       <div style="font-size:9px">${name}</div>
-      ${eq?`<div class="eq-rank" style="color:${RANK_COLORS[eq.rank]}">${RANK_NAMES[eq.rank]}</div>`:'<div style="font-size:8px;color:#666">empty</div>'}
+      ${eq?`<div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${RANK_NAMES[eq.rank]}</div>
+      <div style="font-size:8px;color:#0f0">+${eqStatValue(eq.slot,eq.rank)}%</div>`:'<div style="font-size:8px;color:#666">empty</div>'}
     </div>`;
   }
   h+='</div>';
 
-  h+=`<div style="text-align:center;margin:8px 0 6px"><b>Inventory (${save.equipment.length}/50)</b></div>`;
+  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold">INVENTORY (${save.equipment.length}/50)</div>`;
   h+='<div class="inv-grid">';
-  // 50 slots (5x10 grid)
-  const items=save.equipment.slice();
-  // Sort by rank desc then slot
-  items.sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank));
+  const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank));
   for(let i=0;i<50;i++){
     const eq=items[i];
     if(eq){
-      const isEquipped=Object.values(save.equipped).includes(eq.id);
-      h+=`<div class="equip-slot rank-${eq.rank}" onclick="equipOrSelect(${eq.id})" style="${isEquipped?'opacity:0.45;border-style:dashed':''}">
+      const isEq=Object.values(save.equipped).includes(eq.id);
+      h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
         <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
-        <div class="eq-rank" style="color:${RANK_COLORS[eq.rank]}">${RANK_NAMES[eq.rank]}</div>
-        <div style="font-size:8px;color:#ccc">${SLOT_NAMES[eq.slot]}</div>
-        ${isEquipped?'<div style="font-size:7px;color:#0f0">★EQ</div>':''}
+        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${RANK_NAMES[eq.rank]}</div>
+        <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]}</div>
+        <div style="font-size:8px;color:#0f0">+${eqStatValue(eq.slot,eq.rank)}%</div>
+        ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
       </div>`;
     } else {
-      h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:0.4;cursor:default"></div>`;
+      h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
     }
   }
   h+='</div>';
-
   h+=`<div style="text-align:center;margin-top:14px">
-    <button class="btn btn-purple" onclick="autoMerge()">⚒ Auto Merge</button>
+    <button class="btn btn-purple" onclick="autoMerge()">⚒ Auto Merge All</button>
     <span style="font-size:11px;color:#aaa;margin-left:10px">Same slot + same rank × 2 → upgrade</span>
   </div>`;
   p.innerHTML=h;
 }
-window.equipOrSelect=function(id){
+
+window.openEqMenu=function(id,ev){
+  ev&&ev.stopPropagation();
   const eq=save.equipment.find(e=>e.id===id);if(!eq)return;
-  const cur=save.equipped[eq.slot];
-  if(cur===id)save.equipped[eq.slot]=null;
+  const isEq=Object.values(save.equipped).includes(eq.id);
+  // Find matching same-slot same-rank items (excluding equipped)
+  const matches=save.equipment.filter(e=>e.slot===eq.slot&&e.rank===eq.rank&&e.id!==eq.id&&!Object.values(save.equipped).includes(e.id));
+  const canMerge=matches.length>=1&&RANKS.indexOf(eq.rank)<RANKS.length-1&&!isEq;
+  const m=document.getElementById('eqMenu');
+  m.innerHTML=`<div style="font-weight:bold;margin-bottom:6px;color:${RANK_COLORS[eq.rank]}">${SLOT_ICONS[eq.slot]} ${RANK_NAMES[eq.rank]} ${SLOT_NAMES[eq.slot]}</div>
+    <div style="font-size:11px;color:#0f0;margin-bottom:6px">+${eqStatValue(eq.slot,eq.rank)}% ${SLOT_EFFECTS[eq.slot]}</div>
+    <button class="btn-blue" onclick="equipOrUnequip(${id})">${isEq?'Unequip':'Equip'}</button>
+    ${canMerge?`<button class="btn-purple" onclick="mergeOne(${id})">Merge with 1 (${matches.length} avail)</button>`:''}
+    <button class="btn-gray" style="background:#444" onclick="closeEqMenu()">Close</button>`;
+  m.style.display='block';
+  // Position near click
+  const r=ev.target.getBoundingClientRect();
+  let x=r.left,y=r.bottom+5;
+  if(x+200>innerWidth)x=innerWidth-210;
+  if(y+150>innerHeight)y=r.top-160;
+  m.style.left=x+'px';m.style.top=y+'px';
+};
+window.closeEqMenu=function(){document.getElementById('eqMenu').style.display='none';};
+document.addEventListener('click',e=>{if(!e.target.closest('#eqMenu')&&!e.target.closest('.equip-slot'))closeEqMenu();});
+
+window.equipOrUnequip=function(id){
+  const eq=save.equipment.find(e=>e.id===id);if(!eq)return;
+  if(save.equipped[eq.slot]===id)save.equipped[eq.slot]=null;
   else save.equipped[eq.slot]=id;
-  saveSave();renderHome();
+  saveSave();closeEqMenu();renderHome();
+};
+window.mergeOne=function(id){
+  const eq=save.equipment.find(e=>e.id===id);if(!eq)return;
+  const partner=save.equipment.find(e=>e.slot===eq.slot&&e.rank===eq.rank&&e.id!==eq.id&&!Object.values(save.equipped).includes(e.id));
+  if(!partner)return;
+  const ri=RANKS.indexOf(eq.rank);if(ri>=RANKS.length-1)return;
+  save.equipment=save.equipment.filter(e=>e.id!==eq.id&&e.id!==partner.id);
+  makeEquip(eq.slot,RANKS[ri+1]);
+  saveSave();closeEqMenu();renderHome();
 };
 window.autoMerge=function(){
   let merged=true;
@@ -307,8 +457,7 @@ window.autoMerge=function(){
         while(items.length>=2){
           const a=items.pop(),b=items.pop();
           save.equipment=save.equipment.filter(e=>e.id!==a.id&&e.id!==b.id);
-          makeEquip(slot,RANKS[ri+1]);
-          merged=true;
+          makeEquip(slot,RANKS[ri+1]);merged=true;
         }
       }
     }
@@ -323,12 +472,12 @@ function renderGacha(p){
     <p style="font-size:11px;color:#aaa;margin:6px 0">Gray 50% | Green 30% | Blue 15% | Purple 4% | Gold 1%</p>
     <button class="btn btn-blue" onclick="doGacha('normal',1)" style="margin:6px">1× Pull (100G)</button>
     <button class="btn btn-blue" onclick="doGacha('normal',10)" style="margin:6px">10× Pull (500G)</button>
-
     <h3 style="color:#c6f;margin-top:18px">✨ S-Rank Gacha</h3>
-    <p style="font-size:11px;color:#aaa;margin:6px 0">Purple 40% | Gold 40% | Red 20% | Pity: ${save.sgachaPity}/50 → Red</p>
-    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:6px">1× Pull (300G)</button>
+    <p style="font-size:11px;color:#aaa;margin:6px 0">Purple 40% | Gold 40% | Red 20%</p>
+    <p style="font-size:13px;color:#fa0;margin:8px 0">🎯 Pity: <b style="color:#f44">${save.sgachaPity}/50</b> → Red Guaranteed</p>
+    <div class="bar-bg" style="max-width:300px;margin:0 auto"><div class="bar-fill" style="width:${(save.sgachaPity/50)*100}%;background:linear-gradient(90deg,#a0f,#f44)"></div></div>
+    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:10px">1× Pull (300G)</button>
     <button class="btn btn-purple" onclick="doGacha('s',10)" style="margin:6px">10× Pull (2680G)</button>
-
     <p style="font-size:11px;color:#888;margin-top:14px">Total pulls: ${save.gachaTotal}</p>
   </div>`;
   p.innerHTML=h;
@@ -357,38 +506,47 @@ window.doGacha=function(type,count){
     results.push(save.equipment.find(e=>e.id===id));
     save.gachaTotal++;
   }
+  dailyProgress('gacha',1);
   saveSave();
   showGachaPopup(results);
   renderHome();
 };
 
 function showGachaPopup(results){
-  const cards=document.getElementById('gachaCards');
-  cards.innerHTML='';
-  // Find best rank for title
-  let bestRank=results.reduce((m,r)=>RANKS.indexOf(r.rank)>RANKS.indexOf(m)?r.rank:m,'gray');
-  document.getElementById('gachaPopupTitle').textContent=
-    bestRank==='red'?'🔥🔥 MYTHIC! 🔥🔥':bestRank==='gold'?'⭐ LEGENDARY! ⭐':
-    bestRank==='purple'?'💜 EPIC PULL 💜':'✨ GACHA RESULT ✨';
-  document.getElementById('gachaPopupTitle').style.color=RANK_COLORS[bestRank];
+  const cards=document.getElementById('gachaCards');cards.innerHTML='';
+  let bestRank='gray';
+  for(const r of results)if(RANKS.indexOf(r.rank)>RANKS.indexOf(bestRank))bestRank=r.rank;
+  const title=document.getElementById('gachaPopupTitle');
+  if(bestRank==='red'){title.textContent='🔥 MYTHIC! 🔥';showLegendaryText('🎉 LEGENDARY! 🎉');}
+  else if(bestRank==='gold')title.textContent='⭐ LEGENDARY ⭐';
+  else if(bestRank==='purple')title.textContent='💜 EPIC PULL 💜';
+  else title.textContent='✨ GACHA RESULT ✨';
+  title.style.color=RANK_COLORS[bestRank];
+  // Rarity flash
+  if(RANKS.indexOf(bestRank)>=3){
+    const fl=document.getElementById('rarityFlash');
+    fl.style.background=RANK_COLORS[bestRank];
+    fl.classList.remove('flash');void fl.offsetWidth;fl.classList.add('flash');
+  }
   for(const r of results){
     const c=document.createElement('div');
     c.className=`gacha-card rank-${r.rank}`;
     c.style.borderColor=RANK_COLORS[r.rank];
     c.innerHTML=`<div class="gc-icon">${SLOT_ICONS[r.slot]}</div>
       <div class="gc-rank" style="color:${RANK_COLORS[r.rank]}">${RANK_NAMES[r.rank]}</div>
-      <div class="gc-slot">${SLOT_NAMES[r.slot]}</div>`;
+      <div class="gc-slot">${SLOT_NAMES[r.slot]}</div>
+      <div style="font-size:9px;color:#0f0;margin-top:3px">+${eqStatValue(r.slot,r.rank)}% ${SLOT_EFFECTS[r.slot]}</div>`;
     cards.appendChild(c);
   }
   document.getElementById('gachaPopup').classList.add('show');
 }
 window.closeGachaPopup=function(){document.getElementById('gachaPopup').classList.remove('show');};
+function showLegendaryText(t){const el=document.getElementById('legendaryText');el.textContent=t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
 
 function flashMsg(t){
-  const d=document.createElement('div');
-  d.textContent=t;d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,0.85);color:#fff;padding:12px 24px;border-radius:8px;font-weight:bold;z-index:200;animation:gachaIn .3s';
-  document.body.appendChild(d);
-  setTimeout(()=>d.remove(),1500);
+  const d=document.createElement('div');d.textContent=t;
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,.85);color:#fff;padding:12px 24px;border-radius:8px;font-weight:bold;z-index:200';
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1500);
 }
 
 /* ── Pets ── */
@@ -401,13 +559,13 @@ function renderPets(p){
       <h3 style="color:${pet.color}">${pet.name}</h3>
       <p>${pet.desc}</p>`;
     if(!d.unlocked)h+=`<button class="btn btn-orange" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();unlockPet('${id}')">Unlock ${pet.cost}G</button>`;
-    else h+=`<div style="color:#0f0;font-size:12px;margin-top:8px">${sel?'★ Selected ★':'Click to select'}</div>`;
+    else h+=`<div style="color:#0f0;font-size:13px;margin-top:8px;font-weight:bold">${sel?'★ Selected ★':'Tap to select'}</div>`;
     h+=`</div>`;
   }
   h+='</div>';p.innerHTML=h;
 }
 window.selectPet=function(id){if(!save.pets[id].unlocked)return;save.selectedPet=id;saveSave();renderHome();};
-window.unlockPet=function(id){const cost=PET_DEFS[id].cost||0;if(save.coins<cost)return;save.coins-=cost;save.pets[id].unlocked=true;saveSave();renderHome();};
+window.unlockPet=function(id){const c=PET_DEFS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.pets[id].unlocked=true;saveSave();renderHome();};
 
 /* ── Chapters ── */
 function renderChapters(p){
@@ -416,25 +574,79 @@ function renderChapters(p){
     const d=save.chapters[cid];const sel=save.selectedChapter==cid;const locked=!d.unlocked;
     h+=`<div class="home-card chapter-card ${sel?'selected':''} ${locked?'locked':''}" onclick="selectChapter(${cid})">
       <h3>${ch.name}</h3>
-      <p style="font-size:12px">${ch.desc}</p>
-      <div class="stats">Diff x${ch.diff} | Coin x${ch.coinMult}</div>
-      <div style="font-size:11px;color:#fa0">Clear: +${ch.clearReward}G</div>
-      ${d.cleared?'<div style="color:#0f0;margin-top:4px">✓ CLEARED</div>':''}
-      ${locked?`<button class="btn btn-orange" style="margin-top:6px;padding:4px 12px;font-size:12px" onclick="event.stopPropagation();unlockChapter(${cid})">${ch.cost}G</button>`:''}
+      <p>${ch.desc}</p>
+      <div class="stats">⚡ Diff x${ch.diff}</div>
+      <div class="stats">💰 Coin x${ch.coinMult}</div>
+      <div style="font-size:11px;color:#fa0;margin-top:4px">Clear Bonus: +${ch.clearReward}G</div>
+      ${d.cleared?'<div style="color:#0f0;margin-top:4px;font-weight:bold">✓ CLEARED</div>':''}
+      ${locked?`<button class="btn btn-orange" style="margin-top:6px;padding:4px 12px;font-size:12px" onclick="event.stopPropagation();unlockChapter(${cid})">Unlock ${ch.cost}G</button>`:''}
     </div>`;
   }
   h+='</div>';p.innerHTML=h;
 }
 window.selectChapter=function(id){if(!save.chapters[id].unlocked)return;save.selectedChapter=id;saveSave();renderHome();};
-window.unlockChapter=function(id){const cost=CHAPTER_DEFS[id].cost||0;if(save.coins<cost)return;save.coins-=cost;save.chapters[id].unlocked=true;saveSave();renderHome();};
+window.unlockChapter=function(id){const c=CHAPTER_DEFS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chapters[id].unlocked=true;saveSave();renderHome();};
+
+/* ── Daily ── */
+function renderDaily(p){
+  checkDaily();
+  let h='<div style="max-width:560px;margin:0 auto"><h3 style="text-align:center;color:#fa0;margin-bottom:10px">📅 Daily Missions</h3>';
+  for(const m of DAILY_MISSIONS){
+    const prog=save.daily.progress[m.key]||0;
+    const claimed=save.daily.claimed[m.key];
+    const done=prog>=m.target;
+    const pct=Math.min(100,(prog/m.target)*100);
+    h+=`<div class="mission-row ${claimed?'done':''}">
+      <div class="mi">${m.icon}</div>
+      <div class="info">
+        <b>${m.name}</b>
+        <p>Reward: <span style="color:#ff0">${m.reward}G</span> | Progress: ${Math.min(prog,m.target)}/${m.target}</p>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      ${claimed?'<div style="color:#0f0;font-weight:bold">✓ Claimed</div>':done?`<button class="btn btn-green" onclick="claimDaily('${m.key}')">Claim</button>`:'<div style="color:#666;font-size:11px">Locked</div>'}
+    </div>`;
+  }
+  h+=`<p style="text-align:center;color:#888;font-size:11px;margin-top:10px">Resets daily at 00:00 UTC | Today: ${save.daily.date}</p></div>`;
+  p.innerHTML=h;
+}
+
+/* ── Records ── */
+function renderRecords(p){
+  const r=save.records;
+  const playMin=Math.floor(r.totalPlayTime/60);
+  const longMin=Math.floor(r.longestSurvival/60);
+  const longSec=Math.floor(r.longestSurvival%60);
+  let h=`<div style="max-width:560px;margin:0 auto"><h3 style="text-align:center;color:#fa0;margin-bottom:14px">📊 Records</h3>
+    <div style="background:rgba(0,0,0,.3);padding:14px;border-radius:10px;margin-bottom:14px">
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #222;font-size:13px"><span>⚔ Total Battles</span><span style="color:#ff0">${r.totalBattles}</span></div>
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #222;font-size:13px"><span>💀 Total Kills</span><span style="color:#ff0">${r.totalKills}</span></div>
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #222;font-size:13px"><span>⏱ Total Play Time</span><span style="color:#ff0">${playMin} min</span></div>
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #222;font-size:13px"><span>🏆 Longest Survival</span><span style="color:#ff0">${String(longMin).padStart(2,'0')}:${String(longSec).padStart(2,'0')}</span></div>
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #222;font-size:13px"><span>⭐ Highest Level</span><span style="color:#ff0">${r.highestLevel}</span></div>
+      <div class="stat-row" style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>🔥 Total Evolutions</span><span style="color:#ff0">${r.totalEvolutions}</span></div>
+    </div>
+    <h3 style="text-align:center;color:#fa0;margin:14px 0 10px">🏅 Achievements</h3>`;
+  for(const a of ACHIEVEMENTS){
+    const got=!!r.achievements[a.key];
+    const meets=a.cond(r);
+    h+=`<div class="mission-row ${got?'done':''}">
+      <div class="mi">${got?'🏆':meets?'✨':'🔒'}</div>
+      <div class="info"><b>${a.name}</b><p>${a.desc} — Reward: <span style="color:#ff0">${a.reward}G</span></p></div>
+      ${got?'<div style="color:#0f0;font-weight:bold">✓ Earned</div>':meets?'<div style="color:#fa0;font-weight:bold">Auto-claim on home open</div>':'<div style="color:#666;font-size:11px">Locked</div>'}
+    </div>`;
+  }
+  h+='</div>';p.innerHTML=h;
+}
 
 /* ═══════════════════════════════════════════════════════
    START BATTLE
    ═══════════════════════════════════════════════════════ */
 window.startBattle=function(){
   if(!save.chars[save.selectedChar].unlocked)return;
+  closeEqMenu();
   document.getElementById('home').classList.remove('active');
   document.getElementById('battle').classList.add('active');
+  hideBattleBtn();
   if('ontouchstart'in window)document.getElementById('joystickArea').style.display='block';
   initBattle();
 };
@@ -446,31 +658,25 @@ const canvas2=document.getElementById('game');
 const ctx=canvas2.getContext('2d');
 const W=1280,H=720;
 
-function resizeCanvas(){
-  const r=Math.min(window.innerWidth/W,window.innerHeight/H);
-  canvas2.style.width=W*r+'px';canvas2.style.height=H*r+'px';
-}
+function resizeCanvas(){const r=Math.min(window.innerWidth/W,window.innerHeight/H);canvas2.style.width=W*r+'px';canvas2.style.height=H*r+'px';}
 resizeCanvas();window.addEventListener('resize',resizeCanvas);
 
 const keys={};
 window.addEventListener('keydown',e=>{keys[e.key]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();});
 window.addEventListener('keyup',e=>{keys[e.key]=false;});
 
-// Joystick
 let joyDx=0,joyDy=0;
-const ja=document.getElementById('joystickArea');
-const jk=document.getElementById('joystickKnob');
+const ja=document.getElementById('joystickArea'),jk=document.getElementById('joystickKnob');
 ja.addEventListener('touchstart',handleJoy);ja.addEventListener('touchmove',handleJoy);
-ja.addEventListener('touchend',()=>{joyDx=0;joyDy=0;jk.style.left='50px';jk.style.top='50px';});
+ja.addEventListener('touchend',()=>{joyDx=0;joyDy=0;jk.style.left='45px';jk.style.top='45px';});
 function handleJoy(e){
-  e.preventDefault();
-  const t=e.touches[0];const rect=ja.getBoundingClientRect();
-  const cx=rect.left+75,cy=rect.top+75;
+  e.preventDefault();const t=e.touches[0];const rect=ja.getBoundingClientRect();
+  const cx=rect.left+70,cy=rect.top+70;
   let dx2=t.clientX-cx,dy2=t.clientY-cy;
   const d2=Math.sqrt(dx2*dx2+dy2*dy2);
-  if(d2>50){dx2=dx2/d2*50;dy2=dy2/d2*50;}
-  jk.style.left=(50+dx2)+'px';jk.style.top=(50+dy2)+'px';
-  joyDx=dx2/50;joyDy=dy2/50;
+  if(d2>45){dx2=dx2/d2*45;dy2=dy2/d2*45;}
+  jk.style.left=(45+dx2)+'px';jk.style.top=(45+dy2)+'px';
+  joyDx=dx2/45;joyDy=dy2/45;
 }
 
 let bState='playing';
@@ -481,31 +687,35 @@ let lightningFx,whipFx,dmgPopups;
 let bossActive,bossesSpawned,deathEntity,deathWarnTimer;
 let enemySpawnTimer,pendingLvl,levelUpChoices,selectedChoice;
 let waveText,waveTimer,lastWaveMin;
-let runGold,runKills;
-let petTimer;
+let runGold,runKills,runEquipsDropped;
+let pet={x:0,y:0,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
 
 const WEAPON_DEFS={
   kunai:{name:'Kunai',icon:'🗡️',color:'#ff0',maxLv:8,baseDmg:8,baseCd:0.35,baseSpd:520,basePierce:2,baseCount:1,
-    desc:l=>`Lv${l} Pierce ${2+Math.floor((l-1)*0.4)}`,evolved:false,evolveTo:'thousandEdge',evolveWith:'spinach'},
+    desc:l=>`Lv${l} Pierce ${2+Math.floor((l-1)*0.4)}`,evolved:false},
   bow:{name:'Bow',icon:'🏹',color:'#fff',maxLv:8,baseDmg:30,baseCd:1.2,baseSpd:300,basePierce:1,baseCount:1,
-    desc:l=>`Lv${l} High damage`,evolved:false,evolveTo:'sniperBow',evolveWith:'hollowHeart'},
+    desc:l=>`Lv${l} Hits nearest`,evolved:false},
   sword:{name:'Sword',icon:'⚔️',color:'#fa0',maxLv:8,baseDmg:18,baseCd:1.0,baseArea:90,
-    desc:l=>`Lv${l} Melee sweep`,evolved:false},
+    desc:l=>`Lv${l} Sweep r=${90+(l-1)*8}`,evolved:false},
   garlic:{name:'Garlic',icon:'🧄',color:'#fff',maxLv:8,baseDmg:5,baseCd:0.3,baseArea:60,
-    desc:l=>`Lv${l} Aura r=${60+(l-1)*10}`,evolved:false,evolveTo:'soulEater',evolveWith:'attractorb'},
+    desc:l=>`Lv${l} Aura r=${60+(l-1)*10}`,evolved:false},
   bible:{name:'Bible',icon:'📖',color:'#a0f',maxLv:8,baseDmg:12,baseCd:0.1,baseCount:2,baseOrbitR:80,baseOrbitSpd:3,
-    desc:l=>`Lv${l} ${2+Math.floor((l-1)*0.5)} books`,evolved:false,evolveTo:'unholyVespers',evolveWith:'emptyTome'},
+    desc:l=>`Lv${l} ${2+Math.floor((l-1)*0.5)} books`,evolved:false},
   lightning:{name:'Lightning',icon:'⚡',color:'#ff0',maxLv:8,baseDmg:25,baseCd:1.5,baseCount:1,
     desc:l=>`Lv${l} ${1+Math.floor((l-1)*0.5)} bolts`,evolved:false},
   // Evolved
-  thousandEdge:{name:'1000 Edge',icon:'🌟',color:'#fff',maxLv:1,baseDmg:12,baseCd:0.15,baseSpd:550,basePierce:5,baseCount:3,
-    desc:()=>'Triple kunai storm',evolved:true},
-  sniperBow:{name:'Sniper Bow',icon:'🎯',color:'#0f0',maxLv:1,baseDmg:200,baseCd:2.0,baseSpd:600,basePierce:10,baseCount:1,
-    desc:()=>'Oneshot sniper',evolved:true},
-  soulEater:{name:'Soul Eater',icon:'💀',color:'#0f0',maxLv:1,baseDmg:12,baseCd:0.2,baseArea:120,
-    desc:()=>'Wide aura + regen',evolved:true},
-  unholyVespers:{name:'Unholy V.',icon:'📕',color:'#a0f',maxLv:1,baseDmg:22,baseCd:0.05,baseCount:4,baseOrbitR:110,baseOrbitSpd:6,
-    desc:()=>'4× fast orbs',evolved:true},
+  thousandEdge:{name:'1000 Edge',icon:'🌟',color:'#fff',maxLv:1,baseDmg:14,baseCd:0.15,baseSpd:550,basePierce:5,baseCount:8,
+    desc:()=>'8-way kunai storm',evolved:true},
+  sniperBow:{name:'Sniper Bow',icon:'🎯',color:'#0f0',maxLv:1,baseDmg:300,baseCd:1.5,baseSpd:900,basePierce:99,baseCount:1,
+    desc:()=>'Oneshot infinite range',evolved:true,slow:true},
+  soulEater:{name:'Soul Eater',icon:'💀',color:'#0f0',maxLv:1,baseDmg:14,baseCd:0.2,baseArea:140,
+    desc:()=>'2× aura + regen + XP',evolved:true},
+  unholyVespers:{name:'Unholy V.',icon:'📕',color:'#a0f',maxLv:1,baseDmg:30,baseCd:0.05,baseCount:4,baseOrbitR:110,baseOrbitSpd:6,
+    desc:()=>'4× fast holy orbs',evolved:true},
+  deathblade:{name:'Deathblade',icon:'🗡',color:'#f00',maxLv:1,baseDmg:35,baseCd:0.7,baseArea:270,lifesteal:0.10,
+    desc:()=>'Triple range + 10% lifesteal',evolved:true},
+  thunderStorm:{name:'Thunderstorm',icon:'🌩️',color:'#ff0',maxLv:1,baseDmg:40,baseCd:1.0,baseCount:99,chain:true,
+    desc:()=>'All enemies on screen + chain',evolved:true},
 };
 
 const PASSIVE_DEFS={
@@ -527,17 +737,13 @@ const ENEMY_TYPES={
     move:(e,px,py)=>{if(!e.ct)e.ct=0;e.ct+=dt2;const s=e.ct%3<0.5?e.speed*3.5:e.speed;const a=Math.atan2(py-e.y,px-e.x);e.x+=Math.cos(a)*s*dt2;e.y+=Math.sin(a)*s*dt2;}},
 };
 
-const BOSS_DEFS2={
-  1:{name:'Giant Zombie',color:'#6f6',radius:70,hp:3000,speed:30,damage:30,xp:80},
-  2:{name:'Armored King',color:'#aaf',radius:80,hp:8000,speed:25,damage:45,xp:150},
-  3:{name:'Demon Lord',color:'#f22',radius:90,hp:20000,speed:22,damage:60,xp:300},
-};
-
 const EVOLUTIONS=[
   {weapon:'kunai',passive:'spinach',evolved:'thousandEdge'},
   {weapon:'bow',passive:'hollowHeart',evolved:'sniperBow'},
   {weapon:'garlic',passive:'attractorb',evolved:'soulEater'},
   {weapon:'bible',passive:'emptyTome',evolved:'unholyVespers'},
+  {weapon:'sword',passive:'armor',evolved:'deathblade'},
+  {weapon:'lightning',passive:'wings',evolved:'thunderStorm'},
 ];
 
 function distXY(ax,ay,bx,by){const d1=ax-bx,d2=ay-by;return Math.sqrt(d1*d1+d2*d2);}
@@ -549,28 +755,24 @@ function getP(id){return player.passives.find(p=>p.id===id);}
 function wCd(w){const d=WEAPON_DEFS[w.id];return Math.max(0.05,d.baseCd*Math.max(0.3,1-(w.lv-1)*0.04)*(1-player.cdReduction));}
 function wDmg(w){const d=WEAPON_DEFS[w.id];return(d.baseDmg+(w.lv-1)*Math.ceil(d.baseDmg*0.25))*player.might;}
 function wCount(w){const d=WEAPON_DEFS[w.id];return(d.baseCount||1)+Math.floor((w.lv-1)*0.5);}
-function wArea(w){const d=WEAPON_DEFS[w.id];return(d.baseArea||0)+(w.lv-1)*10;}
+function wArea(w){const d=WEAPON_DEFS[w.id];if(!d.baseArea)return 0;return d.baseArea+(w.lv-1)*((w.id==='sword'||w.id==='deathblade')?8:10);}
 
 function initBattle(){
   const ch=CHARS[save.selectedChar];
   const cd=save.chars[save.selectedChar];
-
-  const atkBonus=getEquippedBonus('ATK');
-  const hpBonus=getEquippedBonus('MaxHP');
-  const spdBonus=getEquippedBonus('Speed');
-  const cdBonus=getEquippedBonus('CD Reduce');
-  const critBonus=getEquippedBonus('Crit%');
-  const xpBonus=getEquippedBonus('XP Gain');
+  const atkBonus=getEquippedBonus('ATK'),hpBonus=getEquippedBonus('MaxHP'),spdBonus=getEquippedBonus('Speed'),
+        cdBonus=getEquippedBonus('CD Reduce'),critBonus=getEquippedBonus('Crit%'),xpBonus=getEquippedBonus('XP Gain');
 
   const baseHp=Math.floor(ch.baseHp*(1+(cd.lv-1)*0.05)*(1+hpBonus/100));
   const baseSpd=Math.floor(200*(1+spdBonus/100));
-  const baseMight=1*(1+(cd.lv-1)*0.08+atkBonus/100);
+  const charAtkMult=ch.baseAtk/100; // common=1.0, archer=1.3, knight=0.8
+  const baseMight=charAtkMult*(1+(cd.lv-1)*0.08+atkBonus/100);
   player={
     x:0,y:0,radius:18,
     baseSpeed:baseSpd,speed:baseSpd,
     baseMaxHp:baseHp,maxHp:baseHp,hp:baseHp,
     level:1,xp:0,xpToNext:10,
-    baseMight:baseMight,might:baseMight,
+    baseMight,might:baseMight,
     armor:0,baseCdReduction:cdBonus/100,cdReduction:cdBonus/100,
     magnetRange:100,hpRegen:0.1,
     invTimer:0,
@@ -591,20 +793,26 @@ function initBattle(){
   gameTime=0;dt2=0;lastTs=0;enemySpawnTimer=0;pendingLvl=0;
   levelUpChoices=[];selectedChoice=-1;
   waveText='';waveTimer=0;lastWaveMin=-1;
-  runGold=0;runKills=0;petTimer=0;
+  runGold=0;runKills=0;runEquipsDropped=[];
+  pet={x:player.x,y:player.y,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
   bState='playing';
+
+  save.records.totalBattles++;
+  dailyProgress('battle',1);
+  saveSave();
 
   requestAnimationFrame(battleLoop);
 }
 
 function spawnParticles2(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=50+Math.random()*150;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.35+Math.random()*.3,maxLife:.5,radius:2+Math.random()*3,color:c});}}
+
 function spawnDmgPop(x,y,dmg,evo,crit){
   dmgPopups.push({
     x:x+rnd(-8,8),y,
-    text:(crit?'CRIT ':'')+(Math.round(dmg)+''),
+    text:(crit?'CRIT! ':'')+(Math.round(dmg)+''),
     life:1.0,maxLife:1.0,
-    color:evo?'#ffd700':crit?'#f80':'#ff0',
-    size:evo?18:crit?15:13
+    color:crit?'#f44':evo?'#ffd700':'#ff0',
+    size:evo?18:crit?17:13
   });
 }
 
@@ -615,8 +823,24 @@ function applyDmg(e,dmg,wid){
   spawnDmgPop(e.x,e.y-e.radius,dmg,WEAPON_DEFS[wid]&&WEAPON_DEFS[wid].evolved,crit);
 }
 
+/* Wave */
 function getWaveTypes(m){const t=[];if(m<18)t.push('zombie');if(m>=3)t.push('skeleton');if(m>=7)t.push('armorZombie');if(m>=12)t.push('ghost');if(m>=18)t.push('demon');return t;}
-function getWaveName(m){if(m>=18)return'DEMON HORDE';if(m>=12)return'GHOST SWARM';if(m>=7)return'ARMOR ZOMBIE WAVE';if(m>=3)return'SKELETON ARMY';return'ZOMBIE HORDE';}
+function getWaveName(m){
+  const c=m%5;
+  if(c===1)return'🧟 ZOMBIE HORDE';
+  if(c===2)return'💀 SKELETON ARMY';
+  if(c===3)return'🐉 DEMON RUSH';
+  if(c===4)return'👻 GHOST SWARM';
+  return'⚔️ BOSS INCOMING';
+}
+function getHordeType(m){
+  const c=m%5;
+  if(c===1)return'zombie';
+  if(c===2)return'skeleton';
+  if(c===3)return m>=18?'demon':'armorZombie';
+  if(c===4)return m>=12?'ghost':'skeleton';
+  return getWaveTypes(m).slice(-1)[0];
+}
 
 function spawnEnemy2(typeId){
   const def=ENEMY_TYPES[typeId];if(!def)return;
@@ -630,34 +854,42 @@ function spawnEnemy2(typeId){
     flashTimer:0,color:def.color,typeId,isBoss:false,st:gameTime,xpValue:def.xp});
 }
 
-function spawnBoss2(idx){
-  const def=BOSS_DEFS2[idx];if(!def)return;
+function spawnBossByKey(key){
+  const def=BOSS_DEFS[key];if(!def)return;
   const chap=CHAPTER_DEFS[save.selectedChapter];
   const a=Math.random()*Math.PI*2;
-  const b={x:player.x+Math.cos(a)*650,y:player.y+Math.sin(a)*650,
+  const b={x:player.x+Math.cos(a)*700,y:player.y+Math.sin(a)*700,
     radius:def.radius,hp:def.hp*chap.diff,maxHp:def.hp*chap.diff,
     speed:def.speed,damage:def.damage*chap.diff,
-    flashTimer:0,color:def.color,isBoss:true,bossName:def.name,typeId:'boss',st:gameTime,xpValue:def.xp};
+    flashTimer:0,color:def.color,outline:def.outline,hasWings:def.hasWings,rainbow:def.rainbow,
+    isBoss:true,bossName:def.name,typeId:'boss',st:gameTime,xpValue:def.xp,bossKey:key};
   enemies.push(b);bossActive=b;
 }
 
-/* ── Weapon update ── */
+/* Weapons */
 function updateWeapons(){
   for(const w of player.weapons){
     w.timer+=dt2;const cd=wCd(w);if(w.timer<cd)continue;w.timer=0;
     const dmg=wDmg(w);const def=WEAPON_DEFS[w.id];
     switch(w.id){
-      case'sword':{
-        const area=wArea(w);
+      case'sword':case'deathblade':{
+        const area=wArea(w);const ls=def.lifesteal||0;
         for(const dir of[-1,1]){
           whipFx.push({x:player.x+dir*area*.5,y:player.y,dir,area,life:.18,maxLife:.18,color:def.color});
-          for(const e of enemies){const ex=e.x-player.x;if(Math.sqrt(ex*ex+(e.y-player.y)**2)<area&&((dir>0&&ex>=0)||(dir<0&&ex<0)))applyDmg(e,dmg,w.id);}
-        }break;}
+          for(const e of enemies){
+            const ex=e.x-player.x;
+            if(Math.sqrt(ex*ex+(e.y-player.y)**2)<area&&((dir>0&&ex>=0)||(dir<0&&ex<0))){
+              applyDmg(e,dmg,w.id);
+              if(ls>0)player.hp=Math.min(player.maxHp,player.hp+dmg*ls);
+            }
+          }
+        }
+        break;}
       case'kunai':case'thousandEdge':{
         const cnt=wCount(w);const spd=def.baseSpd||520;const pierce=(def.basePierce||2)+Math.floor((w.lv-1)*0.4);
         for(let i=0;i<cnt;i++){
-          const sp=(i-(cnt-1)/2)*.12;
-          const ang=Math.atan2(player.lastDy,player.lastDx)+sp;
+          const sp=(i-(cnt-1)/2)*(w.id==='thousandEdge'?(Math.PI*2/cnt):0.12);
+          const ang=w.id==='thousandEdge'?(Math.PI*2/cnt)*i:Math.atan2(player.lastDy,player.lastDx)+sp;
           bullets.push({x:player.x,y:player.y,radius:4,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,damage:dmg,pierce,life:1.5,color:def.color,wid:w.id,kind:'kunai',angle:ang});
         }break;}
       case'bow':case'sniperBow':{
@@ -668,18 +900,28 @@ function updateWeapons(){
         const ang=nearest?Math.atan2(nearest.y-player.y,nearest.x-player.x):Math.atan2(player.lastDy,player.lastDx);
         for(let i=0;i<cnt;i++){
           const sp=(i-(cnt-1)/2)*.1;
-          bullets.push({x:player.x,y:player.y,radius:5,vx:Math.cos(ang+sp)*spd,vy:Math.sin(ang+sp)*spd,damage:dmg,pierce,life:2*rangeMult,color:def.color,wid:w.id,kind:'arrow',angle:ang+sp});
+          bullets.push({x:player.x,y:player.y,radius:5,vx:Math.cos(ang+sp)*spd,vy:Math.sin(ang+sp)*spd,damage:dmg,pierce,life:(w.id==='sniperBow'?5:2)*rangeMult,color:def.color,wid:w.id,kind:'arrow',angle:ang+sp,slow:def.slow});
         }break;}
       case'garlic':case'soulEater':{
         const area=wArea(w);
         for(const e of enemies)if(dist2(e,player)<area+e.radius)applyDmg(e,dmg,w.id);
+        if(w.id==='soulEater'){
+          // Auto collect XP within aura
+          for(const g of gems){if(dist2(g,player)<area){g.x=player.x;g.y=player.y;}}
+        }
         break;}
       case'bible':case'unholyVespers':break;
-      case'lightning':{
-        const cnt=wCount(w);
-        let tgts=enemies.filter(e=>dist2(e,player)<550).sort(()=>Math.random()-.5).slice(0,cnt);
-        if(!tgts.length)tgts=enemies.slice(0,cnt);
-        for(const e of tgts){applyDmg(e,dmg,w.id);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3});}
+      case'lightning':case'thunderStorm':{
+        if(w.id==='thunderStorm'){
+          // All on-screen enemies + chain
+          const onScreen=enemies.filter(e=>dist2(e,player)<700);
+          for(const e of onScreen){applyDmg(e,dmg,w.id);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3});}
+        } else {
+          const cnt=wCount(w);
+          let tgts=enemies.filter(e=>dist2(e,player)<550).sort(()=>Math.random()-.5).slice(0,cnt);
+          if(!tgts.length)tgts=enemies.slice(0,cnt);
+          for(const e of tgts){applyDmg(e,dmg,w.id);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3});}
+        }
         break;}
     }
   }
@@ -688,7 +930,8 @@ function updateWeapons(){
 function updateBibleOrbs(){
   const bw=getW('bible')||getW('unholyVespers');if(!bw)return;
   const def=WEAPON_DEFS[bw.id];const cnt=wCount(bw);
-  const oR=(def.baseOrbitR||80)+(bw.lv-1)*10;const oS=def.baseOrbitSpd||3;const dmg=wDmg(bw);
+  const oR=(def.baseOrbitR||80)+(bw.lv-1)*10;const oS=def.baseOrbitSpd||3;
+  const dmg=wDmg(bw)*(bw.id==='unholyVespers'?2:1);
   while(weaponProjectiles.length<cnt)weaponProjectiles.push({angle:weaponProjectiles.length*(Math.PI*2/cnt),hc:{}});
   while(weaponProjectiles.length>cnt)weaponProjectiles.pop();
   for(const o of weaponProjectiles){
@@ -700,49 +943,110 @@ function updateBibleOrbs(){
   }
 }
 
+/* Pet logic */
 function updatePet(){
-  petTimer+=dt2;
   if(save.selectedPet==='hachiko'&&save.pets.hachiko.unlocked){
-    if(petTimer>=1){petTimer=0;
-      for(const e of enemies){if(dist2(e,player)<120){e.hp-=3*player.might;e.flashTimer=.05;break;}}
+    if(pet.state==='orbit'){
+      pet.angle+=2.5*dt2;
+      pet.x=player.x+Math.cos(pet.angle)*55;
+      pet.y=player.y+Math.sin(pet.angle)*55;
+      pet.timer+=dt2;
+      if(pet.timer>=2){
+        pet.timer=0;
+        // find nearest enemy
+        let near=null,nd=Infinity;
+        for(const e of enemies){const d=distXY(pet.x,pet.y,e.x,e.y);if(d<nd&&d<300){nd=d;near=e;}}
+        if(near){pet.target=near;pet.state='dash';}
+      }
+    } else if(pet.state==='dash'){
+      const t=pet.target;
+      if(!t||enemies.indexOf(t)===-1){pet.state='return';return;}
+      const a=Math.atan2(t.y-pet.y,t.x-pet.x);
+      pet.x+=Math.cos(a)*450*dt2;pet.y+=Math.sin(a)*450*dt2;
+      if(distXY(pet.x,pet.y,t.x,t.y)<t.radius+10){
+        applyDmg(t,8*player.might,'hachiko');
+        spawnParticles2(pet.x,pet.y,'#fa0',5);
+        pet.state='return';
+      }
+    } else { // return
+      const a=Math.atan2(player.y-pet.y,player.x-pet.x);
+      pet.x+=Math.cos(a)*400*dt2;pet.y+=Math.sin(a)*400*dt2;
+      if(distXY(pet.x,pet.y,player.x,player.y)<60){pet.state='orbit';pet.timer=0;}
     }
-  }
-  if(save.selectedPet==='frog'&&save.pets.frog.unlocked){
-    for(const g of gems){
-      if(dist2(g,player)<350){const a=Math.atan2(player.y-g.y,player.x-g.x);g.x+=Math.cos(a)*400*dt2;g.y+=Math.sin(a)*400*dt2;}
+  } else if(save.selectedPet==='frog'&&save.pets.frog.unlocked){
+    pet.timer+=dt2;
+    pet.hopT+=dt2*4;
+    // Find nearest gem
+    let near=null,nd=Infinity;
+    for(const g of gems){const d=distXY(pet.x,pet.y,g.x,g.y);if(d<nd){nd=d;near=g;}}
+    if(near&&nd>10){
+      const a=Math.atan2(near.y-pet.y,near.x-pet.x);
+      pet.x+=Math.cos(a)*250*dt2;pet.y+=Math.sin(a)*250*dt2;
+      // Hop animation
+      pet.vy=Math.abs(Math.sin(pet.hopT))*8;
+      // Collect on touch
+      if(distXY(pet.x,pet.y,near.x,near.y)<14){
+        player.xp+=near.value;
+        gems.splice(gems.indexOf(near),1);
+        while(player.xp>=player.xpToNext){player.xp-=player.xpToNext;player.level++;player.xpToNext=Math.floor(player.xpToNext*1.4)+5;pendingLvl++;}
+      }
+    } else {
+      // follow player
+      const a=Math.atan2(player.y-pet.y,player.x-pet.x);
+      const d=distXY(pet.x,pet.y,player.x,player.y);
+      if(d>50){pet.x+=Math.cos(a)*150*dt2;pet.y+=Math.sin(a)*150*dt2;}
+      pet.vy=0;
     }
   }
 }
 
 function pickChoices(){
   const ch=[];
+  // Weapons - upgrade existing
   for(const w of player.weapons){const d=WEAPON_DEFS[w.id];if(w.lv<d.maxLv&&!d.evolved)ch.push({type:'weapon',tag:'WEAPON UP',name:d.name+` Lv${w.lv+1}`,desc:d.desc(w.lv+1),color:d.color,icon:d.icon,apply:()=>{w.lv++;}});}
+  // New weapons
   if(player.weapons.length<6){
     const owned=new Set(player.weapons.map(w=>w.id));
     for(const id of['kunai','bow','sword','garlic','bible','lightning']){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];ch.push({type:'weapon',tag:'NEW WEAPON',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,apply:()=>{player.weapons.push({id,lv:1,timer:0});}});}
     }
   }
+  // Passives - upgrade
   for(const p of player.passives){const d=PASSIVE_DEFS[p.id];if(p.lv<d.maxLv)ch.push({type:'passive',tag:'PASSIVE UP',name:d.name+` Lv${p.lv+1}`,desc:d.desc(p.lv+1),color:d.color,icon:d.icon,apply:()=>{p.lv++;d.apply(player,p.lv);}});}
+  // New passives
   if(player.passives.length<6){
     const owned=new Set(player.passives.map(p=>p.id));
     for(const id of Object.keys(PASSIVE_DEFS)){
       if(!owned.has(id)){const d=PASSIVE_DEFS[id];ch.push({type:'passive',tag:'NEW PASSIVE',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,apply:()=>{player.passives.push({id,lv:1});d.apply(player,1);}});}
     }
   }
+  // Heal
   if(player.hp<player.maxHp*.9)ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
   levelUpChoices=ch.sort(()=>Math.random()-.5).slice(0,3);selectedChoice=-1;
+}
+
+function evolutionReady(){
+  for(const evo of EVOLUTIONS){
+    const w=getW(evo.weapon),p=getP(evo.passive);
+    if(w&&w.lv>=8&&p)return true;
+  }
+  return false;
 }
 
 function openChest2(){
   for(const evo of EVOLUTIONS){
     const w=getW(evo.weapon),p=getP(evo.passive);
-    if(w&&w.lv>=8&&p){w.id=evo.evolved;w.lv=1;w.timer=0;if(evo.evolved==='unholyVespers')weaponProjectiles=[];
-      bState='chest';return;}
+    if(w&&w.lv>=8&&p){
+      w.id=evo.evolved;w.lv=1;w.timer=0;
+      if(evo.evolved==='unholyVespers'||evo.evolved==='soulEater')weaponProjectiles=[];
+      save.records.totalEvolutions++;saveSave();
+      bState='chest';return;
+    }
   }
   pickChoices();bState='levelup';
 }
 
+/* Update */
 function updateBattle(){
   if(bState!=='playing')return;
   const chap=CHAPTER_DEFS[save.selectedChapter];
@@ -761,38 +1065,53 @@ function updateBattle(){
 
   gameTime+=dt2;
 
+  // Records: track playtime
+  save.records.totalPlayTime+=dt2;
+  // periodic save
+  if(Math.floor(gameTime*2)%20===0&&Math.abs((gameTime*2)-Math.round(gameTime*2))<0.05)saveSave();
+
   let regen=player.hpRegen;if(getW('soulEater'))regen=Math.max(regen,.5);
   player.hp=Math.min(player.hp+regen*dt2,player.maxHp);
   if(player.invTimer>0)player.invTimer-=dt2;
 
+  // Wave (start at minute 1)
   const curMin=Math.floor(gameTime/60);
-  if(curMin!==lastWaveMin&&gameTime>2){
-    lastWaveMin=curMin;const types=getWaveTypes(curMin);
-    waveText='-- '+getWaveName(curMin)+' --';waveTimer=3;
-    const ht=types[types.length-1];for(let i=0;i<15;i++)spawnEnemy2(ht);
+  if(curMin!==lastWaveMin&&curMin>=1){
+    lastWaveMin=curMin;
+    waveText=getWaveName(curMin);waveTimer=3;
+    const ht=getHordeType(curMin);
+    for(let i=0;i<15;i++)spawnEnemy2(ht);
   }
   if(waveTimer>0)waveTimer-=dt2;
 
-  const bTimes=[.33,.66,1];
-  for(let i=0;i<bTimes.length;i++){
-    const t=Math.floor(clearTime*bTimes[i]);
-    if(gameTime>=t&&!bossesSpawned.includes(i)){bossesSpawned.push(i);spawnBoss2(i+1);}
+  // Bosses
+  for(let i=0;i<BOSS_SCHEDULE.length;i++){
+    const sc=BOSS_SCHEDULE[i];
+    if(gameTime>=sc.time&&!bossesSpawned.includes(i)){
+      bossesSpawned.push(i);
+      spawnBossByKey(sc.key);
+    }
   }
 
-  if(gameTime>=clearTime+10&&!deathEntity){
-    deathEntity={x:player.x+800,y:player.y,radius:30,speed:45};deathWarnTimer=5;
+  // Death warning starts 30 sec before death
+  const deathSpawnTime=Math.max(clearTime+10,1800);
+  if(gameTime>=deathSpawnTime-30&&!deathEntity)deathWarnTimer=Math.max(deathWarnTimer,deathSpawnTime-gameTime);
+  if(gameTime>=deathSpawnTime&&!deathEntity){
+    const a=Math.random()*Math.PI*2;
+    deathEntity={x:player.x+Math.cos(a)*900,y:player.y+Math.sin(a)*900,radius:35,speed:50};
   }
-  if(deathWarnTimer>0)deathWarnTimer-=dt2;
   if(deathEntity){
     const a=Math.atan2(player.y-deathEntity.y,player.x-deathEntity.x);
     deathEntity.x+=Math.cos(a)*deathEntity.speed*dt2;deathEntity.y+=Math.sin(a)*deathEntity.speed*dt2;
     if(distXY(deathEntity.x,deathEntity.y,player.x,player.y)<deathEntity.radius+player.radius){player.hp=0;bState='done';endBattle(false);return;}
   }
 
+  // Clear check
   if(gameTime>=clearTime&&!bossActive){bState='done';endBattle(true);return;}
 
   updateWeapons();updateBibleOrbs();updatePet();
 
+  // Spawn
   const tf=Math.min(gameTime/clearTime,1);
   const si=Math.max(.12,1.2-tf*1);
   enemySpawnTimer+=dt2;
@@ -801,14 +1120,21 @@ function updateBattle(){
     for(let i=0;i<cnt;i++)spawnEnemy2(types[Math.floor(Math.random()*types.length)]);
   }
 
+  // Bullets
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];b.x+=b.vx*dt2;b.y+=b.vy*dt2;b.life-=dt2;
     if(b.life<=0){bullets.splice(i,1);continue;}
     for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];
-      if(dist2(b,e)<b.radius+e.radius){applyDmg(e,b.damage,b.wid);b.pierce--;if(b.pierce<=0){bullets.splice(i,1);break;}}
+      if(dist2(b,e)<b.radius+e.radius){
+        applyDmg(e,b.damage,b.wid);
+        if(b.slow)e.speed=Math.max(e.speed*0.3,5);
+        b.pierce--;
+        if(b.pierce<=0){bullets.splice(i,1);break;}
+      }
     }
   }
 
+  // Enemies
   for(let i=enemies.length-1;i>=0;i--){
     const e=enemies[i];const td=ENEMY_TYPES[e.typeId];
     if(td&&td.move)td.move(e,player.x,player.y);
@@ -818,15 +1144,23 @@ function updateBattle(){
     if(e.hp<=0){
       spawnParticles2(e.x,e.y,e.color,e.isBoss?20:5);runKills++;
       gems.push({x:e.x,y:e.y,radius:e.isBoss?8:5,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
-      // 3x coin drop rate
-      const coinChance=e.isBoss?1:.18*chap.coinMult;
-      let coinVal=e.isBoss?Math.floor(30*chap.coinMult):Math.ceil(rnd(1,3)*chap.coinMult);
-      if(player.commonCoinBonus&&Math.random()<.05)coinVal*=2;
-      if(Math.random()<coinChance)coins2.push({x:e.x+rnd(-8,8),y:e.y+rnd(-8,8),radius:4,value:coinVal,bob:Math.random()*6});
-      if(e.isBoss||(Math.random()<.005*chap.dropMult)){
+      // Coins: 3% normal, boss = 50-100
+      const coinChance=e.isBoss?1:.03*chap.coinMult;
+      if(Math.random()<coinChance){
+        let coinVal=e.isBoss?Math.floor(rnd(50,100)*chap.coinMult):Math.ceil(rnd(1,3)*chap.coinMult);
+        if(player.commonCoinBonus&&Math.random()<.05)coinVal*=2;
+        coins2.push({x:e.x+rnd(-8,8),y:e.y+rnd(-8,8),radius:4,value:coinVal,bob:Math.random()*6});
+      }
+      // Equipment drop
+      if(e.isBoss){
+        // boss = blue+ guaranteed
         const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
-        const ri=e.isBoss?Math.min(Math.floor(Math.random()*4)+2,5):Math.floor(Math.random()*3);
-        if(save.equipment.length<50)makeEquip(sl,RANKS[ri]);
+        const ri=2+Math.floor(Math.random()*3); // blue/purple/gold
+        if(save.equipment.length<50){const id=makeEquip(sl,RANKS[ri]);runEquipsDropped.push(save.equipment.find(x=>x.id===id));}
+      } else if(Math.random()<.01){
+        // 1% normal drop = gray
+        const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
+        if(save.equipment.length<50){const id=makeEquip(sl,'gray');runEquipsDropped.push(save.equipment.find(x=>x.id===id));}
       }
       if(e.isBoss){chests2.push({x:e.x,y:e.y,radius:18,bob:0});if(bossActive===e)bossActive=null;}
       enemies.splice(i,1);continue;
@@ -839,6 +1173,7 @@ function updateBattle(){
   }
   enemies=enemies.filter(e=>e.isBoss||dist2(e,player)<1200);
 
+  // Gems
   for(let i=gems.length-1;i>=0;i--){
     const g=gems[i];g.bob+=dt2*3;const d=dist2(g,player);
     if(d<player.magnetRange){const a=Math.atan2(player.y-g.y,player.x-g.x);g.x+=Math.cos(a)*350*dt2;g.y+=Math.sin(a)*350*dt2;}
@@ -863,14 +1198,28 @@ function updateBattle(){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt2;p.y+=p.vy*dt2;p.vx*=.94;p.vy*=.94;p.life-=dt2;if(p.life<=0)particles.splice(i,1);}
 }
 
-/* ── Draw enemies (per type) ── */
+/* Draw enemy */
 function drawEnemy(e){
   const td=ENEMY_TYPES[e.typeId];
   if(td&&td.alpha)ctx.globalAlpha=td.alpha+Math.sin(gameTime*3+e.st)*0.15;
-
   if(e.isBoss){
-    ctx.fillStyle=e.flashTimer>0?'#fff':e.color;ctx.shadowColor=e.color;ctx.shadowBlur=18;
-    ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    // Rainbow outline blink for final boss
+    let outline=e.outline||e.color;
+    if(e.rainbow){outline=`hsl(${(gameTime*120)%360},100%,55%)`;}
+    ctx.fillStyle=e.flashTimer>0?'#fff':e.color;
+    ctx.shadowColor=outline;ctx.shadowBlur=20;
+    ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    if(outline){ctx.strokeStyle=outline;ctx.lineWidth=4;ctx.beginPath();ctx.arc(e.x,e.y,e.radius+2,0,Math.PI*2);ctx.stroke();}
+    // Wings for demon king
+    if(e.hasWings){
+      ctx.fillStyle='#600';
+      ctx.beginPath();
+      ctx.ellipse(e.x-e.radius-15,e.y,18,e.radius*.7,Math.PI/4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(e.x+e.radius+15,e.y,18,e.radius*.7,-Math.PI/4,0,Math.PI*2);ctx.fill();
+    }
+    // Eyes
     const er=e.radius*.3;ctx.fillStyle='#000';
     ctx.beginPath();ctx.arc(e.x-er,e.y-er*.5,er*.4,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(e.x+er,e.y-er*.5,er*.4,0,Math.PI*2);ctx.fill();
@@ -878,59 +1227,30 @@ function drawEnemy(e){
     ctx.beginPath();ctx.arc(e.x-er,e.y-er*.5,er*.2,0,Math.PI*2);ctx.fill();
     ctx.beginPath();ctx.arc(e.x+er,e.y-er*.5,er*.2,0,Math.PI*2);ctx.fill();
   } else {
-    // Body
     ctx.fillStyle=e.flashTimer>0?'#fff':e.color;
     ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.fill();
-    // Outline (armor zombie has yellow outline)
-    if(td&&td.outline){
-      ctx.strokeStyle=td.outline;ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.stroke();
-    }
-    // Type-specific decorations
+    if(td&&td.outline){ctx.strokeStyle=td.outline;ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.stroke();}
     if(e.typeId==='zombie'){
-      // Two white eyes
-      ctx.fillStyle='#fff';
-      ctx.beginPath();ctx.arc(e.x-3,e.y-2,2,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(e.x+3,e.y-2,2,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#000';
-      ctx.beginPath();ctx.arc(e.x-3,e.y-2,1,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(e.x+3,e.y-2,1,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e.x-3,e.y-2,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(e.x+3,e.y-2,2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(e.x-3,e.y-2,1,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(e.x+3,e.y-2,1,0,Math.PI*2);ctx.fill();
     } else if(e.typeId==='skeleton'){
-      // Eye sockets
-      ctx.fillStyle='#000';
-      ctx.beginPath();ctx.arc(e.x-3,e.y-2,2,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(e.x+3,e.y-2,2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(e.x-3,e.y-2,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(e.x+3,e.y-2,2,0,Math.PI*2);ctx.fill();
     } else if(e.typeId==='armorZombie'){
-      // X cross on body (armor plate)
       ctx.strokeStyle='#ff0';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(e.x-7,e.y-2);ctx.lineTo(e.x+7,e.y-2);ctx.stroke();
       ctx.beginPath();ctx.moveTo(e.x,e.y-9);ctx.lineTo(e.x,e.y+5);ctx.stroke();
     } else if(e.typeId==='ghost'){
-      // Wavy bottom
-      ctx.fillStyle=e.flashTimer>0?'#fff':e.color;
-      ctx.beginPath();
-      for(let i=-4;i<=4;i++){
-        const wx=e.x+i*3;
-        const wy=e.y+e.radius+Math.sin(gameTime*5+i)*2;
-        ctx.lineTo(wx,wy);
-      }
-      ctx.lineTo(e.x+e.radius,e.y);ctx.lineTo(e.x-e.radius,e.y);
-      ctx.fill();
-      // Hollow eyes
       ctx.fillStyle='#000';
       ctx.beginPath();ctx.arc(e.x-4,e.y-3,2.5,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(e.x+4,e.y-3,2.5,0,Math.PI*2);ctx.fill();
     } else if(e.typeId==='demon'){
-      // Two horns (small triangles up)
       ctx.fillStyle=e.flashTimer>0?'#fff':'#900';
       ctx.beginPath();ctx.moveTo(e.x-7,e.y-e.radius+2);ctx.lineTo(e.x-10,e.y-e.radius-7);ctx.lineTo(e.x-3,e.y-e.radius);ctx.fill();
       ctx.beginPath();ctx.moveTo(e.x+7,e.y-e.radius+2);ctx.lineTo(e.x+10,e.y-e.radius-7);ctx.lineTo(e.x+3,e.y-e.radius);ctx.fill();
-      // Yellow eyes
       ctx.fillStyle='#ff0';
       ctx.beginPath();ctx.arc(e.x-4,e.y-2,2,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(e.x+4,e.y-2,2,0,Math.PI*2);ctx.fill();
     }
-    // HP bar
     if(e.hp<e.maxHp){
       const r=Math.max(0,e.hp/e.maxHp);
       ctx.fillStyle='#333';ctx.fillRect(e.x-15,e.y-e.radius-7,30,3);
@@ -940,40 +1260,30 @@ function drawEnemy(e){
   ctx.globalAlpha=1;
 }
 
-/* ── Draw player (per character) ── */
 function drawPlayer(){
   const blink=player.invTimer>0&&Math.floor(player.invTimer*10)%2;
   if(blink)return;
   const ch=CHARS[player.charId];
-
-  // Outline (thicker outer ring)
   ctx.strokeStyle=ch.outline;ctx.lineWidth=4;
   ctx.beginPath();ctx.arc(player.x,player.y,player.radius+2,0,Math.PI*2);ctx.stroke();
-
-  // Body
   ctx.fillStyle=ch.color;
   ctx.beginPath();ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);ctx.fill();
-
-  // Letter
-  ctx.fillStyle='#fff';
-  ctx.font='bold 18px monospace';
+  ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(ch.letter,player.x,player.y+1);
   ctx.textBaseline='alphabetic';
 }
 
-/* ── Main draw ── */
 function drawBattle(){
   ctx.fillStyle='#12122a';ctx.fillRect(0,0,W,H);
   ctx.save();ctx.translate(-camera.x,-camera.y);
 
-  // Grid
   ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=1;
   const gs=80,sx=Math.floor(camera.x/gs)*gs,sy=Math.floor(camera.y/gs)*gs;
   for(let x=sx;x<camera.x+W+gs;x+=gs){ctx.beginPath();ctx.moveTo(x,camera.y);ctx.lineTo(x,camera.y+H);ctx.stroke();}
   for(let y=sy;y<camera.y+H+gs;y+=gs){ctx.beginPath();ctx.moveTo(camera.x,y);ctx.lineTo(camera.x+W,y);ctx.stroke();}
 
-  // Garlic always-on aura (visual only - not damage)
+  // Garlic aura
   const gw=getW('garlic')||getW('soulEater');
   if(gw){
     const a=wArea(gw);const c=WEAPON_DEFS[gw.id].color;
@@ -984,11 +1294,11 @@ function drawBattle(){
     ctx.globalAlpha=1;
   }
 
-  // Sword arc fx (orange)
+  // Sword arc
   for(const w of whipFx){
     const a=w.life/w.maxLife;
-    ctx.globalAlpha=a*.5;
-    ctx.strokeStyle=w.color;ctx.lineWidth=10;
+    ctx.globalAlpha=a*.55;
+    ctx.strokeStyle=w.color;ctx.lineWidth=12;
     ctx.beginPath();
     const startA=w.dir>0?-Math.PI/3:Math.PI*2/3;
     const endA=w.dir>0?Math.PI/3:Math.PI*4/3;
@@ -997,41 +1307,32 @@ function drawBattle(){
     ctx.globalAlpha=1;
   }
 
-  // Chests
-  for(const c of chests2){const b=Math.sin(c.bob)*3;ctx.fillStyle='#fa0';ctx.strokeStyle='#840';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(c.x-14,c.y-12+b,28,24,4);ctx.fill();ctx.stroke();ctx.fillStyle='#ff0';ctx.fillRect(c.x-3,c.y-4+b,6,8);}
+  for(const c of chests2){const b=Math.sin(c.bob)*3;ctx.fillStyle='#fa0';ctx.strokeStyle='#840';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(c.x-14,c.y-12+b,28,24,4);ctx.fill();ctx.stroke();ctx.fillStyle='#ff0';ctx.fillRect(c.x-3,c.y-4+b,6,8);ctx.shadowColor='#fa0';ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;}
 
-  // Gems
   for(const g of gems){const b=Math.sin(g.bob)*3;ctx.fillStyle='#0f6';ctx.shadowColor='#0f6';ctx.shadowBlur=5;ctx.beginPath();ctx.arc(g.x,g.y+b,g.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
-  // Coins
   for(const c of coins2){const b=Math.sin(c.bob)*2;ctx.fillStyle='#ff0';ctx.shadowColor='#ff0';ctx.shadowBlur=4;ctx.beginPath();ctx.arc(c.x,c.y+b,c.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
 
-  // Bullets (per kind)
+  // Bullets
   for(const b of bullets){
     if(b.kind==='kunai'){
-      // Yellow diamond, rotated to angle
       ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);
       ctx.fillStyle='#ff0';ctx.shadowColor='#ff0';ctx.shadowBlur=6;
       ctx.beginPath();
       ctx.moveTo(6,0);ctx.lineTo(0,2);ctx.lineTo(-6,0);ctx.lineTo(0,-2);ctx.closePath();
-      ctx.fill();ctx.shadowBlur=0;
-      ctx.restore();
+      ctx.fill();ctx.shadowBlur=0;ctx.restore();
     } else if(b.kind==='arrow'){
-      // White arrow
       ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);
-      ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=4;
+      ctx.fillStyle=b.color||'#fff';ctx.shadowColor=b.color||'#fff';ctx.shadowBlur=4;
       ctx.fillRect(-4,-1,8,2);
-      // tip
       ctx.beginPath();ctx.moveTo(4,-3);ctx.lineTo(8,0);ctx.lineTo(4,3);ctx.closePath();ctx.fill();
-      ctx.shadowBlur=0;
-      ctx.restore();
+      ctx.shadowBlur=0;ctx.restore();
     } else {
-      // Generic
       ctx.fillStyle=b.color||'#ff0';ctx.shadowColor=b.color||'#ff0';ctx.shadowBlur=5;
       ctx.beginPath();ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
     }
   }
 
-  // Bible orbs - purple book rectangles
+  // Bible orbs (rectangles)
   const bw=getW('bible')||getW('unholyVespers');
   if(bw){
     const c=WEAPON_DEFS[bw.id].color;
@@ -1040,66 +1341,68 @@ function drawBattle(){
       ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=8;
       ctx.fillRect(-5,-4,10,8);
       ctx.shadowBlur=0;
-      // book line
       ctx.strokeStyle='#fff';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(0,4);ctx.stroke();
       ctx.restore();
     }
   }
 
-  // Lightning - bright zigzag
+  // Lightning
   for(const l of lightningFx){
     const a=l.life/l.maxLife;
     ctx.globalAlpha=a;
-    // Glow flash
     ctx.fillStyle='rgba(255,255,200,0.4)';
     ctx.beginPath();ctx.arc(l.x,l.y,30*a,0,Math.PI*2);ctx.fill();
-    // Bolt
     ctx.strokeStyle='#ff0';ctx.lineWidth=4;ctx.shadowColor='#ff0';ctx.shadowBlur=10;
     ctx.beginPath();let bx=l.x+rnd(-5,5),by=l.y-280;ctx.moveTo(bx,by);
     for(let s=0;s<6;s++){bx+=rnd(-25,25);by+=47;ctx.lineTo(bx,by);}
-    ctx.lineTo(l.x,l.y);ctx.stroke();
-    ctx.shadowBlur=0;
-    ctx.globalAlpha=1;
+    ctx.lineTo(l.x,l.y);ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1;
   }
 
-  // Enemies
   for(const e of enemies)drawEnemy(e);
 
   // Death
-  if(deathEntity){const d=deathEntity;ctx.fillStyle='#000';ctx.shadowColor='#808';ctx.shadowBlur=25;ctx.beginPath();ctx.arc(d.x,d.y,d.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#202';ctx.beginPath();ctx.arc(d.x,d.y-5,d.radius*.8,Math.PI,0);ctx.fill();ctx.fillStyle='#f00';ctx.beginPath();ctx.arc(d.x-8,d.y-5,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(d.x+8,d.y-5,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#888';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(d.x+d.radius,d.y-d.radius);ctx.lineTo(d.x-5,d.y+d.radius*.8);ctx.stroke();ctx.fillStyle='#f00';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('DEATH',d.x,d.y+d.radius+18);}
+  if(deathEntity){
+    const d=deathEntity;
+    ctx.fillStyle='#000';ctx.shadowColor='#808';ctx.shadowBlur=30;
+    ctx.beginPath();ctx.arc(d.x,d.y,d.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#202';ctx.beginPath();ctx.arc(d.x,d.y-5,d.radius*.85,Math.PI,0);ctx.fill();
+    ctx.fillStyle='#f00';ctx.beginPath();ctx.arc(d.x-9,d.y-5,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(d.x+9,d.y-5,5,0,Math.PI*2);ctx.fill();
+    // ☠ symbol
+    ctx.fillStyle='#fff';ctx.font='bold 22px monospace';ctx.textAlign='center';
+    ctx.fillText('☠',d.x,d.y+10);
+    ctx.fillStyle='#f00';ctx.font='bold 14px monospace';
+    ctx.fillText('DEATH',d.x,d.y+d.radius+18);
+  }
 
   // Pet
   if(save.pets[save.selectedPet]&&save.pets[save.selectedPet].unlocked){
     const pi=PET_DEFS[save.selectedPet];
-    const px=player.x+Math.cos(gameTime*2)*30,py=player.y+Math.sin(gameTime*2)*30+25;
-    ctx.font='22px serif';ctx.textAlign='center';ctx.fillText(pi.icon,px,py);
+    ctx.font='24px serif';ctx.textAlign='center';
+    ctx.fillText(pi.icon,pet.x,pet.y-(pet.vy||0)+8);
   }
 
-  // Player
   drawPlayer();
 
-  // Dmg popups
-  for(const p of dmgPopups){ctx.globalAlpha=Math.min(1,p.life/p.maxLife*1.5);ctx.fillStyle=p.color;ctx.font=`bold ${p.size}px monospace`;ctx.textAlign='center';
-    // Outline for readability
+  for(const p of dmgPopups){
+    ctx.globalAlpha=Math.min(1,p.life/p.maxLife*1.5);
+    ctx.fillStyle=p.color;ctx.font=`bold ${p.size}px monospace`;ctx.textAlign='center';
     ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.strokeText(p.text,p.x,p.y);
-    ctx.fillText(p.text,p.x,p.y);}
+    ctx.fillText(p.text,p.x,p.y);
+  }
   ctx.globalAlpha=1;
-  // Particles
   for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/p.maxLife);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
   ctx.restore();
 
   drawHUD();
-
   if(bState==='levelup')drawLevelUp2();
   if(bState==='chest')drawChest2();
   if(bState==='paused')drawPaused2();
 }
 
-/* ── HUD ── */
 function drawHUD(){
-  const SL=94; // left panel width
+  const SL=94;
   // HP
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(SL+5,10,210,22);
   ctx.fillStyle='#222';ctx.fillRect(SL+7,12,206,18);
@@ -1107,167 +1410,153 @@ function drawHUD(){
   ctx.fillStyle=hpR>.5?'#4f4':hpR>.25?'#fa0':'#f44';
   ctx.fillRect(SL+7,12,206*hpR,18);
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
-  ctx.fillText(`❤️ ${Math.ceil(player.hp)}/${player.maxHp}`,SL+110,26);
+  ctx.fillText(`❤ ${Math.ceil(player.hp)}/${player.maxHp}`,SL+110,26);
 
-  // Timer top center
   const mins=Math.floor(gameTime/60),secs=Math.floor(gameTime%60);
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(W/2-65,8,130,28);
   ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
   ctx.fillText(`⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`,W/2,28);
 
-  // Level (next to timer)
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(W/2-130,8,60,28);
   ctx.fillStyle='#ff0';ctx.font='bold 15px monospace';
   ctx.fillText(`Lv${player.level}`,W/2-100,28);
 
-  // Top right - Coins + Kills (visible box)
-  ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(W-180,8,170,28);
+  // Top right gold + kills (boxed)
+  ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(W-180,8,170,28);
   ctx.strokeStyle='#fa0';ctx.lineWidth=1;ctx.strokeRect(W-180,8,170,28);
   ctx.fillStyle='#ff0';ctx.font='bold 14px monospace';ctx.textAlign='left';
   ctx.fillText(`💰 ${runGold}`,W-172,28);
-  ctx.fillStyle='#f44';
-  ctx.fillText(`💀 ${runKills}`,W-90,28);
+  ctx.fillStyle='#f88';ctx.fillText(`💀 ${runKills}`,W-90,28);
 
-  // XP bar
-  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(SL+3,H-30,W-SL-15,20);
-  ctx.fillStyle='#222';ctx.fillRect(SL+5,H-28,W-SL-19,16);
-  ctx.fillStyle='#0af';ctx.fillRect(SL+5,H-28,(W-SL-19)*(player.xp/player.xpToNext),16);
+  // XP gradient bar
+  const xpBarW=W-SL-15;
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(SL+3,H-30,xpBarW,20);
+  ctx.fillStyle='#222';ctx.fillRect(SL+5,H-28,xpBarW-2,16);
+  const xpGrad=ctx.createLinearGradient(SL+5,H-28,SL+5+xpBarW,H-28);
+  xpGrad.addColorStop(0,'#08f');xpGrad.addColorStop(1,'#0ff');
+  ctx.fillStyle=xpGrad;ctx.fillRect(SL+5,H-28,(xpBarW-2)*(player.xp/player.xpToNext),16);
   ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.textAlign='center';
   ctx.fillText(`XP ${player.xp} / ${player.xpToNext}`,(SL+5+W-15)/2,H-17);
 
   // Boss HP
   if(bossActive&&bossActive.hp>0){
-    ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(W/2-200,40,400,22);
-    ctx.fillStyle='#222';ctx.fillRect(W/2-198,42,396,18);
-    const r=bossActive.hp/bossActive.maxHp;ctx.fillStyle=bossActive.color;ctx.fillRect(W/2-198,42,396*r,18);
-    ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';
-    ctx.fillText(`👑 ${bossActive.bossName} ${Math.ceil(bossActive.hp)}/${Math.ceil(bossActive.maxHp)}`,W/2,55);
+    ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(W/2-200,40,400,24);
+    ctx.fillStyle='#222';ctx.fillRect(W/2-198,42,396,20);
+    const r=bossActive.hp/bossActive.maxHp;
+    let bossColor=bossActive.color;
+    if(bossActive.rainbow)bossColor=`hsl(${(gameTime*120)%360},100%,55%)`;
+    ctx.fillStyle=bossColor;ctx.fillRect(W/2-198,42,396*r,20);
+    ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText(`👑 ${bossActive.bossName} ${Math.ceil(bossActive.hp)}/${Math.ceil(bossActive.maxHp)}`,W/2,57);
   }
 
   // Wave text
   if(waveTimer>0){
     ctx.globalAlpha=Math.min(1,waveTimer);
-    ctx.fillStyle='#000';ctx.fillRect(W/2-160,75,320,30);
+    const txtW=ctx.measureText(waveText).width;
+    ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(W/2-180,75,360,34);
     ctx.fillStyle='#f44';ctx.font='bold 22px monospace';ctx.textAlign='center';
-    ctx.fillText(waveText,W/2,97);
+    ctx.fillText(waveText,W/2,99);
     ctx.globalAlpha=1;
   }
-  if(deathWarnTimer>0){
-    const a=.5+Math.sin(Date.now()/150)*.5;
-    ctx.globalAlpha=a;ctx.fillStyle='#f00';ctx.font='bold 28px monospace';ctx.textAlign='center';
-    ctx.fillText('☠ DEATH APPROACHES... ☠',W/2,H/2-100);
+  // Death warning
+  if(deathWarnTimer>0&&!deathEntity){
+    const a=.5+Math.sin(Date.now()/130)*.5;
+    ctx.globalAlpha=a;
+    ctx.fillStyle='#f00';ctx.font='bold 28px monospace';ctx.textAlign='center';
+    ctx.fillText(`⚠️ DEATH APPROACHES IN ${Math.ceil(deathWarnTimer)}s ⚠️`,W/2,H/2-100);
     ctx.globalAlpha=1;
   }
 
-  // === LEFT PANEL: 90px wide ===
+  // Evolution ready banner
+  if(evolutionReady()){
+    ctx.fillStyle='rgba(255,200,0,.85)';
+    ctx.fillRect(W/2-180,H-70,360,28);
+    ctx.fillStyle='#000';ctx.font='bold 14px monospace';ctx.textAlign='center';
+    ctx.fillText('⚡ EVOLUTION READY! Open boss chest! ⚡',W/2,H-51);
+  }
+
+  // Left panel: weapons + passives
   const px2=2,py2=8,slH=30,slW=90;
-  ctx.fillStyle='rgba(0,0,0,0.7)';
-  ctx.fillRect(px2,py2,slW,6*slH+22);
-  ctx.fillStyle='#ff0';ctx.font='bold 9px monospace';ctx.textAlign='left';
-  ctx.fillText('⚔ WEAPONS',px2+5,py2+12);
+  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(px2,py2,slW,6*slH+22);
+  ctx.fillStyle='#ff0';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('⚔ WEAPONS',px2+5,py2+12);
   for(let i=0;i<6;i++){
     const y=py2+16+i*slH;const w=player.weapons[i];
-    if(w){
-      const d=WEAPON_DEFS[w.id];
-      // Slot bg with weapon color
-      ctx.fillStyle=d.color;ctx.globalAlpha=.25;
-      ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
-      ctx.strokeStyle=d.color;ctx.lineWidth=1;
-      ctx.strokeRect(px2+3,y,slW-6,slH-3);
-      // Emoji icon
-      ctx.font='16px serif';ctx.textAlign='left';
-      ctx.fillText(d.icon,px2+6,y+18);
-      // Name
-      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';
-      ctx.fillText(d.name.slice(0,8),px2+25,y+12);
-      // Lv
-      ctx.fillStyle=d.evolved?'#fa0':'#fff';ctx.font='bold 9px monospace';
-      ctx.fillText(d.evolved?'★EVO':`Lv${w.lv}`,px2+25,y+24);
-    } else {
-      ctx.strokeStyle='#333';ctx.lineWidth=1;
-      ctx.strokeRect(px2+3,y,slW-6,slH-3);
-    }
+    if(w){const d=WEAPON_DEFS[w.id];
+      ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
+      ctx.strokeStyle=d.color;ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);
+      ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);
+      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,8),px2+25,y+12);
+      ctx.fillStyle=d.evolved?'#fa0':'#fff';ctx.font='bold 9px monospace';ctx.fillText(d.evolved?'★EVO':`Lv${w.lv}`,px2+25,y+24);
+    } else {ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);}
   }
-  // Passive panel
   const psY=py2+16+6*slH+6;
-  ctx.fillStyle='rgba(0,0,0,0.7)';
-  ctx.fillRect(px2,psY-6,slW,6*slH+22);
-  ctx.fillStyle='#0ff';ctx.font='bold 9px monospace';ctx.textAlign='left';
-  ctx.fillText('✦ PASSIVE',px2+5,psY+5);
+  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(px2,psY-6,slW,6*slH+22);
+  ctx.fillStyle='#0ff';ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillText('✦ PASSIVE',px2+5,psY+5);
   for(let i=0;i<6;i++){
     const y=psY+10+i*slH;const p=player.passives[i];
-    if(p){
-      const d=PASSIVE_DEFS[p.id];
-      ctx.fillStyle=d.color;ctx.globalAlpha=.25;
-      ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
-      ctx.strokeStyle=d.color;ctx.lineWidth=1;
-      ctx.strokeRect(px2+3,y,slW-6,slH-3);
-      ctx.font='16px serif';ctx.textAlign='left';
-      ctx.fillText(d.icon,px2+6,y+18);
-      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';
-      ctx.fillText(d.name.slice(0,8),px2+25,y+12);
-      ctx.fillStyle='#fff';ctx.font='bold 9px monospace';
-      ctx.fillText(`Lv${p.lv}`,px2+25,y+24);
-    } else {
-      ctx.strokeStyle='#333';ctx.lineWidth=1;
-      ctx.strokeRect(px2+3,y,slW-6,slH-3);
-    }
+    if(p){const d=PASSIVE_DEFS[p.id];
+      ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
+      ctx.strokeStyle=d.color;ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);
+      ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);
+      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,8),px2+25,y+12);
+      ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.fillText(`Lv${p.lv}`,px2+25,y+24);
+    } else {ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);}
   }
-  ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='8px monospace';ctx.textAlign='right';
-  ctx.fillText('ESC=Pause',W-6,H-5);
+  ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='8px monospace';ctx.textAlign='right';ctx.fillText('ESC=Pause',W-6,H-5);
 }
 
 function drawLevelUp2(){
-  ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(0,0,W,H);
+  if(evolutionReady()){
+    ctx.fillStyle='#fa0';ctx.font='bold 18px monospace';ctx.textAlign='center';
+    ctx.fillText('⚡ EVOLUTION READY! Find a boss chest ⚡',W/2,80);
+  }
   ctx.fillStyle='#ff0';ctx.font='bold 32px monospace';ctx.textAlign='center';
-  ctx.fillText('★ LEVEL UP! ★',W/2,110);
-  ctx.fillStyle='#ccc';ctx.font='12px monospace';ctx.fillText('Press 1 / 2 / 3 or click',W/2,135);
-  if(pendingLvl>0){ctx.fillStyle='#fa0';ctx.font='11px monospace';ctx.fillText(`+${pendingLvl} more pending`,W/2,153);}
+  ctx.fillText('★ LEVEL UP! ★',W/2,115);
+  ctx.fillStyle='#ccc';ctx.font='12px monospace';ctx.fillText('Press 1 / 2 / 3 or click',W/2,140);
+  if(pendingLvl>0){ctx.fillStyle='#fa0';ctx.font='11px monospace';ctx.fillText(`+${pendingLvl} more pending`,W/2,158);}
   for(let i=0;i<levelUpChoices.length;i++){
-    const c=levelUpChoices[i];const bx=W/2-265+i*185,by=170,bw=165,bh=240;
+    const c=levelUpChoices[i];const bx=W/2-265+i*185,by=175,bw=165,bh=240;
     const hov=selectedChoice===i;
     ctx.fillStyle=hov?'rgba(100,180,255,.4)':'rgba(35,35,65,.95)';
     ctx.strokeStyle=hov?'#4af':c.color||'#444';ctx.lineWidth=2;
     ctx.beginPath();ctx.roundRect(bx,by,bw,bh,10);ctx.fill();ctx.stroke();
-    // Tag
     ctx.fillStyle=c.type==='weapon'?'#f80':c.type==='passive'?'#0af':'#4f4';
     ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(c.tag,bx+bw/2,by+18);
-    // Number
     ctx.fillStyle='#ff0';ctx.font='bold 22px monospace';ctx.fillText(i+1+'',bx+bw/2,by+44);
-    // Big icon
-    ctx.font='40px serif';ctx.textAlign='center';
-    ctx.fillText(c.icon||'?',bx+bw/2,by+92);
-    // Color bar
+    ctx.font='40px serif';ctx.textAlign='center';ctx.fillText(c.icon||'?',bx+bw/2,by+92);
     ctx.fillStyle=c.color;ctx.fillRect(bx+18,by+105,bw-36,3);
-    // Name
     ctx.fillStyle='#fff';ctx.font='bold 13px monospace';wrapTx(c.name,bx+bw/2,by+128,bw-14,16);
-    // Desc
     ctx.fillStyle='#aaa';ctx.font='11px monospace';wrapTx(c.desc,bx+bw/2,by+170,bw-14,14);
   }
 }
 function drawChest2(){
   ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#fa0';ctx.font='bold 34px monospace';ctx.textAlign='center';
-  ctx.fillText('✨ WEAPON EVOLVED! ✨',W/2,230);
+  ctx.fillStyle='#fa0';ctx.font='bold 36px monospace';ctx.textAlign='center';
+  ctx.fillText('✨ WEAPON EVOLVED! ✨',W/2,210);
   const ew=player.weapons.find(w=>WEAPON_DEFS[w.id].evolved);
-  if(ew){
-    const d=WEAPON_DEFS[ew.id];
-    ctx.font='60px serif';ctx.fillText(d.icon,W/2,300);
-    ctx.fillStyle=d.color;ctx.font='bold 24px monospace';ctx.fillText(d.name,W/2,340);
-    ctx.fillStyle='#aaa';ctx.font='14px monospace';ctx.fillText(typeof d.desc==='function'?d.desc():'',W/2,365);
+  if(ew){const d=WEAPON_DEFS[ew.id];
+    ctx.font='80px serif';ctx.fillText(d.icon,W/2,310);
+    ctx.fillStyle=d.color;ctx.font='bold 26px monospace';ctx.fillText(d.name,W/2,360);
+    ctx.fillStyle='#aaa';ctx.font='14px monospace';ctx.fillText(typeof d.desc==='function'?d.desc():'',W/2,388);
   }
   ctx.fillStyle='#ff0';ctx.font='bold 16px monospace';
   ctx.globalAlpha=.6+Math.sin(Date.now()/300)*.4;
-  ctx.fillText('Press SPACE',W/2,440);ctx.globalAlpha=1;
+  ctx.fillText('Press SPACE',W/2,460);ctx.globalAlpha=1;
 }
 function drawPaused2(){
   ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#fff';ctx.font='bold 32px monospace';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,100);
-  let y=140;
+  ctx.fillStyle='#fff';ctx.font='bold 32px monospace';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,90);
+  let y=130;
   ctx.fillStyle='#ff0';ctx.font='bold 13px monospace';ctx.fillText('-- WEAPONS --',W/2,y);y+=20;
   for(const w of player.weapons){const d=WEAPON_DEFS[w.id];ctx.fillStyle=d.color;ctx.font='12px monospace';ctx.fillText(`${d.icon} ${d.name} ${d.evolved?'★EVO':`Lv${w.lv}`}`,W/2,y);y+=18;}
   y+=8;ctx.fillStyle='#0ff';ctx.font='bold 13px monospace';ctx.fillText('-- PASSIVES --',W/2,y);y+=20;
   for(const p of player.passives){const d=PASSIVE_DEFS[p.id];ctx.fillStyle=d.color;ctx.font='12px monospace';ctx.fillText(`${d.icon} ${d.name} Lv${p.lv}`,W/2,y);y+=18;}
+  y+=8;ctx.fillStyle='#fa0';ctx.font='bold 13px monospace';ctx.fillText('-- STATS --',W/2,y);y+=20;
+  ctx.fillStyle='#fff';ctx.font='12px monospace';
+  ctx.fillText(`ATK x${player.might.toFixed(2)}  Crit ${player.critRate}%  CD -${(player.cdReduction*100).toFixed(0)}%`,W/2,y);y+=18;
+  ctx.fillText(`Speed ${Math.round(player.speed)}  Magnet ${Math.round(player.magnetRange)}`,W/2,y);
   ctx.fillStyle='#888';ctx.font='13px monospace';ctx.fillText('ESC to resume',W/2,H-40);
 }
 function wrapTx(t,x,y,mw,lh){const w=t.split(' ');let l='',ty=y;for(const wd of w){const ts=l+wd+' ';if(ctx.measureText(ts).width>mw&&l!==''){ctx.fillText(l.trim(),x,ty);l=wd+' ';ty+=lh;}else l=ts;}ctx.fillText(l.trim(),x,ty);}
@@ -1284,7 +1573,7 @@ canvas2.addEventListener('click',e=>{
   const rect=canvas2.getBoundingClientRect();const sx=W/rect.width,sy=H/rect.height;
   const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
   if(bState==='levelup'){
-    for(let i=0;i<levelUpChoices.length;i++){const bx=W/2-265+i*185,by=170;
+    for(let i=0;i<levelUpChoices.length;i++){const bx=W/2-265+i*185,by=175;
       if(mx>=bx&&mx<=bx+165&&my>=by&&my<=by+240){levelUpChoices[i].apply();if(pendingLvl>0){pendingLvl--;pickChoices();}else bState='playing';break;}}
   }else if(bState==='chest')bState='playing';
   else if(bState==='paused')bState='playing';
@@ -1294,7 +1583,7 @@ canvas2.addEventListener('mousemove',e=>{
   const rect=canvas2.getBoundingClientRect();const sx=W/rect.width,sy=H/rect.height;
   const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
   selectedChoice=-1;
-  for(let i=0;i<levelUpChoices.length;i++){const bx=W/2-265+i*185,by=170;if(mx>=bx&&mx<=bx+165&&my>=by&&my<=by+240){selectedChoice=i;break;}}
+  for(let i=0;i<levelUpChoices.length;i++){const bx=W/2-265+i*185,by=175;if(mx>=bx&&mx<=bx+165&&my>=by&&my<=by+240){selectedChoice=i;break;}}
 });
 
 function battleLoop(ts){
@@ -1307,36 +1596,63 @@ function battleLoop(ts){
 
 function endBattle(cleared){
   save.coins+=runGold;
+  save.records.totalKills+=runKills;
+  if(player.level>save.records.highestLevel)save.records.highestLevel=player.level;
+  if(gameTime>save.records.longestSurvival)save.records.longestSurvival=gameTime;
+  dailyProgress('kills',runKills);
+
   let bonusGold=0;
   if(cleared){
     const chap=CHAPTER_DEFS[save.selectedChapter];
     if(!save.chapters[save.selectedChapter].cleared){
       bonusGold=chap.clearReward||0;
       save.coins+=bonusGold;
+      // Unlock next chapter for free? No, costs coins
     } else {
       bonusGold=Math.floor((chap.clearReward||0)*0.3);
       save.coins+=bonusGold;
     }
     save.chapters[save.selectedChapter].cleared=true;
+    // 30 min clear: golden equipment
+    if(gameTime>=1800){
+      const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
+      if(save.equipment.length<50){const id=makeEquip(sl,'gold');runEquipsDropped.push(save.equipment.find(e=>e.id===id));}
+    }
   }
+  // Check achievements
+  const ac=checkAchievements();
   saveSave();
+
   document.getElementById('battle').classList.remove('active');
   document.getElementById('joystickArea').style.display='none';
-  showResult(cleared,bonusGold);
+  showResult(cleared,bonusGold,ac);
 }
 
-function showResult(cleared,bonusGold){
+function showResult(cleared,bonusGold,achievementsClaimed){
   const r=document.getElementById('result');r.classList.add('active');
   const mins=Math.floor(gameTime/60),secs=Math.floor(gameTime%60);
   const timeStr=`${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  let dropHtml='';
+  if(runEquipsDropped.length>0){
+    dropHtml='<div style="margin-top:14px"><div style="color:#fa0;font-weight:bold;margin-bottom:6px">📦 Equipment Dropped</div><div class="dropped-eq">';
+    for(const eq of runEquipsDropped){
+      dropHtml+=`<div class="equip-slot rank-${eq.rank}">
+        <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
+        <div style="font-size:8px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${RANK_NAMES[eq.rank]}</div>
+      </div>`;
+    }
+    dropHtml+='</div></div>';
+  }
   r.innerHTML=`<div class="result-box">
     <h2 style="color:${cleared?'#0f0':'#f44'}">${cleared?'🎉 STAGE CLEAR! 🎉':'💀 GAME OVER 💀'}</h2>
     <div class="stat-row"><span>⏱ Survived</span><span>${timeStr}</span></div>
-    <div class="stat-row"><span>★ Level</span><span>${player.level}</span></div>
+    <div class="stat-row"><span>★ Level Reached</span><span>${player.level}</span></div>
     <div class="stat-row"><span>💀 Kills</span><span>${runKills}</span></div>
     <div class="stat-row"><span>💰 Gold Earned</span><span>${runGold}</span></div>
     ${bonusGold>0?`<div class="stat-row"><span>🏆 Clear Bonus</span><span>+${bonusGold}</span></div>`:''}
+    ${achievementsClaimed>0?`<div class="stat-row"><span>🏅 Achievements</span><span style="color:#0f0">+${achievementsClaimed}!</span></div>`:''}
     <div class="stat-row"><span>💼 Total Gold</span><span>${save.coins}</span></div>
+    ${dropHtml}
     <div class="result-btns">
       <button class="btn btn-blue" onclick="goEquip()">🛡 Equipment</button>
       <button class="btn btn-purple" onclick="goGacha()">🎰 Gacha</button>
@@ -1351,6 +1667,8 @@ window.goGacha=function(){document.getElementById('result').classList.remove('ac
 window.goHome=function(){document.getElementById('result').classList.remove('active');showHome();};
 window.retry=function(){document.getElementById('result').classList.remove('active');startBattle();};
 
+// Init
+checkAchievements();
 showHome();
 </script>
 </body>
