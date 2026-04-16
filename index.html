@@ -195,6 +195,8 @@ const SPRITE_FILES={
   weapon_katana:'assets/weapon_katana.png',weapon_shotgun:'assets/weapon_shotgun.png',weapon_drill:'assets/weapon_drill.png',
   weapon_soccer:'assets/weapon_soccer.png',weapon_lightchaser:'assets/weapon_lightchaser.png',weapon_force:'assets/weapon_force.png',
   weapon_chaos:'assets/weapon_chaos.png',weapon_lightchaser_s:'assets/weapon_lightchaser_s.png',weapon_force_s:'assets/weapon_force_s.png',
+  skill_molotov:'assets/skill_molotov.png',skill_boomerang:'assets/skill_boomerang.png',skill_garlic:'assets/skill_garlic.png',
+  skill_bible:'assets/skill_bible.png',skill_lightning:'assets/skill_lightning.png',skill_drone:'assets/skill_drone.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
 function preloadSprites(cb){
@@ -1608,37 +1610,37 @@ const WEAPON_DEFS={
     desc:()=>'80% execute / 20% on boss + omni-wave',evolved:true,from:'chaosBlade'},
 
   /* === SUB-SKILLS (level-up pool) === */
-  molotov:{name:'火炎瓶',icon:'🍾',color:'#f80',maxLv:5,sub:true,
+  molotov:{name:'火炎瓶',icon:'🍾',color:'#f80',sprite:'skill_molotov',maxLv:5,sub:true,
     cd:[2.0,2.0,2.0,2.0,2.0],radius:[40,50,50,50,50],dur:[2,2,3,3,3],count:[1,1,1,2,2],dmgMul:[1,1,1.2,1.2,1.4],
     desc:s=>`★${s} ${({1:'40r fire 2s',2:'+10r area',3:'+1s, +20% dmg',4:'2 throws',5:'burst on expire'})[s]}`,evolved:false},
-  boomerang:{name:'ブーメラン',icon:'🪃',color:'#a63',maxLv:5,sub:true,
+  boomerang:{name:'ブーメラン',icon:'🪃',color:'#a63',sprite:'skill_boomerang',maxLv:5,sub:true,
     cd:[3.0,2.5,2.5,2.5,2.5],size:[6,6,8,8,8],count:[1,1,1,2,3],dmgMul:[1,1,1.2,1.2,1.3],pierce:[1,1,1,1,5],
     desc:s=>`★${s} ${({1:'3s throw, 2 hits',2:'-0.5s CD',3:'+30% size, +20% dmg',4:'2 throws',5:'3 throws + pierce'})[s]}`,evolved:false},
-  garlic:{name:'ガーリック',icon:'🧄',color:'#fff',maxLv:5,sub:true,
+  garlic:{name:'ガーリック',icon:'🧄',color:'#fff',sprite:'skill_garlic',maxLv:5,sub:true,
     radius:[60,70,70,90,90],dmgMul:[1,1,1.3,1.3,1.3],kb:[0,0,0,1,1],slow:[0,0,0,0,1],
     desc:s=>`★${s} ${({1:'60r aura',2:'+10r',3:'+30% dmg',4:'+20r, knockback',5:'slow inside'})[s]}`,evolved:false},
-  bible:{name:'聖書',icon:'📖',color:'#a0f',maxLv:5,sub:true,
+  bible:{name:'聖書',icon:'📖',color:'#a0f',sprite:'skill_bible',maxLv:5,sub:true,
     orbits:[2,2,3,4,6],spd:[3,3.6,3.6,3.6,6],dmgMul:[1,1,1.2,1.2,1.2],orbitR:90,
     desc:s=>`★${s} ${({1:'2 books orbit',2:'+20% spd',3:'3 books, +20% dmg',4:'4 books',5:'6 books, 2× spd'})[s]}`,evolved:false},
-  lightning:{name:'ライトニング',icon:'⚡',color:'#ff8',maxLv:5,sub:true,
+  lightning:{name:'ライトニング',icon:'⚡',color:'#ff8',sprite:'skill_lightning',maxLv:5,sub:true,
     cd:[2.0,1.8,1.6,1.4,1.0],targets:[1,2,3,5,99],chain:[0,1,2,2,3],dmgMul:[1,1,1.1,1.2,1.4],
     desc:s=>`★${s} ${({1:'1 random',2:'2 + chain',3:'3 + chain×2',4:'5 strikes',5:'all on screen'})[s]}`,evolved:false},
-  drone:{name:'ドローン',icon:'🤖',color:'#888',maxLv:5,sub:true,
+  drone:{name:'ドローン',icon:'🤖',color:'#888',sprite:'skill_drone',maxLv:5,sub:true,
     drones:[1,1,2,2,3],cd:[0.6,0.5,0.5,0.4,0.35],dmgMul:[1,1,1.2,1.2,1.4],missile:[0,0,0,0,1],
     desc:s=>`★${s} ${({1:'1 drone',2:'+20% atk spd',3:'2 drones, +20% dmg',4:'+20% atk spd',5:'3 drones + missiles'})[s]}`,evolved:false},
 
   /* === SUB-SKILL evolved === */
-  hellfire:{name:'地獄火炎',icon:'🔥',color:'#f44',maxLv:1,sub:true,
+  hellfire:{name:'地獄火炎',icon:'🔥',color:'#f44',sprite:'skill_molotov',maxLv:1,sub:true,
     desc:()=>'3× area, poison, guaranteed burst',evolved:true,from:'molotov'},
-  quantumBoomerang:{name:'量子ブーメラン',icon:'💫',color:'#0ff',maxLv:1,sub:true,
+  quantumBoomerang:{name:'量子ブーメラン',icon:'💫',color:'#0ff',sprite:'skill_boomerang',maxLv:1,sub:true,
     desc:()=>'Teleport-homing, infinite flight',evolved:true,from:'boomerang'},
-  soulEater:{name:'ソウルイーター',icon:'💀',color:'#0f0',maxLv:1,sub:true,
+  soulEater:{name:'ソウルイーター',icon:'💀',color:'#0f0',sprite:'skill_garlic',maxLv:1,sub:true,
     desc:()=>'2× radius, 0.5HP/s regen, auto-XP',evolved:true,from:'garlic'},
-  unholyBible:{name:'邪悪な聖典',icon:'📕',color:'#a0f',maxLv:1,sub:true,
+  unholyBible:{name:'邪悪な聖典',icon:'📕',color:'#a0f',sprite:'skill_bible',maxLv:1,sub:true,
     desc:()=>'6 books, 3× spd, 3× dmg',evolved:true,from:'bible'},
-  thunderWrath:{name:'雷神の怒り',icon:'⛈️',color:'#ff0',maxLv:1,sub:true,
+  thunderWrath:{name:'雷神の怒り',icon:'⛈️',color:'#ff0',sprite:'skill_lightning',maxLv:1,sub:true,
     desc:()=>'All enemies, chain unlimited, 3s CD',evolved:true,from:'lightning'},
-  destroyer:{name:'破壊者',icon:'💥',color:'#fa0',maxLv:1,sub:true,
+  destroyer:{name:'破壊者',icon:'💥',color:'#fa0',sprite:'skill_drone',maxLv:1,sub:true,
     desc:()=>'3 fused drones, lock-on missile barrage',evolved:true,from:'drone'},
 };
 
@@ -2340,7 +2342,7 @@ function pickChoices(){
   const ready=readyEvolutions();
   if(ready.length>0){
     const evo=ready[0];const d=WEAPON_DEFS[evo.evolved];
-    levelUpChoices=[{type:'evolve',tag:'⚡ EVOLVE!',name:d.name,desc:d.desc(),color:d.color,icon:d.icon,evolve:true,
+    levelUpChoices=[{type:'evolve',tag:'⚡ EVOLVE!',name:d.name,desc:d.desc(),color:d.color,icon:d.icon,sprite:d.sprite,evolve:true,
       apply:()=>{
         evo.w.id=evo.evolved;evo.w.lv=1;evo.w.timer=0;evo.w.evolvedDone=true;
         weaponProjectiles=[];
@@ -2356,7 +2358,7 @@ function pickChoices(){
     const d=WEAPON_DEFS[w.id];
     if(!d||!d.sub||d.evolved||w.lv>=d.maxLv)continue;
     const ns=w.lv+1;
-    ch.push({type:'weapon',weaponId:w.id,tag:`⭐ STAR UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,star:ns,apply:()=>{w.lv++;}});
+    ch.push({type:'weapon',weaponId:w.id,tag:`⭐ STAR UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }
   // NEW SUB SKILL pool — only the 6 sub-skills enter the level-up trio
   if(player.weapons.length<7){
@@ -2364,7 +2366,7 @@ function pickChoices(){
     const BATTLE_NEW_SKILL_POOL=['molotov','boomerang','garlic','bible','lightning','drone'];
     for(const id of BATTLE_NEW_SKILL_POOL){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
-        ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,star:1,
+        ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
           apply:()=>{player.weapons.push({id,lv:1,timer:0});if(!save.records.weaponsUsed)save.records.weaponsUsed=[];if(!save.records.weaponsUsed.includes(id))save.records.weaponsUsed.push(id);}});
       }
     }
@@ -3432,8 +3434,8 @@ function drawHUD(){
     const sp=d.sprite&&SPRITES[d.sprite];
     if(sp){
       if(d.tier==='S'){ctx.shadowColor='#fc0';ctx.shadowBlur=10;}
-      ctx.drawImage(sp,px2+4,y+2,26,26);ctx.shadowBlur=0;
-      if(d.tier==='S'){ctx.fillStyle='#fc0';ctx.fillRect(px2+22,y+2,8,8);ctx.fillStyle='#000';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('S',px2+26,y+8);}
+      ctx.drawImage(sp,px2+4,y+1,28,28);ctx.shadowBlur=0;
+      if(d.tier==='S'){ctx.fillStyle='#fc0';ctx.fillRect(px2+24,y+2,8,8);ctx.fillStyle='#000';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText('S',px2+28,y+8);}
     } else {ctx.font='18px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+22);}
     ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillText(d.name.slice(0,10),px2+32,y+12);
     if(d.evolved){ctx.fillStyle='#fa0';ctx.font='bold 9px monospace';ctx.fillText('★EVOLVED',px2+32,y+24);}
@@ -3511,7 +3513,12 @@ function drawLevelUp2(){
     ctx.fillStyle='rgba(80,40,0,.95)';ctx.strokeStyle='#fa0';ctx.lineWidth=4;
     ctx.shadowColor='#fa0';ctx.shadowBlur=24;
     ctx.beginPath();ctx.roundRect(bx,by,bw,bh,16);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-    ctx.font='80px serif';ctx.fillStyle='#fff';ctx.fillText(c.icon||'?',W/2,by+130);
+    const sp=c.sprite&&SPRITES[c.sprite];
+    if(sp){
+      ctx.shadowColor='#fc0';ctx.shadowBlur=30;
+      ctx.drawImage(sp,W/2-48,by+90,96,96);
+      ctx.shadowBlur=0;
+    } else {ctx.font='80px serif';ctx.fillStyle='#fff';ctx.fillText(c.icon||'?',W/2,by+150);}
     ctx.fillStyle=c.color;ctx.font='bold 28px monospace';ctx.fillText(c.name,W/2,by+200);
     ctx.fillStyle='#fff';ctx.font='13px monospace';wrapTx(c.desc,W/2,by+250,bw-30,18);
     ctx.fillStyle='#fa0';ctx.font='bold 16px monospace';ctx.globalAlpha=.6+pulse*.4;
@@ -3544,15 +3551,18 @@ function drawLevelUp2(){
       if(isSWeapon){ctx.shadowColor='#fc0';ctx.shadowBlur=10;}
       ctx.drawImage(sp,bx+8,by+8,32,32);
       ctx.shadowBlur=0;
-      // Large centered icon
-      ctx.drawImage(sp,bx+bw/2-26,by+60,52,52);
+      // Large centered icon (64x64 per spec; EVOLVE gets gold glow)
+      if(c.type==='evolve'){ctx.shadowColor='#fc0';ctx.shadowBlur=24;}
+      else if(isSWeapon){ctx.shadowColor='#fc0';ctx.shadowBlur=14;}
+      ctx.drawImage(sp,bx+bw/2-32,by+58,64,64);
+      ctx.shadowBlur=0;
       // S badge top-right
       if(isSWeapon){
         ctx.fillStyle='#fc0';ctx.fillRect(bx+bw-22,by+8,16,16);
         ctx.fillStyle='#000';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText('S',bx+bw-14,by+20);
       }
     }
-    else{ctx.font='44px serif';ctx.fillText(c.icon||'?',bx+bw/2,by+108);}
+    else{ctx.font='52px serif';ctx.fillText(c.icon||'?',bx+bw/2,by+118);}
     ctx.fillStyle=c.color;ctx.fillRect(bx+18,by+125,bw-36,3);
     ctx.fillStyle='#fff';ctx.font='bold 13px monospace';wrapTx(c.name,bx+bw/2,by+148,bw-14,16);
     // ★ display for weapon UP
