@@ -758,16 +758,23 @@ window.openWeaponPicker=function(){
   let inner=`<div style="max-width:780px;width:100%"><div style="text-align:center;color:#fa0;font-weight:bold;font-size:18px;margin-bottom:14px">⚔️ Select Main Weapon</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">`;
   for(const id of owned){
     const d=WEAPON_DEFS[id];const r=save.weaponsOwned[id]||'gray';
+    const lv=(save.weaponLevels&&save.weaponLevels[id])||1;
     const isS=d.tier==='S';
+    const sel=save.selectedWeapon===id;
     const src=d.sprite?`assets/${d.sprite}.png`:null;
-    inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;cursor:pointer;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}" onclick="pickWeapon('${id}')">
-      ${isS?`<div style="position:absolute;top:5px;right:5px;background:#fc0;color:#000;font-size:9px;font-weight:bold;padding:1px 5px;border-radius:4px">S</div>
-        <div style="font-size:9px;color:#fc0;font-weight:bold;margin-bottom:4px">✨ S級 ${d.name.replace(/^S\s/,'').toUpperCase()} ✨</div>`:''}
-      ${src?`<img src="${src}" width="48" height="48" style="object-fit:contain;image-rendering:pixelated;display:block;margin:0 auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    const rankAtk={gray:5,green:12,blue:22,purple:38,gold:60,red:90}[r]||0;
+    const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
+    const evo=EVOLUTIONS.find(e=>e.weapon===id);
+    inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
+      ${isS?`<div style="position:absolute;top:5px;right:5px;background:#fc0;color:#000;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px">✨S</div>`:''}
+      ${sel?`<div style="position:absolute;top:5px;left:5px;background:#ff0;color:#000;font-size:9px;font-weight:bold;padding:1px 5px;border-radius:4px">装備中</div>`:''}
+      ${src?`<img src="${src}" width="48" height="48" style="object-fit:contain;image-rendering:pixelated;display:block;margin:6px auto 2px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <div style="font-size:36px;display:none">${d.icon}</div>`:`<div style="font-size:36px">${d.icon}</div>`}
       <div style="font-size:13px;color:${d.color};font-weight:bold;margin-top:4px">${d.name}</div>
-      <div style="font-size:10px;color:${RANK_COLORS[r]}">[${RANK_NAMES[r]}]</div>
-      <div style="font-size:10px;color:#aaa;margin-top:4px">${d.desc(1)}</div>
+      <div style="font-size:10px"><span style="color:${RANK_COLORS[r]}">${RANK_NAMES[r]}</span> · <span style="color:#aaa">Lv.${lv}</span></div>
+      <div style="font-size:11px;color:#0f0;margin-top:4px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
+      ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ EVO: ${WEAPON_DEFS[evo.evolved].name}</div>`:''}
+      <button class="btn btn-blue" style="margin-top:6px;padding:5px 14px;font-size:12px" ${sel?'disabled':''} onclick="pickWeapon('${id}')">${sel?'装備中':'セットする'}</button>
     </div>`;
   }
   inner+=`</div><div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center">
@@ -832,27 +839,95 @@ function renderEquip(p){
 }
 window.setEquipTab=function(t){equipSubTab=t;renderHome();};
 
+let invFilter='armor';
+window.setInvFilter=function(f){invFilter=f;renderHome();};
+
 function renderInventoryTab(){
-  let h=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">INVENTORY (${save.equipment.length}/50)</div>`;
-  h+='<div class="inv-grid">';
-  const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.sub||0)-(a.sub||0)||(b.level||0)-(a.level||0));
-  for(let i=0;i<50;i++){
-    const eq=items[i];
-    if(eq){
-      const isEq=eqIsEquipped(eq.id);
-      h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
-        <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
-        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
-        <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]} Lv${eq.level}</div>
-        <div style="font-size:8px;color:#0f0">+${eqBonusPct(eq).toFixed(1)}%</div>
-        ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
-        ${eq.astral>0?`<div style="font-size:8px;color:#fa0;position:absolute;top:1px;left:3px">${'★'.repeat(eq.astral)}</div>`:''}
-      </div>`;
-    } else h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
+  const ownedWeapons=Object.keys(save.weaponsOwned||{}).filter(id=>WEAPON_DEFS[id]&&!WEAPON_DEFS[id].evolved);
+  let h=`<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px">
+    <button class="btn ${invFilter==='armor'?'btn-orange':''}" style="padding:6px 18px;font-size:13px;background:${invFilter==='armor'?'':'#333'}" onclick="setInvFilter('armor')">🛡️ 防具 (${save.equipment.length}/50)</button>
+    <button class="btn ${invFilter==='weapon'?'btn-orange':''}" style="padding:6px 18px;font-size:13px;background:${invFilter==='weapon'?'':'#333'}" onclick="setInvFilter('weapon')">⚔️ 武器 (${ownedWeapons.length})</button>
+  </div>`;
+  if(invFilter==='armor'){
+    h+=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">ARMOR INVENTORY</div>`;
+    h+='<div class="inv-grid">';
+    const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.sub||0)-(a.sub||0)||(b.level||0)-(a.level||0));
+    for(let i=0;i<50;i++){
+      const eq=items[i];
+      if(eq){
+        const isEq=eqIsEquipped(eq.id);
+        h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
+          <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
+          <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
+          <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]||'?'} Lv${eq.level}</div>
+          <div style="font-size:8px;color:#0f0">+${eqBonusPct(eq).toFixed(1)}%</div>
+          ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
+          ${eq.astral>0?`<div style="font-size:8px;color:#fa0;position:absolute;top:1px;left:3px">${'★'.repeat(eq.astral)}</div>`:''}
+        </div>`;
+      } else h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
+    }
+    h+='</div>';
+  } else {
+    // Weapons
+    h+=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">WEAPON INVENTORY</div>`;
+    if(ownedWeapons.length===0){
+      h+='<div style="text-align:center;color:#888;padding:30px">No weapons yet. Pull gacha to obtain weapons.</div>';
+    } else {
+      h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:760px;margin:0 auto">';
+      // Sort by rank desc, S-tier first
+      ownedWeapons.sort((a,b)=>{
+        const sa=WEAPON_DEFS[a].tier==='S'?1:0,sb=WEAPON_DEFS[b].tier==='S'?1:0;
+        if(sa!==sb)return sb-sa;
+        return RANKS.indexOf(save.weaponsOwned[b]||'gray')-RANKS.indexOf(save.weaponsOwned[a]||'gray');
+      });
+      for(const id of ownedWeapons){
+        const d=WEAPON_DEFS[id];const r=save.weaponsOwned[id]||'gray';
+        const lv=(save.weaponLevels&&save.weaponLevels[id])||1;
+        const isS=d.tier==='S';
+        const sel=save.selectedWeapon===id;
+        const src=d.sprite?`assets/${d.sprite}.png`:null;
+        const rankAtk={gray:5,green:12,blue:22,purple:38,gold:60,red:90}[r]||0;
+        const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
+        const evo=EVOLUTIONS.find(e=>e.weapon===id);
+        h+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.6)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
+          ${isS?`<div style="position:absolute;top:5px;right:5px;background:#fc0;color:#000;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px">✨S</div>`:''}
+          ${sel?`<div style="position:absolute;top:5px;left:5px;background:#ff0;color:#000;font-size:9px;font-weight:bold;padding:1px 5px;border-radius:4px">装備中</div>`:''}
+          ${src?`<img src="${src}" width="64" height="64" style="object-fit:contain;image-rendering:pixelated;display:block;margin:6px auto 4px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+            <div style="font-size:42px;display:none">${d.icon}</div>`:`<div style="font-size:42px">${d.icon}</div>`}
+          <div style="font-size:13px;color:${d.color};font-weight:bold">${d.name}</div>
+          <div style="font-size:10px;color:${RANK_COLORS[r]}">${RANK_NAMES[r]} · Lv.${lv}</div>
+          <div style="font-size:11px;color:#0f0;margin-top:4px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
+          ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ ${WEAPON_DEFS[evo.evolved].name}</div>`:''}
+          <div style="display:flex;gap:4px;justify-content:center;margin-top:6px">
+            ${sel?'':`<button class="btn btn-blue" style="padding:4px 10px;font-size:11px" onclick="setMainWeapon('${id}')">セット</button>`}
+            <button class="btn" style="padding:4px 10px;font-size:11px;background:#922" onclick="dismantleWeapon('${id}')" title="Decompose">解体</button>
+          </div>
+        </div>`;
+      }
+      h+='</div>';
+      h+=`<div style="text-align:center;font-size:11px;color:#888;margin-top:10px">解体: ベーステック獲得（${'gray:5/green:15/blue:40/purple:100/gold:200(+1Core)/red:500(+5Core)'}）</div>`;
+    }
   }
-  h+='</div>';
   return h;
 }
+
+window.setMainWeapon=function(id){
+  if(!save.weaponsOwned[id]){flashMsg('Not owned');return;}
+  save.selectedWeapon=id;saveSave();renderHome();SFX.coin();
+};
+window.dismantleWeapon=function(id){
+  if(!save.weaponsOwned[id]){flashMsg('Not owned');return;}
+  if(save.selectedWeapon===id){flashMsg('Unequip first');return;}
+  // Don't allow dismantling kunai (default fallback)
+  const ownedCount=Object.keys(save.weaponsOwned).length;
+  if(ownedCount<=1){flashMsg('Last weapon — cannot dismantle');return;}
+  const r=save.weaponsOwned[id];
+  const v=DECOMPOSE_VAL[r]||DECOMPOSE_VAL.gray;
+  save.basetech+=v.bt;save.cores+=v.core;
+  delete save.weaponsOwned[id];
+  if(save.weaponLevels)delete save.weaponLevels[id];
+  saveSave();renderHome();flashMsg(`+${v.bt} BT${v.core?` +${v.core} Core`:''}`);
+};
 
 function renderMergeTab(){
   let h='<div style="max-width:800px;margin:0 auto">';
@@ -1122,7 +1197,7 @@ window.buyMaterial=function(kind){
 
 // Weapon pool by rank availability
 const NORMAL_WEAPONS=['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer'];
-const GREEN_WEAPONS=['kunai','bat','shotgun','drill','soccer'];
+const GREEN_WEAPONS=['kunai','bat','drill','soccer'];
 const S_WEAPONS=['lightChaserS','forceS','chaosBlade'];
 function _grantWeapon(id,rank){
   const cur=save.weaponsOwned[id];
@@ -1633,16 +1708,19 @@ function initBattle(){
     commonCoinBonus:save.selectedChar==='common',
     gskills:{},critCombo:0,nextGuaranteedCrit:0,shieldHp:0,shieldCd:0,
   };
-  // Resolve main weapon up front: selected if owned + valid, else fall back to kunai
+  // Resolve main weapon: selected if owned + valid; null = no initial skill
   let mainW=save.selectedWeapon;
-  if(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW])mainW='kunai';
+  if(mainW&&(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW]))mainW=null;
   // Main-weapon ATK bonus (rank + level)
-  const mwRank=save.weaponsOwned[mainW]||'gray';
-  const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
-  const mwRankBonus={gray:0.05,green:0.12,blue:0.22,purple:0.38,gold:0.60,red:0.90}[mwRank]||0;
-  const mwLvBonus=(mwLv-1)*0.02;
-  player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
-  player.might=player.baseMight;
+  if(mainW){
+    const mwRank=save.weaponsOwned[mainW]||'gray';
+    const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
+    const mwRankBonus={gray:0.05,green:0.12,blue:0.22,purple:0.38,gold:0.60,red:0.90}[mwRank]||0;
+    const mwLvBonus=(mwLv-1)*0.02;
+    player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
+    player.might=player.baseMight;
+  }
+  player.mainWeaponId=mainW||null;
   // Compute equipped grade-skill flags
   for(const slot of Object.keys(SLOT_NAMES)){
     const id=save.equipped[slot];if(id==null)continue;
@@ -1650,7 +1728,10 @@ function initBattle(){
     player.gskills[slot]={ri:RANKS.indexOf(eq.rank),sub:eq.sub||0,astral:eq.astral||0};
   }
   // Main weapon rank → weapon grade-skill (replaces the removed weapon slot)
-  player.gskills.weapon={ri:RANKS.indexOf(mwRank),sub:0,astral:0};
+  if(mainW){
+    const _mwR=save.weaponsOwned[mainW]||'gray';
+    player.gskills.weapon={ri:RANKS.indexOf(_mwR),sub:0,astral:0};
+  }
   // Belt-blue: magnet +50%
   if(player.gskills.belt&&player.gskills.belt.ri>=2)player.magnetRange*=1.5;
   // Boots-purple: speed→ATK (precomputed)
@@ -1659,9 +1740,11 @@ function initBattle(){
     player.baseMight*=1+(spdRatio-1)*0.6;player.might=player.baseMight;
   }
   // Armor-purple: HP<50% ATK+20% (handled dynamically — flag only)
-  player.weapons.push({id:mainW,lv:1,timer:0});
-  if(!save.records.weaponsUsed)save.records.weaponsUsed=[];
-  if(!save.records.weaponsUsed.includes(mainW))save.records.weaponsUsed.push(mainW);
+  if(mainW){
+    player.weapons.push({id:mainW,lv:1,timer:0});
+    if(!save.records.weaponsUsed)save.records.weaponsUsed=[];
+    if(!save.records.weaponsUsed.includes(mainW))save.records.weaponsUsed.push(mainW);
+  }
 
   bullets=[];enemies=[];gems=[];coins2=[];particles=[];chests2=[];energyDrinks=[];
   weaponProjectiles=[];lightningFx=[];whipFx=[];dmgPopups=[];deadFx=[];
@@ -2099,14 +2182,14 @@ function pickChoices(){
   const ch=[];
   // Attack skill ★UP
   for(const w of player.weapons){const d=WEAPON_DEFS[w.id];if(!d.evolved&&w.lv<d.maxLv){const ns=w.lv+1;
-    ch.push({type:'weapon',tag:`★UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
+    ch.push({type:'weapon',weaponId:w.id,tag:`★UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }}
   // New attack skills (only Normal-tier randomly-pickable; S-tier comes via main weapon slot)
   if(player.weapons.length<6){
     const owned=new Set(player.weapons.map(w=>w.id));
     for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer']){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
-        ch.push({type:'weapon',tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
+        ch.push({type:'weapon',weaponId:id,tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
           apply:()=>{player.weapons.push({id,lv:1,timer:0});if(!save.records.weaponsUsed)save.records.weaponsUsed=[];if(!save.records.weaponsUsed.includes(id))save.records.weaponsUsed.push(id);}});
       }
     }
@@ -2123,7 +2206,14 @@ function pickChoices(){
   }
   // Heal
   if(player.hp<player.maxHp*.9)ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
-  levelUpChoices=ch.sort(()=>Math.random()-.5).slice(0,3);selectedChoice=-1;
+  // Main-weapon bias: 50% chance to ensure the main weapon's choice (★UP or NEW SKILL) is one of the picks
+  ch.sort(()=>Math.random()-.5);
+  let picks=ch.slice(0,3);
+  if(player.mainWeaponId&&Math.random()<0.5){
+    const mwChoice=ch.find(c=>c.type==='weapon'&&(c.weaponId===player.mainWeaponId));
+    if(mwChoice&&!picks.includes(mwChoice)){picks[picks.length-1]=mwChoice;picks.sort(()=>Math.random()-.5);}
+  }
+  levelUpChoices=picks;selectedChoice=-1;
 }
 
 function openChest2(){
