@@ -387,7 +387,7 @@ function defaultSave(){
     chars:{common:{unlocked:true,lv:1},archer:{unlocked:false,lv:1},knight:{unlocked:false,lv:1}},
     selectedChar:'common',
     equipment:[],
-    equipped:{weapon:null,armor:null,boots:null,belt:null,gloves:null,necklace:null},
+    equipped:{armor:null,boots:null,belt:null,gloves:null,necklace:null},
     pets:{hachiko:{unlocked:true},frog:{unlocked:false}},
     selectedPet:'hachiko',
     chapters:{1:{unlocked:true,cleared:false},2:{unlocked:false,cleared:false},3:{unlocked:false,cleared:false}},
@@ -422,6 +422,10 @@ delete save.shopDaily;
 if(!save.talents)save.talents={atk:0,hp:0,speed:0,coin:0,xp:0,cd:0};
 if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
 if(!save.selectedWeapon)save.selectedWeapon='kunai';
+// Drop legacy weapon equip slot from older saves
+if(save.equipped&&'weapon' in save.equipped)delete save.equipped.weapon;
+// Remove any legacy 'weapon' inventory items (slot system no longer includes weapon)
+if(save.equipment)save.equipment=save.equipment.filter(e=>e.slot!=='weapon');
 for(const e of save.equipment){if(e.level===undefined)e.level=1;if(e.sub===undefined)e.sub=0;if(e.astral===undefined)e.astral=0;}
 
 /* ═══════════════════════════════════════════════════════
@@ -431,7 +435,6 @@ const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
 const RANK_PERCENT={
-  weapon:{gray:5,green:12,blue:22,purple:38,gold:60,red:90},
   armor:{gray:5,green:12,blue:22,purple:38,gold:60,red:90},
   boots:{gray:3,green:8,blue:14,purple:22,gold:35,red:50},
   belt:{gray:5,green:12,blue:20,purple:32,gold:50,red:75},
@@ -459,9 +462,9 @@ const ASTRAL_DESC={
   gloves:'★3: Crit splashes 50% to nearby',
   necklace:'★3: Cooldown ready triggers double-fire',
 };
-const SLOT_NAMES={weapon:'Weapon',armor:'Armor',boots:'Boots',belt:'Belt',gloves:'Gloves',necklace:'Necklace'};
-const SLOT_ICONS={weapon:'⚔️',armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',necklace:'📿'};
-const SLOT_EFFECTS={weapon:'ATK',armor:'MaxHP',boots:'Speed',belt:'XP Gain',gloves:'Crit%',necklace:'CD Reduce'};
+const SLOT_NAMES={armor:'Armor',boots:'Boots',belt:'Belt',gloves:'Gloves',necklace:'Necklace'};
+const SLOT_ICONS={armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',necklace:'📿'};
+const SLOT_EFFECTS={armor:'MaxHP',boots:'Speed',belt:'XP Gain',gloves:'Crit%',necklace:'CD Reduce'};
 
 const CHARS={
   common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:100,baseHp:100,
@@ -576,13 +579,23 @@ function calcPower(){
     const id=save.equipped[slot];if(id==null)continue;
     const eq=getEqById(id);if(!eq)continue;
     const b=eqBonusPct(eq)/100;
-    if(slot==='weapon')atk*=1+b;
     if(slot==='armor')hp*=1+b;
     if(slot==='boots')speed*=1+b;
     if(slot==='gloves')crit+=b*100;
     if(eq.rank==='red')bonus+=500;
     else if(eq.rank==='gold')bonus+=200;
     bonus+=[0,300,600,1000][eq.astral||0];
+  }
+  // Main weapon: ATK multiplier + flat power
+  const mw=save.selectedWeapon;
+  if(mw&&save.weaponsOwned[mw]){
+    const mwR=save.weaponsOwned[mw];
+    const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
+    const rankAtk={gray:0.05,green:0.12,blue:0.22,purple:0.38,gold:0.60,red:0.90}[mwR]||0;
+    atk*=(1+rankAtk)*(1+(mwLv-1)*0.02);
+    const flat={gray:50,green:150,blue:300,purple:600,gold:1200,red:2500}[mwR]||0;
+    bonus+=flat+mwLv*20;
+    if(WEAPON_DEFS[mw]&&WEAPON_DEFS[mw].tier==='S')bonus+=1500;
   }
   return Math.floor(atk*10+hp*5+speed*100+crit*200+bonus);
 }
@@ -642,8 +655,8 @@ function showHome(){
   document.getElementById('result').classList.remove('active');
   document.getElementById('battleBtn').style.display='block';
   _lastPower=null; // reset diff tracking
-  // Sanitize a stale selectedWeapon from older saves
-  if(!WEAPON_DEFS[save.selectedWeapon]||WEAPON_DEFS[save.selectedWeapon].evolved){save.selectedWeapon='kunai';saveSave();}
+  // Sanitize a stale selectedWeapon from older saves (null = intentionally unequipped)
+  if(save.selectedWeapon&&(!WEAPON_DEFS[save.selectedWeapon]||WEAPON_DEFS[save.selectedWeapon].evolved)){save.selectedWeapon='kunai';saveSave();}
   checkDaily();renderHome();
 }
 function hideBattleBtn(){document.getElementById('battleBtn').style.display='none';}
@@ -701,22 +714,39 @@ function renderChars(p){
     h+=`</div>`;
   }
   h+='</div>';
-  // Main weapon slot (selected character only)
-  const mw=save.selectedWeapon||'kunai';const wd=WEAPON_DEFS[mw];
-  const mwRank=save.weaponsOwned[mw]||'gray';
-  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">⚔️ Main Weapon</div>`;
+  // Main weapon slot
+  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">🗡️ メイン武器</div>`;
+  const mw=save.selectedWeapon;
+  const wd=mw?WEAPON_DEFS[mw]:null;
+  const isOwned=mw&&save.weaponsOwned[mw];
+  const mwRank=isOwned?save.weaponsOwned[mw]:'gray';
+  const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
   const mwIsS=wd&&wd.tier==='S';
   const mwSrc=wd&&wd.sprite?`assets/${wd.sprite}.png`:null;
-  h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
-    <div class="game-card rank-${mwRank}" style="cursor:pointer;width:260px;text-align:center;padding:14px;margin:0;position:relative;${mwIsS?'border-color:#fc0;box-shadow:0 0 18px rgba(255,200,0,.6)':''}" onclick="openWeaponPicker()">
-      ${mwIsS?'<div style="position:absolute;top:6px;right:6px;background:#fc0;color:#000;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px">S</div>':''}
-      ${mwSrc?`<img src="${mwSrc}" width="48" height="48" style="object-fit:contain;image-rendering:pixelated;display:block;margin:0 auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-        <div style="font-size:36px;display:none">${wd.icon}</div>`:`<div style="font-size:36px">${wd?wd.icon:'?'}</div>`}
-      <div style="font-size:14px;color:${wd?wd.color:'#fff'};font-weight:bold;margin-top:4px">${wd?wd.name:'(none)'} <span style="color:${RANK_COLORS[mwRank]};font-size:11px">[${RANK_NAMES[mwRank]}]</span></div>
-      <div style="font-size:11px;color:#aaa;margin-top:4px">${wd?wd.desc(1):''}</div>
-      <div style="font-size:10px;color:#0af;margin-top:6px">タップして変更</div>
-    </div>
-  </div>`;
+  const rankAtk={gray:5,green:12,blue:22,purple:38,gold:60,red:90}[mwRank]||0;
+  const finalAtk=Math.round(rankAtk*(1+(mwLv-1)*0.02));
+  if(wd&&isOwned){
+    h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="game-card rank-${mwRank}" style="width:280px;text-align:center;padding:14px;margin:0;position:relative;${mwIsS?'border-color:#fc0;box-shadow:0 0 22px rgba(255,200,0,.65)':''}">
+        ${mwIsS?'<div style="position:absolute;top:6px;right:6px;background:#fc0;color:#000;font-size:11px;font-weight:bold;padding:1px 7px;border-radius:4px">S</div>':''}
+        ${mwSrc?`<img src="${mwSrc}" width="64" height="64" style="object-fit:contain;image-rendering:pixelated;display:block;margin:0 auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+          <div style="font-size:48px;display:none">${wd.icon}</div>`:`<div style="font-size:48px">${wd.icon}</div>`}
+        <div style="font-size:15px;color:${wd.color};font-weight:bold;margin-top:6px">${wd.name}</div>
+        <div style="font-size:11px;color:${RANK_COLORS[mwRank]};margin-top:2px">[${RANK_NAMES[mwRank]}] Lv.${mwLv}</div>
+        <div style="font-size:13px;color:#0f0;margin-top:6px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
+        <button class="btn btn-blue" style="margin-top:8px;padding:5px 16px;font-size:12px" onclick="openWeaponPicker()">変更する ▼</button>
+      </div>
+    </div>`;
+  } else {
+    h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="game-card" style="width:280px;text-align:center;padding:14px;margin:0;border-color:#444;cursor:pointer" onclick="openWeaponPicker()">
+        <div style="font-size:48px;opacity:.4">🗡️</div>
+        <div style="font-size:14px;color:#aaa;margin-top:6px">武器未装備</div>
+        <div style="font-size:11px;color:#777;margin-top:2px">タップして武器を選択</div>
+        <button class="btn btn-orange" style="margin-top:8px;padding:5px 16px;font-size:12px">武器を選択 →</button>
+      </div>
+    </div>`;
+  }
   p.innerHTML=h;
 }
 
@@ -740,15 +770,22 @@ window.openWeaponPicker=function(){
       <div style="font-size:10px;color:#aaa;margin-top:4px">${d.desc(1)}</div>
     </div>`;
   }
-  inner+=`</div><div style="text-align:center;margin-top:16px"><button class="btn btn-orange" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button></div></div>`;
+  inner+=`</div><div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center">
+    <button class="btn btn-red" onclick="unequipWeapon()">解除</button>
+    <button class="btn btn-orange" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+  </div></div>`;
   ov.innerHTML=inner;
   document.body.appendChild(ov);
 };
+function _closeWeaponPicker(){document.querySelectorAll('div[style*="z-index: 300"],div[style*="z-index:300"]').forEach(d=>d.remove());}
 window.pickWeapon=function(id){
   if(!save.weaponsOwned[id]){flashMsg('Not owned');return;}
   save.selectedWeapon=id;saveSave();
-  document.querySelectorAll('div[style*="z-index:300"]').forEach(d=>d.remove());
-  renderHome();SFX.coin();
+  _closeWeaponPicker();renderHome();SFX.coin();
+};
+window.unequipWeapon=function(){
+  save.selectedWeapon=null;saveSave();
+  _closeWeaponPicker();renderHome();
 };
 window.selectChar=function(id){if(!save.chars[id].unlocked)return;save.selectedChar=id;saveSave();renderHome();};
 window.unlockChar=function(id){const c=CHARS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chars[id].unlocked=true;saveSave();renderHome();};
@@ -1596,12 +1633,24 @@ function initBattle(){
     commonCoinBonus:save.selectedChar==='common',
     gskills:{},critCombo:0,nextGuaranteedCrit:0,shieldHp:0,shieldCd:0,
   };
+  // Resolve main weapon up front: selected if owned + valid, else fall back to kunai
+  let mainW=save.selectedWeapon;
+  if(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW])mainW='kunai';
+  // Main-weapon ATK bonus (rank + level)
+  const mwRank=save.weaponsOwned[mainW]||'gray';
+  const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
+  const mwRankBonus={gray:0.05,green:0.12,blue:0.22,purple:0.38,gold:0.60,red:0.90}[mwRank]||0;
+  const mwLvBonus=(mwLv-1)*0.02;
+  player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
+  player.might=player.baseMight;
   // Compute equipped grade-skill flags
   for(const slot of Object.keys(SLOT_NAMES)){
     const id=save.equipped[slot];if(id==null)continue;
     const eq=getEqById(id);if(!eq)continue;
     player.gskills[slot]={ri:RANKS.indexOf(eq.rank),sub:eq.sub||0,astral:eq.astral||0};
   }
+  // Main weapon rank → weapon grade-skill (replaces the removed weapon slot)
+  player.gskills.weapon={ri:RANKS.indexOf(mwRank),sub:0,astral:0};
   // Belt-blue: magnet +50%
   if(player.gskills.belt&&player.gskills.belt.ri>=2)player.magnetRange*=1.5;
   // Boots-purple: speed→ATK (precomputed)
@@ -1610,9 +1659,6 @@ function initBattle(){
     player.baseMight*=1+(spdRatio-1)*0.6;player.might=player.baseMight;
   }
   // Armor-purple: HP<50% ATK+20% (handled dynamically — flag only)
-  // Resolve main weapon: selected if owned + valid, else fall back to kunai
-  let mainW=save.selectedWeapon;
-  if(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW])mainW='kunai';
   player.weapons.push({id:mainW,lv:1,timer:0});
   if(!save.records.weaponsUsed)save.records.weaponsUsed=[];
   if(!save.records.weaponsUsed.includes(mainW))save.records.weaponsUsed.push(mainW);
