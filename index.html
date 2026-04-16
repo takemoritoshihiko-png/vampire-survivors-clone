@@ -9,7 +9,8 @@
 body{background:#0a0a1a;color:#fff;overflow:hidden;height:100vh;width:100vw;position:fixed}
 .screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto}
 .screen.active{display:flex;flex-direction:column}
-canvas{display:block;margin:0 auto}
+canvas{display:block;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+img{image-rendering:pixelated;image-rendering:crisp-edges}
 
 /* ─── HOME ─── */
 #home{background:linear-gradient(135deg,#0a0a2e,#1a0a2e,#0a1a2e);align-items:center;padding:14px 14px 100px}
@@ -20,6 +21,7 @@ canvas{display:block;margin:0 auto}
 .home-card:hover{border-color:#f80;background:rgba(255,200,0,.08);transform:translateY(-2px)}
 .home-card.selected{border-color:#f80;box-shadow:0 0 14px rgba(255,136,0,.5)}
 .home-card .big-icon{font-size:50px;line-height:1.2;margin-bottom:4px}
+.home-card img{display:block;margin:0 auto 6px}
 .home-card h3{font-size:16px;margin-bottom:4px}
 .home-card p{font-size:11px;color:#aaa;line-height:1.3}
 .home-card .stats{font-size:11px;color:#4af;margin:4px 0;font-weight:bold}
@@ -150,6 +152,29 @@ canvas{display:block;margin:0 auto}
 
 <script>
 'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   SPRITE PRELOAD
+   ═══════════════════════════════════════════════════════ */
+const SPRITES={};
+const SPRITE_FILES={
+  char_common:'assets/char_common.png',char_archer:'assets/char_archer.png',char_knight:'assets/char_knight.png',
+  enemy_zombie:'assets/enemy_zombie.png',enemy_skeleton:'assets/enemy_skeleton.png',enemy_armorZombie:'assets/enemy_armorZombie.png',
+  enemy_ghost:'assets/enemy_ghost.png',enemy_demon:'assets/enemy_demon.png',
+  pet_hachiko:'assets/pet_hachiko.png',pet_frog:'assets/pet_frog.png',
+  boss_zombie:'assets/boss_zombie.png',
+  weapon_kunai:'assets/weapon_kunai.png',weapon_bow:'assets/weapon_bow.png',weapon_sword:'assets/weapon_sword.png',
+  weapon_garlic:'assets/weapon_garlic.png',weapon_bible:'assets/weapon_bible.png',weapon_lightning:'assets/weapon_lightning.png',
+};
+let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
+function preloadSprites(cb){
+  for(const[k,src]of Object.entries(SPRITE_FILES)){
+    const img=new Image();
+    img.onload=()=>{SPRITES[k]=img;if(++spritesLoaded===spritesTotal)cb();};
+    img.onerror=()=>{SPRITES[k]=null;if(++spritesLoaded===spritesTotal)cb();};
+    img.src=src;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
    SAVE DATA
@@ -346,7 +371,8 @@ function renderChars(p){
     const hp=Math.floor(c.baseHp*(1+(d.lv-1)*0.05));
     const cost=charLvCost(d.lv);
     h+=`<div class="home-card ${sel?'selected':''}" onclick="selectChar('${id}')">
-      <div class="big-icon">${c.icon}</div>
+      <img src="assets/char_${id}.png" width="80" height="80" style="object-fit:contain;image-rendering:pixelated" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div class="big-icon" style="display:none">${c.icon}</div>
       <h3 style="color:${c.outline}">${c.name}</h3>
       <div class="stats">Lv${d.lv}/${MAX_CHAR_LV}</div>
       <div class="stats">⚔ ATK ${atk} | ❤ HP ${hp}</div>
@@ -555,7 +581,8 @@ function renderPets(p){
   for(const[id,pet]of Object.entries(PET_DEFS)){
     const d=save.pets[id];const sel=save.selectedPet===id;
     h+=`<div class="home-card ${sel?'selected':''}" onclick="selectPet('${id}')">
-      <div class="big-icon">${pet.icon}</div>
+      <img src="assets/pet_${id}.png" width="80" height="80" style="object-fit:contain;image-rendering:pixelated" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div class="big-icon" style="display:none">${pet.icon}</div>
       <h3 style="color:${pet.color}">${pet.name}</h3>
       <p>${pet.desc}</p>`;
     if(!d.unlocked)h+=`<button class="btn btn-orange" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();unlockPet('${id}')">Unlock ${pet.cost}G</button>`;
@@ -656,6 +683,7 @@ window.startBattle=function(){
    ═══════════════════════════════════════════════════════ */
 const canvas2=document.getElementById('game');
 const ctx=canvas2.getContext('2d');
+ctx.imageSmoothingEnabled=false;
 const W=1280,H=720;
 
 function resizeCanvas(){const r=Math.min(window.innerWidth/W,window.innerHeight/H);canvas2.style.width=W*r+'px';canvas2.style.height=H*r+'px';}
@@ -1201,6 +1229,60 @@ function updateBattle(){
 /* Draw enemy */
 function drawEnemy(e){
   const td=ENEMY_TYPES[e.typeId];
+
+  // Try sprite first
+  if(!e.isBoss){
+    const sp=SPRITES['enemy_'+e.typeId];
+    if(sp){
+      const sz=e.radius*2.6;
+      if(e.typeId==='ghost')ctx.globalAlpha=0.75+Math.sin(gameTime*3+e.st)*0.15;
+      // Flash via brightness filter
+      if(e.flashTimer>0)ctx.filter='brightness(3) saturate(0)';
+      ctx.drawImage(sp,e.x-sz/2,e.y-sz/2,sz,sz);
+      if(e.flashTimer>0)ctx.filter='none';
+      ctx.globalAlpha=1;
+      // HP bar
+      if(e.hp<e.maxHp){
+        const r=Math.max(0,e.hp/e.maxHp);
+        ctx.fillStyle='#333';ctx.fillRect(e.x-15,e.y-e.radius-7,30,3);
+        ctx.fillStyle='#f44';ctx.fillRect(e.x-15,e.y-e.radius-7,30*r,3);
+      }
+      return;
+    }
+  }
+
+  // Boss with sprite
+  if(e.isBoss){
+    const sp=SPRITES['boss_zombie'];
+    if(sp){
+      const sz=e.radius*2.4;
+      const wobble=Math.sin(gameTime*3+e.st)*4;
+      // Outline glow
+      let outline=e.outline||e.color;
+      if(e.rainbow)outline=`hsl(${(gameTime*120)%360},100%,55%)`;
+      ctx.shadowColor=outline;ctx.shadowBlur=22;
+      if(e.flashTimer>0)ctx.filter='brightness(3) saturate(0)';
+      ctx.drawImage(sp,e.x-sz/2,e.y-sz/2+wobble,sz,sz);
+      if(e.flashTimer>0)ctx.filter='none';
+      ctx.shadowBlur=0;
+      // Rainbow ring for final boss
+      if(e.rainbow){
+        ctx.strokeStyle=outline;ctx.lineWidth=4;
+        ctx.beginPath();ctx.arc(e.x,e.y+wobble,e.radius+4,0,Math.PI*2);ctx.stroke();
+      }
+      // Wings overlay for demon king
+      if(e.hasWings){
+        ctx.fillStyle='#600';
+        ctx.beginPath();ctx.ellipse(e.x-sz/2-15,e.y+wobble,18,sz/2.5,Math.PI/4,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(e.x+sz/2+15,e.y+wobble,18,sz/2.5,-Math.PI/4,0,Math.PI*2);ctx.fill();
+      }
+      // Boss name
+      ctx.fillStyle='#fff';ctx.font='bold 13px monospace';ctx.textAlign='center';
+      ctx.fillText(e.bossName||'BOSS',e.x,e.y+e.radius+18);
+      return;
+    }
+  }
+
   if(td&&td.alpha)ctx.globalAlpha=td.alpha+Math.sin(gameTime*3+e.st)*0.15;
   if(e.isBoss){
     // Rainbow outline blink for final boss
@@ -1264,14 +1346,30 @@ function drawPlayer(){
   const blink=player.invTimer>0&&Math.floor(player.invTimer*10)%2;
   if(blink)return;
   const ch=CHARS[player.charId];
-  ctx.strokeStyle=ch.outline;ctx.lineWidth=4;
-  ctx.beginPath();ctx.arc(player.x,player.y,player.radius+2,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle=ch.color;
-  ctx.beginPath();ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(ch.letter,player.x,player.y+1);
-  ctx.textBaseline='alphabetic';
+  const sp=SPRITES['char_'+player.charId];
+  if(sp){
+    const sz=52;
+    // Outline ring (faint)
+    ctx.strokeStyle=ch.outline;ctx.lineWidth=2;ctx.globalAlpha=0.5;
+    ctx.beginPath();ctx.arc(player.x,player.y,player.radius+4,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+    // Flip horizontally if facing left
+    if(player.facing<0){
+      ctx.save();ctx.translate(player.x,player.y);ctx.scale(-1,1);
+      ctx.drawImage(sp,-sz/2,-sz/2,sz,sz);ctx.restore();
+    } else {
+      ctx.drawImage(sp,player.x-sz/2,player.y-sz/2,sz,sz);
+    }
+  } else {
+    ctx.strokeStyle=ch.outline;ctx.lineWidth=4;
+    ctx.beginPath();ctx.arc(player.x,player.y,player.radius+2,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=ch.color;
+    ctx.beginPath();ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(ch.letter,player.x,player.y+1);
+    ctx.textBaseline='alphabetic';
+  }
 }
 
 function drawBattle(){
@@ -1378,8 +1476,15 @@ function drawBattle(){
   // Pet
   if(save.pets[save.selectedPet]&&save.pets[save.selectedPet].unlocked){
     const pi=PET_DEFS[save.selectedPet];
-    ctx.font='24px serif';ctx.textAlign='center';
-    ctx.fillText(pi.icon,pet.x,pet.y-(pet.vy||0)+8);
+    const sp=SPRITES['pet_'+save.selectedPet];
+    const py2=pet.y-(pet.vy||0);
+    if(sp){
+      const sz=32;
+      ctx.drawImage(sp,pet.x-sz/2,py2-sz/2,sz,sz);
+    } else {
+      ctx.font='24px serif';ctx.textAlign='center';
+      ctx.fillText(pi.icon,pet.x,py2+8);
+    }
   }
 
   drawPlayer();
@@ -1485,9 +1590,13 @@ function drawHUD(){
     if(w){const d=WEAPON_DEFS[w.id];
       ctx.fillStyle=d.color;ctx.globalAlpha=.25;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
       ctx.strokeStyle=d.color;ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);
-      ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);
-      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,8),px2+25,y+12);
-      ctx.fillStyle=d.evolved?'#fa0':'#fff';ctx.font='bold 9px monospace';ctx.fillText(d.evolved?'★EVO':`Lv${w.lv}`,px2+25,y+24);
+      // Try sprite for base weapon (evolved versions fall back to emoji)
+      const baseId=({thousandEdge:'kunai',sniperBow:'bow',deathblade:'sword',soulEater:'garlic',unholyVespers:'bible',thunderStorm:'lightning'})[w.id]||w.id;
+      const sp=SPRITES['weapon_'+baseId];
+      if(sp){ctx.drawImage(sp,px2+5,y+3,22,22);}
+      else{ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+18);}
+      ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillText(d.name.slice(0,8),px2+30,y+12);
+      ctx.fillStyle=d.evolved?'#fa0':'#fff';ctx.font='bold 9px monospace';ctx.fillText(d.evolved?'★EVO':`Lv${w.lv}`,px2+30,y+24);
     } else {ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);}
   }
   const psY=py2+16+6*slH+6;
@@ -1669,7 +1778,21 @@ window.retry=function(){document.getElementById('result').classList.remove('acti
 
 // Init
 checkAchievements();
-showHome();
+// Show loading screen on home initially
+document.getElementById('homePanel').innerHTML='<div style="text-align:center;padding:60px;color:#fa0;font-size:18px">⏳ Loading sprites... <span id="loadProg">0</span>/'+spritesTotal+'</div>';
+const loadProgEl=()=>document.getElementById('loadProg');
+const origLoad=preloadSprites;
+let _origCb;
+preloadSprites=function(cb){
+  _origCb=cb;
+  for(const[k,src]of Object.entries(SPRITE_FILES)){
+    const img=new Image();
+    img.onload=()=>{SPRITES[k]=img;spritesLoaded++;const el=loadProgEl();if(el)el.textContent=spritesLoaded;if(spritesLoaded===spritesTotal)cb();};
+    img.onerror=()=>{SPRITES[k]=null;spritesLoaded++;const el=loadProgEl();if(el)el.textContent=spritesLoaded;if(spritesLoaded===spritesTotal)cb();};
+    img.src=src;
+  }
+};
+preloadSprites(()=>{showHome();});
 </script>
 </body>
 </html>
