@@ -112,6 +112,13 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 #legendaryText.show{display:block;animation:legPop 1.2s}
 @keyframes legPop{0%{transform:translateX(-50%)scale(0)rotate(-15deg);opacity:0}50%{transform:translateX(-50%)scale(1.2)rotate(5deg);opacity:1}100%{transform:translateX(-50%)scale(1)rotate(0);opacity:1}}
 
+/* Rank-up + astral animations */
+@keyframes rankFlash{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
+@keyframes rankUpText{0%{transform:translateX(-50%)scale(0)rotate(-15deg);opacity:0}40%{transform:translateX(-50%)scale(1.3)rotate(5deg);opacity:1}100%{transform:translateX(-50%)scale(1)rotate(0);opacity:0}}
+@keyframes astralFlash{0%{opacity:0}30%{opacity:.85}100%{opacity:0}}
+@keyframes astralText{0%{transform:translateX(-50%)scale(0);opacity:0;letter-spacing:0px}50%{transform:translateX(-50%)scale(1.2);opacity:1;letter-spacing:8px}100%{transform:translateX(-50%)scale(1);opacity:0;letter-spacing:6px}}
+@keyframes starFall{0%{transform:translateY(0)rotate(0);opacity:1}100%{transform:translateY(120vh)rotate(360deg);opacity:0}}
+
 /* Equipment action menu */
 #eqMenu{position:fixed;background:rgba(20,20,40,.97);border:2px solid #fa0;border-radius:10px;padding:10px;display:none;z-index:90;box-shadow:0 6px 30px rgba(0,0,0,.7)}
 #eqMenu.show{display:block}
@@ -301,6 +308,8 @@ function defaultSave(){
     selectedChapter:1,
     gachaPity:0,gachaTotal:0,sgachaPity:0,
     eqIdCounter:0,
+    basetech:0,cores:0,
+    shopDaily:{date:'',purchased:{}},
     daily:{date:'',progress:{battle:0,kills:0,gacha:0,survive3:0,levelup5:0},claimed:{battle:false,kills:false,gacha:false,survive3:false,levelup5:false}},
     records:{totalBattles:0,totalKills:0,totalPlayTime:0,longestSurvival:0,highestLevel:1,totalEvolutions:0,achievements:{},weaponsUsed:[],bossesKilled:0,chaptersCleared:{},gachaTotal:0,mythicCount:0},
   };
@@ -319,6 +328,10 @@ function loadSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));if(d&
 }return defaultSave();}catch(e){return defaultSave();}}
 function saveSave(){localStorage.setItem(SAVE_KEY,JSON.stringify(save));}
 save=loadSave();
+if(save.basetech===undefined)save.basetech=0;
+if(save.cores===undefined)save.cores=0;
+if(!save.shopDaily)save.shopDaily={date:'',purchased:{}};
+for(const e of save.equipment){if(e.level===undefined)e.level=1;if(e.sub===undefined)e.sub=0;if(e.astral===undefined)e.astral=0;}
 
 /* ═══════════════════════════════════════════════════════
    CONSTANTS
@@ -327,12 +340,33 @@ const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
 const RANK_PERCENT={
-  weapon:{gray:5,green:10,blue:20,purple:35,gold:55,red:80},
-  armor:{gray:5,green:10,blue:20,purple:35,gold:55,red:80},
-  boots:{gray:3,green:6,blue:10,purple:15,gold:20,red:25},
-  belt:{gray:5,green:10,blue:15,purple:22,gold:30,red:40},
-  gloves:{gray:3,green:6,blue:9,purple:13,gold:17,red:20},
-  necklace:{gray:3,green:6,blue:9,purple:13,gold:17,red:20},
+  weapon:{gray:5,green:12,blue:22,purple:38,gold:60,red:90},
+  armor:{gray:5,green:12,blue:22,purple:38,gold:60,red:90},
+  boots:{gray:3,green:8,blue:14,purple:22,gold:35,red:50},
+  belt:{gray:5,green:12,blue:20,purple:32,gold:50,red:75},
+  gloves:{gray:2,green:5,blue:9,purple:15,gold:23,red:35},
+  necklace:{gray:2,green:5,blue:9,purple:15,gold:23,red:35},
+};
+const RANK_LEVEL_MAX={gray:10,green:15,blue:20,purple:25,gold:30,red:40};
+const SUB_MAX={gray:0,green:0,blue:0,purple:2,gold:3,red:0};
+const DECOMPOSE_VAL={gray:{bt:5,core:0},green:{bt:15,core:0},blue:{bt:40,core:0},purple:{bt:100,core:0},gold:{bt:200,core:1},red:{bt:500,core:5}};
+const ASTRAL_COST={1:{bt:100,gold:1,core:0},2:{bt:200,gold:1,core:0},3:{bt:300,gold:1,core:1}};
+
+const GRADE_SKILLS={
+  weapon:{blue:'Pierce +1',purple:'10% Slow on hit',gold:'0.5% chest drop on hit',red:'Splits into 2 directions'},
+  armor:{blue:'2s i-frames after hit',purple:'HP<50%: ATK+20%',gold:'+1 HP per kill',red:'HP<30%: shield (20% HP)'},
+  boots:{blue:'Shift to dash',purple:'Speed scales ATK (+30%)',gold:'Radius dmg every 300 dist',red:'Space teleport (10s CD)'},
+  belt:{blue:'XP magnet +50%',purple:'XP gem +1 stack',gold:'Coin pickup +50%',red:'Belt aura: enemies near drop more XP'},
+  gloves:{blue:'Crit dmg +50%',purple:'Crit heals 3 HP',gold:'Crit splash 30%',red:'5 crits → guaranteed crit ×3'},
+  necklace:{blue:'CD start −20%',purple:'CD does not exceed 0.4s',gold:'5% per attack: instant reset',red:'Double-fire on cooldown ready'},
+};
+const ASTRAL_DESC={
+  weapon:'★3: 10% instant kill (bosses immune)',
+  armor:'★3: HP<20% triggers shield (30s CD)',
+  boots:'★3: Damage trail behind you',
+  belt:'★3: 10-stack on kill → screen-clear',
+  gloves:'★3: Crit splashes 50% to nearby',
+  necklace:'★3: Cooldown ready triggers double-fire',
 };
 const SLOT_NAMES={weapon:'Weapon',armor:'Armor',boots:'Boots',belt:'Belt',gloves:'Gloves',necklace:'Necklace'};
 const SLOT_ICONS={weapon:'⚔️',armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',necklace:'📿'};
@@ -402,15 +436,65 @@ const ACHIEVEMENTS=[
 ];
 
 /* Equipment helpers */
-function eqStatValue(slot,rank){return RANK_PERCENT[slot][rank];}
+function eqLvCost(curLv){return Math.floor(10*Math.pow(1.3,curLv-1));}
+function eqMaxLv(rank){return RANK_LEVEL_MAX[rank]||10;}
+function eqMaxSub(rank){return SUB_MAX[rank]||0;}
+// Final percent bonus: base × (1 + level/max × 0.5) × (1 + sub × 0.15)
+function eqBonusPct(eq){
+  const base=RANK_PERCENT[eq.slot][eq.rank];
+  const lvMul=1+((eq.level||1)-1)/(eqMaxLv(eq.rank)-1||1)*0.5;
+  const subMul=1+(eq.sub||0)*0.15;
+  return base*lvMul*subMul;
+}
+function eqStatValue(slot,rank){return RANK_PERCENT[slot][rank];} // legacy: base only
 function getEquippedBonus(stat){
   for(const[sl,s]of Object.entries(SLOT_EFFECTS))if(s===stat&&save.equipped[sl]!=null){
     const eq=save.equipment.find(e=>e.id===save.equipped[sl]);
-    if(eq)return eqStatValue(eq.slot,eq.rank);
+    if(eq)return eqBonusPct(eq);
   }
   return 0;
 }
-function makeEquip(slot,rank){const id=++save.eqIdCounter;save.equipment.push({id,slot,rank,equipped:false});return id;}
+function makeEquip(slot,rank,opts){
+  opts=opts||{};
+  const id=++save.eqIdCounter;
+  save.equipment.push({id,slot,rank,level:opts.level||1,sub:opts.sub||0,astral:opts.astral||0,equipped:false});
+  return id;
+}
+function migrateEquip(){
+  for(const e of save.equipment){
+    if(e.level===undefined)e.level=1;
+    if(e.sub===undefined)e.sub=0;
+    if(e.astral===undefined)e.astral=0;
+  }
+}
+function eqLabel(eq){
+  let n=RANK_NAMES[eq.rank];
+  if(eq.sub>0)n+=` +${eq.sub}`;
+  if(eq.astral>0)n+=' '+'★'.repeat(eq.astral);
+  return n;
+}
+function eqIsEquipped(id){return Object.values(save.equipped).includes(id);}
+function getEqById(id){return save.equipment.find(e=>e.id===id);}
+
+function calcPower(){
+  const cd=save.chars[save.selectedChar];const ch=CHARS[save.selectedChar];
+  let atk=ch.baseAtk*(1+(cd.lv-1)*0.08);
+  let hp=ch.baseHp*(1+(cd.lv-1)*0.05);
+  let speed=200,crit=5,bonus=0;
+  for(const slot of Object.keys(SLOT_NAMES)){
+    const id=save.equipped[slot];if(id==null)continue;
+    const eq=getEqById(id);if(!eq)continue;
+    const b=eqBonusPct(eq)/100;
+    if(slot==='weapon')atk*=1+b;
+    if(slot==='armor')hp*=1+b;
+    if(slot==='boots')speed*=1+b;
+    if(slot==='gloves')crit+=b*100;
+    if(eq.rank==='red')bonus+=500;
+    else if(eq.rank==='gold')bonus+=200;
+    bonus+=[0,300,600,1000][eq.astral||0];
+  }
+  return Math.floor(atk*10+hp*5+speed*100+crit*200+bonus);
+}
 
 /* Char level cost */
 function charLvCost(curLv){
@@ -447,7 +531,7 @@ window.claimAchievement=function(key){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Pets','Chapters','Daily','Records'];
+const tabs=['Characters','Equipment','Gacha','Shop','Pets','Chapters','Daily','Records'];
 let currentTab='Characters';
 
 function showHome(){
@@ -460,7 +544,7 @@ function showHome(){
 function hideBattleBtn(){document.getElementById('battleBtn').style.display='none';}
 
 function renderHome(){
-  document.getElementById('coinDisplay').textContent=`💰 ${save.coins} Coins`;
+  document.getElementById('coinDisplay').innerHTML=`💰 ${save.coins} Coins &nbsp;|&nbsp; ⚔️ Power: <span style="color:#0ff">${calcPower().toLocaleString()}</span>`;
   const tb=document.getElementById('homeTabs');tb.innerHTML='';
   for(const t of tabs){
     const b=document.createElement('button');
@@ -473,6 +557,7 @@ function renderHome(){
     case'Characters':renderChars(panel);break;
     case'Equipment':renderEquip(panel);break;
     case'Gacha':renderGacha(panel);break;
+    case'Shop':renderShop(panel);break;
     case'Pets':renderPets(panel);break;
     case'Chapters':renderChapters(panel);break;
     case'Daily':renderDaily(panel);break;
@@ -509,67 +594,154 @@ window.upgradeChar=function(id){const d=save.chars[id];if(!d.unlocked||d.lv>=MAX
 
 /* ── Equipment ── */
 let eqMenuOpenId=null;
+let equipSubTab='Equipped';
 function renderEquip(p){
-  let h='<div style="text-align:center;margin-bottom:8px;color:#fa0;font-weight:bold">EQUIPPED</div><div class="equip-row">';
+  // Material header
+  let h=`<div style="text-align:center;margin-bottom:6px;font-size:12px">
+    <span style="color:#9bf">⚙ Basetech: <b>${save.basetech}</b></span>
+    &nbsp;|&nbsp;<span style="color:#fa0">💎 Cores: <b>${save.cores}</b></span>
+    &nbsp;|&nbsp;<span style="color:#0ff">⚔ Power: <b>${calcPower()}</b></span>
+  </div>`;
+  // Equipped row (always visible at top)
+  h+='<div class="equip-row">';
   for(const[slot,name]of Object.entries(SLOT_NAMES)){
     const eqId=save.equipped[slot];
-    const eq=eqId!=null?save.equipment.find(e=>e.id===eqId):null;
+    const eq=eqId!=null?getEqById(eqId):null;
     const rc=eq?`rank-${eq.rank}`:'';
-    const val=eq?`+${eqStatValue(eq.slot,eq.rank)}% ${SLOT_EFFECTS[slot]}`:'Empty';
-    h+=`<div class="equip-slot ${rc}" onclick="${eq?`openEqMenu(${eq.id},event)`:''}" title="${name}: ${val}">
+    const pct=eq?eqBonusPct(eq).toFixed(1):0;
+    h+=`<div class="equip-slot ${rc}" onclick="${eq?`openEqMenu(${eq.id},event)`:''}" title="${name}">
       <div class="eq-icon">${SLOT_ICONS[slot]}</div>
       <div style="font-size:9px">${name}</div>
-      ${eq?`<div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${RANK_NAMES[eq.rank]}</div>
-      <div style="font-size:8px;color:#0f0">+${eqStatValue(eq.slot,eq.rank)}%</div>`:'<div style="font-size:8px;color:#666">empty</div>'}
+      ${eq?`<div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
+      <div style="font-size:8px;color:#aaa">Lv${eq.level}</div>
+      <div style="font-size:8px;color:#0f0">+${pct}%</div>`:'<div style="font-size:8px;color:#666">empty</div>'}
     </div>`;
   }
   h+='</div>';
 
-  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold">INVENTORY (${save.equipment.length}/50)</div>`;
+  // Sub-tab bar
+  const subTabs=['Inventory','Merge','Astral'];
+  h+='<div style="display:flex;gap:4px;justify-content:center;margin:12px 0 8px">';
+  for(const t of subTabs)h+=`<button class="btn ${equipSubTab===t?'btn-orange':''}" style="padding:5px 14px;font-size:12px;background:${equipSubTab===t?'':'#333'}" onclick="setEquipTab('${t}')">${t}</button>`;
+  h+='</div>';
+
+  if(equipSubTab==='Inventory')h+=renderInventoryTab();
+  else if(equipSubTab==='Merge')h+=renderMergeTab();
+  else if(equipSubTab==='Astral')h+=renderAstralTab();
+
+  p.innerHTML=h;
+}
+window.setEquipTab=function(t){equipSubTab=t;renderHome();};
+
+function renderInventoryTab(){
+  let h=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">INVENTORY (${save.equipment.length}/50)</div>`;
   h+='<div class="inv-grid">';
-  const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank));
+  const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.sub||0)-(a.sub||0)||(b.level||0)-(a.level||0));
   for(let i=0;i<50;i++){
     const eq=items[i];
     if(eq){
-      const isEq=Object.values(save.equipped).includes(eq.id);
+      const isEq=eqIsEquipped(eq.id);
       h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
         <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
-        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${RANK_NAMES[eq.rank]}</div>
-        <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]}</div>
-        <div style="font-size:8px;color:#0f0">+${eqStatValue(eq.slot,eq.rank)}%</div>
+        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
+        <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]} Lv${eq.level}</div>
+        <div style="font-size:8px;color:#0f0">+${eqBonusPct(eq).toFixed(1)}%</div>
         ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
+        ${eq.astral>0?`<div style="font-size:8px;color:#fa0;position:absolute;top:1px;left:3px">${'★'.repeat(eq.astral)}</div>`:''}
       </div>`;
-    } else {
-      h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
-    }
+    } else h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
   }
   h+='</div>';
-  h+=`<div style="text-align:center;margin-top:14px">
-    <button class="btn btn-purple" onclick="autoMerge()">⚒ Auto Merge All</button>
-    <span style="font-size:11px;color:#aaa;margin-left:10px">Same slot + same rank × 2 → upgrade</span>
-  </div>`;
-  p.innerHTML=h;
+  return h;
+}
+
+function renderMergeTab(){
+  let h='<div style="max-width:800px;margin:0 auto">';
+  h+=`<div style="text-align:center;margin-bottom:10px"><button class="btn btn-purple" onclick="autoMerge()">⚒ Merge All (Gray~Blue)</button></div>`;
+  h+='<div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:8px">Click a base item below to combine with same-slot materials.</div>';
+  // Group by slot
+  for(const[slot,name]of Object.entries(SLOT_NAMES)){
+    const items=save.equipment.filter(e=>e.slot===slot&&!eqIsEquipped(e.id)&&e.rank!=='red').sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.sub||0)-(a.sub||0));
+    if(items.length===0)continue;
+    h+=`<div style="margin:10px 0;padding:8px;background:rgba(0,0,0,.3);border-radius:8px">
+      <div style="color:#fa0;font-weight:bold;margin-bottom:6px">${SLOT_ICONS[slot]} ${name}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">`;
+    for(const eq of items){
+      const r=mergeRuleFor(eq);
+      const found=r?findMergeMaterials(eq):null;
+      const can=!!found;
+      const tip=r?(can?`→ ${RANK_NAMES[r.to.rank]}${r.to.sub?'+'+r.to.sub:''}`:`Need ${r.mat} more ${RANK_NAMES[eq.rank]}`):'MAX';
+      h+=`<div class="equip-slot rank-${eq.rank}" style="cursor:pointer;${can?'box-shadow:0 0 8px #0f0':''}" onclick="${can?`mergeOne(${eq.id})`:''}" title="${tip}">
+        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
+        <div style="font-size:8px;color:#ddd">Lv${eq.level}</div>
+        <div style="font-size:8px;color:${can?'#0f0':'#666'}">${tip}</div>
+      </div>`;
+    }
+    h+='</div></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function renderAstralTab(){
+  let h='<div style="max-width:700px;margin:0 auto">';
+  h+='<div style="font-size:12px;color:#fa0;text-align:center;margin-bottom:10px">⚡ ASTRAL FORGE — only Mythic gear. Consumes 1 Gold + Basetech (+ Core for ★3).</div>';
+  const reds=save.equipment.filter(e=>e.rank==='red');
+  if(reds.length===0)h+='<div style="text-align:center;color:#888;padding:30px">No Mythic equipment yet. Get red gear from S-gacha or merge.</div>';
+  for(const eq of reds){
+    const star=eq.astral||0;
+    const next=star+1;
+    const c=ASTRAL_COST[next];
+    const goldOk=save.equipment.some(e=>e.slot===eq.slot&&e.rank==='gold'&&!eqIsEquipped(e.id));
+    const btOk=c?save.basetech>=c.bt:false;
+    const coreOk=c?(c.core||0)===0||save.cores>=c.core:false;
+    const can=star<3&&goldOk&&btOk&&coreOk;
+    h+=`<div style="background:rgba(0,0,0,.4);border:2px solid #f44;border-radius:10px;padding:12px;margin:10px 0">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="equip-slot rank-red" style="width:80px;height:80px">
+          <div class="eq-icon" style="font-size:32px">${SLOT_ICONS[eq.slot]}</div>
+          <div style="font-size:9px;color:#f44">${SLOT_NAMES[eq.slot]} Lv${eq.level}</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:18px;color:#fa0;font-weight:bold">${'★'.repeat(star)}${'☆'.repeat(3-star)}</div>
+          <div style="font-size:11px;color:#aaa;margin-top:4px">${ASTRAL_DESC[eq.slot]}</div>
+          ${star<3?`<div style="font-size:11px;color:#ddd;margin-top:6px">Cost: 1 Gold ${SLOT_NAMES[eq.slot]} + ${c.bt} BT${c.core?` + ${c.core} Core`:''}</div>`:'<div style="color:#fa0;font-weight:bold">★ MAX FORGED ★</div>'}
+        </div>
+        ${star<3?`<button class="btn btn-red" ${can?'':'disabled'} onclick="astralForge(${eq.id})">Forge ★${next}</button>`:''}
+      </div>
+    </div>`;
+  }
+  h+='</div>';
+  return h;
 }
 
 window.openEqMenu=function(id,ev){
   ev&&ev.stopPropagation();
-  const eq=save.equipment.find(e=>e.id===id);if(!eq)return;
-  const isEq=Object.values(save.equipped).includes(eq.id);
-  // Find matching same-slot same-rank items (excluding equipped)
-  const matches=save.equipment.filter(e=>e.slot===eq.slot&&e.rank===eq.rank&&e.id!==eq.id&&!Object.values(save.equipped).includes(e.id));
-  const canMerge=matches.length>=1&&RANKS.indexOf(eq.rank)<RANKS.length-1&&!isEq;
+  const eq=getEqById(id);if(!eq)return;
+  const isEq=eqIsEquipped(eq.id);
+  const found=findMergeMaterials(eq);
+  const canMerge=!!found&&!isEq;
+  const canDown=(eq.sub||0)>0&&!isEq;
+  const canLevel=eq.level<eqMaxLv(eq.rank);
+  const lvCost=eqLvCost(eq.level);
+  const skill=GRADE_SKILLS[eq.slot]&&GRADE_SKILLS[eq.slot][eq.rank];
   const m=document.getElementById('eqMenu');
-  m.innerHTML=`<div style="font-weight:bold;margin-bottom:6px;color:${RANK_COLORS[eq.rank]}">${SLOT_ICONS[eq.slot]} ${RANK_NAMES[eq.rank]} ${SLOT_NAMES[eq.slot]}</div>
-    <div style="font-size:11px;color:#0f0;margin-bottom:6px">+${eqStatValue(eq.slot,eq.rank)}% ${SLOT_EFFECTS[eq.slot]}</div>
+  m.innerHTML=`<div style="font-weight:bold;margin-bottom:4px;color:${RANK_COLORS[eq.rank]}">${SLOT_ICONS[eq.slot]} ${eqLabel(eq)} ${SLOT_NAMES[eq.slot]}</div>
+    <div style="font-size:11px;color:#0f0;margin-bottom:4px">Lv${eq.level}/${eqMaxLv(eq.rank)} → +${eqBonusPct(eq).toFixed(1)}% ${SLOT_EFFECTS[eq.slot]}</div>
+    ${skill?`<div style="font-size:10px;color:#fa0;margin-bottom:4px">⚡ ${skill}</div>`:''}
+    ${eq.astral>0?`<div style="font-size:10px;color:#f44;margin-bottom:4px">★${eq.astral} ${ASTRAL_DESC[eq.slot]}</div>`:''}
     <button class="btn-blue" onclick="equipOrUnequip(${id})">${isEq?'Unequip':'Equip'}</button>
-    ${canMerge?`<button class="btn-purple" onclick="mergeOne(${id})">Merge with 1 (${matches.length} avail)</button>`:''}
+    ${canLevel?`<button class="btn-green" onclick="levelUpEq(${id})">Lv Up (${lvCost}G)</button>`:''}
+    ${canMerge?`<button class="btn-purple" onclick="mergeOne(${id})">Merge → ${RANK_NAMES[found.rule.to.rank]}${found.rule.to.sub?'+'+found.rule.to.sub:''}</button>`:''}
+    ${canDown?`<button class="btn" style="background:#666" onclick="downgradeEquip(${id})">Downgrade</button>`:''}
+    ${eq.rank==='red'?`<button class="btn-red" onclick="setEquipTab('Astral');closeEqMenu();">⚡ Astral Forge →</button>`:''}
+    ${!isEq?`<button class="btn" style="background:#922" onclick="decomposeEq(${id})">Decompose (+${DECOMPOSE_VAL[eq.rank].bt}BT${DECOMPOSE_VAL[eq.rank].core?',+'+DECOMPOSE_VAL[eq.rank].core+'C':''})</button>`:''}
     <button class="btn-gray" style="background:#444" onclick="closeEqMenu()">Close</button>`;
   m.style.display='block';
-  // Position near click
   const r=ev.target.getBoundingClientRect();
   let x=r.left,y=r.bottom+5;
-  if(x+200>innerWidth)x=innerWidth-210;
-  if(y+150>innerHeight)y=r.top-160;
+  if(x+260>innerWidth)x=innerWidth-270;
+  if(y+260>innerHeight)y=Math.max(10,r.top-260);
   m.style.left=x+'px';m.style.top=y+'px';
 };
 window.closeEqMenu=function(){document.getElementById('eqMenu').style.display='none';};
@@ -581,32 +753,93 @@ window.equipOrUnequip=function(id){
   else save.equipped[eq.slot]=id;
   saveSave();closeEqMenu();renderHome();
 };
+
+const MERGE_RULES={
+  gray_0:  {to:{rank:'green', sub:0},mat:2,matchSub:false},
+  green_0: {to:{rank:'blue',  sub:0},mat:2,matchSub:false},
+  blue_0:  {to:{rank:'purple',sub:0},mat:2,matchSub:false},
+  purple_0:{to:{rank:'purple',sub:1},mat:1,matchSub:false},
+  purple_1:{to:{rank:'purple',sub:2},mat:2,matchSub:false},
+  purple_2:{to:{rank:'gold',  sub:0},mat:1,matchSub:true},
+  gold_0:  {to:{rank:'gold',  sub:1},mat:1,matchSub:false},
+  gold_1:  {to:{rank:'gold',  sub:2},mat:2,matchSub:false},
+  gold_2:  {to:{rank:'gold',  sub:3},mat:3,matchSub:false},
+  gold_3:  {to:{rank:'red',   sub:0},mat:1,matchSub:true},
+};
+function mergeRuleFor(eq){return eq.rank==='red'?null:MERGE_RULES[eq.rank+'_'+(eq.sub||0)];}
+function findMergeMaterials(eq){
+  const r=mergeRuleFor(eq);if(!r)return null;
+  const cands=save.equipment.filter(e=>e.id!==eq.id&&e.slot===eq.slot&&e.rank===eq.rank&&!eqIsEquipped(e.id)&&(!r.matchSub||(e.sub||0)===(eq.sub||0)));
+  if(cands.length<r.mat)return null;
+  cands.sort((a,b)=>(a.level||1)-(b.level||1)+((a.sub||0)-(b.sub||0))*0.5);
+  return {rule:r,materials:cands.slice(0,r.mat)};
+}
+function doMerge(baseId){
+  const base=getEqById(baseId);if(!base||eqIsEquipped(baseId))return null;
+  const found=findMergeMaterials(base);if(!found)return null;
+  const ids=new Set(found.materials.map(m=>m.id));
+  save.equipment=save.equipment.filter(e=>!ids.has(e.id));
+  base.rank=found.rule.to.rank;base.sub=found.rule.to.sub;base.level=1;
+  saveSave();return base;
+}
 window.mergeOne=function(id){
-  const eq=save.equipment.find(e=>e.id===id);if(!eq)return;
-  const partner=save.equipment.find(e=>e.slot===eq.slot&&e.rank===eq.rank&&e.id!==eq.id&&!Object.values(save.equipped).includes(e.id));
-  if(!partner)return;
-  const ri=RANKS.indexOf(eq.rank);if(ri>=RANKS.length-1)return;
-  save.equipment=save.equipment.filter(e=>e.id!==eq.id&&e.id!==partner.id);
-  makeEquip(eq.slot,RANKS[ri+1]);
-  saveSave();closeEqMenu();renderHome();
+  const r=doMerge(id);
+  if(r){closeEqMenu();flashRankUp(r.rank);SFX.levelUp();renderHome();}
+  else flashMsg('Not enough materials');
+};
+window.downgradeEquip=function(id){
+  const eq=getEqById(id);if(!eq||eqIsEquipped(id)||(eq.sub||0)<=0)return;
+  const sub=eq.sub;
+  const refund=sub===1?1:sub===2?2:sub===3?3:0;
+  eq.sub=sub-1;
+  for(let i=0;i<refund;i++)if(save.equipment.length<50)makeEquip(eq.slot,eq.rank);
+  saveSave();closeEqMenu();renderHome();flashMsg(`+${refund} ${RANK_NAMES[eq.rank]} returned`);
 };
 window.autoMerge=function(){
-  let merged=true;
-  while(merged){
-    merged=false;
-    for(let ri=0;ri<RANKS.length-1;ri++){
-      const rank=RANKS[ri];
+  let merged=true,cnt=0;
+  while(merged&&cnt<200){
+    merged=false;cnt++;
+    for(const rank of['gray','green','blue']){
       for(const slot of Object.keys(SLOT_NAMES)){
-        const items=save.equipment.filter(e=>e.slot===slot&&e.rank===rank&&!Object.values(save.equipped).includes(e.id));
-        while(items.length>=2){
-          const a=items.pop(),b=items.pop();
-          save.equipment=save.equipment.filter(e=>e.id!==a.id&&e.id!==b.id);
-          makeEquip(slot,RANKS[ri+1]);merged=true;
-        }
+        const cands=save.equipment.filter(e=>e.slot===slot&&e.rank===rank&&(e.sub||0)===0&&!eqIsEquipped(e.id));
+        if(cands.length>=3){if(doMerge(cands[0].id))merged=true;}
       }
     }
   }
-  saveSave();renderHome();
+  renderHome();SFX.levelUp();
+};
+
+window.levelUpEq=function(id){
+  const eq=getEqById(id);if(!eq)return;
+  const max=eqMaxLv(eq.rank);if(eq.level>=max){flashMsg('Max level');return;}
+  const cost=eqLvCost(eq.level);
+  if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
+  save.coins-=cost;eq.level++;saveSave();closeEqMenu();renderHome();
+};
+
+window.decomposeEq=function(id){
+  const eq=getEqById(id);if(!eq||eqIsEquipped(id))return;
+  const v=DECOMPOSE_VAL[eq.rank];
+  save.basetech+=v.bt;save.cores+=v.core;
+  save.equipment=save.equipment.filter(e=>e.id!==id);
+  saveSave();closeEqMenu();renderHome();flashMsg(`+${v.bt} BT${v.core?` +${v.core} Core`:''}`);
+};
+
+window.astralForge=function(id){
+  const eq=getEqById(id);if(!eq)return;
+  if(eq.rank!=='red'){flashMsg('Only Mythic gear');return;}
+  const star=(eq.astral||0)+1;if(star>3){flashMsg('Already ★3');return;}
+  const c=ASTRAL_COST[star];
+  // Find a gold material in same slot
+  const gold=save.equipment.find(e=>e.slot===eq.slot&&e.rank==='gold'&&!eqIsEquipped(e.id));
+  if(!gold){flashMsg('Need Gold material (same slot)');return;}
+  if(save.basetech<c.bt){flashMsg(`Need ${c.bt} Basetech`);return;}
+  if((c.core||0)>0&&save.cores<c.core){flashMsg(`Need ${c.core} Core`);return;}
+  save.basetech-=c.bt;save.cores-=(c.core||0);
+  save.equipment=save.equipment.filter(e=>e.id!==gold.id);
+  eq.astral=star;saveSave();closeEqMenu();
+  flashAstralForge(star);SFX.evolution();
+  renderHome();
 };
 
 /* ── Gacha ── */
@@ -694,6 +927,133 @@ function flashMsg(t){
   const d=document.createElement('div');d.textContent=t;
   d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,.85);color:#fff;padding:12px 24px;border-radius:8px;font-weight:bold;z-index:200';
   document.body.appendChild(d);setTimeout(()=>d.remove(),1500);
+}
+
+function flashRankUp(rank){
+  const color=RANK_COLORS[rank];const ri=RANKS.indexOf(rank);
+  const ov=document.createElement('div');
+  ov.style.cssText=`position:fixed;inset:0;background:${color};opacity:0;pointer-events:none;z-index:200;animation:rankFlash 0.8s`;
+  document.body.appendChild(ov);
+  const tx=document.createElement('div');
+  tx.textContent=`✨ RANK UP! ${RANK_NAMES[rank]} ✨`;
+  tx.style.cssText=`position:fixed;top:38%;left:50%;color:${color};font-size:54px;font-weight:bold;text-shadow:0 0 30px ${color},0 0 60px ${color};pointer-events:none;z-index:201;animation:rankUpText 0.9s;letter-spacing:3px`;
+  document.body.appendChild(tx);
+  setTimeout(()=>{ov.remove();tx.remove();},900);
+  if(ri>=3){ // purple+: confetti
+    for(let i=0;i<40;i++){
+      const cf=document.createElement('div');
+      cf.textContent=['✦','✧','✨','★'][i%4];
+      cf.style.cssText=`position:fixed;top:-30px;left:${Math.random()*100}%;color:${color};font-size:${14+Math.random()*22}px;pointer-events:none;z-index:202;animation:starFall ${1+Math.random()*0.8}s ease-in;animation-delay:${Math.random()*0.3}s`;
+      document.body.appendChild(cf);setTimeout(()=>cf.remove(),2200);
+    }
+  }
+}
+
+function flashAstralForge(star){
+  const ov=document.createElement('div');
+  ov.style.cssText=`position:fixed;inset:0;background:radial-gradient(circle,#fc0,#f80);opacity:0;pointer-events:none;z-index:200;animation:astralFlash 1.5s`;
+  document.body.appendChild(ov);
+  const tx=document.createElement('div');
+  tx.innerHTML=`⚡ ASTRAL FORGE ${'★'.repeat(star)} ⚡`;
+  tx.style.cssText=`position:fixed;top:35%;left:50%;color:#fff;font-size:50px;font-weight:bold;text-shadow:0 0 30px #fa0,0 0 60px #f80,0 0 90px #f00;pointer-events:none;z-index:201;animation:astralText 1.5s`;
+  document.body.appendChild(tx);
+  for(let i=0;i<60;i++){
+    const s=document.createElement('div');
+    s.textContent='★';
+    s.style.cssText=`position:fixed;top:-30px;left:${Math.random()*100}%;color:#fa0;font-size:${16+Math.random()*32}px;text-shadow:0 0 10px #f80;pointer-events:none;z-index:202;animation:starFall ${1+Math.random()}s ease-in;animation-delay:${Math.random()*0.5}s`;
+    document.body.appendChild(s);setTimeout(()=>s.remove(),2500);
+  }
+  setTimeout(()=>{ov.remove();tx.remove();},1500);
+}
+
+/* ── Shop ── */
+function checkShopDaily(){
+  const today=new Date().toISOString().slice(0,10);
+  if(save.shopDaily.date!==today){
+    // Pre-roll daily slots so they're stable across renders
+    const slots=Object.keys(SLOT_NAMES);
+    const pickSlot=()=>slots[Math.floor(Math.random()*slots.length)];
+    save.shopDaily={date:today,purchased:{},
+      items:{
+        gray:[pickSlot(),pickSlot(),pickSlot(),pickSlot(),pickSlot()],
+        green:[pickSlot(),pickSlot(),pickSlot()],
+        blue:[pickSlot(),pickSlot()],
+        purple:[pickSlot()],
+      }};
+    saveSave();
+  }
+  if(!save.shopDaily.items){
+    const slots=Object.keys(SLOT_NAMES);
+    save.shopDaily.items={gray:[slots[0],slots[1],slots[2],slots[3],slots[4]],green:[slots[0],slots[1],slots[2]],blue:[slots[0],slots[1]],purple:[slots[0]]};
+  }
+}
+function shopBuy(rank,idx,cost){
+  checkShopDaily();
+  const key=rank+'_'+idx;
+  if(save.shopDaily.purchased[key]){flashMsg('Already purchased');return;}
+  if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
+  if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
+  const slot=save.shopDaily.items[rank][idx];
+  save.coins-=cost;save.shopDaily.purchased[key]=true;
+  makeEquip(slot,rank);
+  saveSave();renderHome();SFX.coin();
+}
+function shopBuySpecial(item,cost){
+  if(item==='gold'||item==='red'){
+    if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
+    if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
+    const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
+    save.coins-=cost;makeEquip(sl,item);saveSave();renderHome();SFX.gacha();flashRankUp(item);
+  } else if(item==='basetech'){
+    if(save.coins<cost){flashMsg(`Need ${cost}G`);return;}
+    save.coins-=cost;save.basetech+=100;saveSave();renderHome();SFX.coin();
+  }
+}
+function shopBuyAll(rank,cost){
+  checkShopDaily();
+  const items=save.shopDaily.items[rank];
+  for(let i=0;i<items.length;i++){
+    const k=rank+'_'+i;
+    if(!save.shopDaily.purchased[k]&&save.coins>=cost&&save.equipment.length<50)shopBuy(rank,i,cost);
+  }
+}
+window.shopBuy=shopBuy;window.shopBuySpecial=shopBuySpecial;window.shopBuyAll=shopBuyAll;
+
+function renderShop(p){
+  checkShopDaily();
+  const tiers=[
+    {rank:'gray',cost:30,label:'Gray ×5',cls:'rank-gray'},
+    {rank:'green',cost:80,label:'Green ×3',cls:'rank-green'},
+    {rank:'blue',cost:200,label:'Blue ×2',cls:'rank-blue'},
+    {rank:'purple',cost:500,label:'Purple ×1',cls:'rank-purple'},
+  ];
+  let h=`<div style="text-align:center;color:#fa0;font-weight:bold;margin-bottom:10px">🏪 Daily Shop (resets ${save.shopDaily.date})</div>`;
+  for(const t of tiers){
+    const items=save.shopDaily.items[t.rank];
+    h+=`<div style="margin:10px 0;background:rgba(0,0,0,.3);padding:10px;border-radius:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="color:${RANK_COLORS[t.rank]};font-weight:bold">${t.label} — ${t.cost}G each</div>
+        <button class="btn btn-blue" style="padding:4px 12px;font-size:12px" onclick="shopBuyAll('${t.rank}',${t.cost})">Buy All</button>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">`;
+    for(let i=0;i<items.length;i++){
+      const slot=items[i];const sold=save.shopDaily.purchased[t.rank+'_'+i];
+      h+=`<div class="equip-slot ${t.cls}" style="${sold?'opacity:.3;cursor:default':'cursor:pointer'}" onclick="${sold?'':`shopBuy('${t.rank}',${i},${t.cost})`}">
+        <div class="eq-icon">${SLOT_ICONS[slot]}</div>
+        <div style="font-size:8px">${SLOT_NAMES[slot]}</div>
+        <div style="font-size:9px;color:${sold?'#666':'#ff0'}">${sold?'SOLD':t.cost+'G'}</div>
+      </div>`;
+    }
+    h+='</div></div>';
+  }
+  // Special shop
+  h+=`<div style="margin-top:14px;text-align:center;color:#fa0;font-weight:bold">⭐ Special Shop (always available)</div>`;
+  h+=`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+    <button class="btn btn-orange" onclick="shopBuySpecial('gold',1500)">Random Gold (1500G)</button>
+    <button class="btn btn-red" onclick="shopBuySpecial('red',5000)">Random Mythic (5000G)</button>
+    <button class="btn btn-blue" onclick="shopBuySpecial('basetech',300)">100 Basetech (300G)</button>
+  </div>`;
+  p.innerHTML=h;
 }
 
 /* ── Pets ── */
@@ -937,7 +1297,22 @@ function initBattle(){
     knightReduction:save.selectedChar==='knight'?0.15:0,
     archerRangeBonus:save.selectedChar==='archer'?0.3:0,
     commonCoinBonus:save.selectedChar==='common',
+    gskills:{},critCombo:0,nextGuaranteedCrit:0,shieldHp:0,shieldCd:0,
   };
+  // Compute equipped grade-skill flags
+  for(const slot of Object.keys(SLOT_NAMES)){
+    const id=save.equipped[slot];if(id==null)continue;
+    const eq=getEqById(id);if(!eq)continue;
+    player.gskills[slot]={ri:RANKS.indexOf(eq.rank),sub:eq.sub||0,astral:eq.astral||0};
+  }
+  // Belt-blue: magnet +50%
+  if(player.gskills.belt&&player.gskills.belt.ri>=2)player.magnetRange*=1.5;
+  // Boots-purple: speed→ATK (precomputed)
+  if(player.gskills.boots&&player.gskills.boots.ri>=3){
+    const spdRatio=Math.min(player.speed/200,1.5);
+    player.baseMight*=1+(spdRatio-1)*0.6;player.might=player.baseMight;
+  }
+  // Armor-purple: HP<50% ATK+20% (handled dynamically — flag only)
   player.weapons.push({id:ch.initWeapon,lv:1,timer:0});
   if(!save.records.weaponsUsed)save.records.weaponsUsed=[];
   if(!save.records.weaponsUsed.includes(ch.initWeapon))save.records.weaponsUsed.push(ch.initWeapon);
@@ -974,9 +1349,26 @@ function spawnDmgPop(x,y,dmg,evo,crit){
 
 function applyDmg(e,dmg,wid){
   let crit=false;
-  if(Math.random()*100<player.critRate){dmg*=2;crit=true;}
+  // Armor-purple: HP<50% ATK+20%
+  if(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=3&&player.hp<player.maxHp*0.5)dmg*=1.2;
+  // Gloves-red: forced crit if combo armed
+  if(player.nextGuaranteedCrit>0){dmg*=3;crit=true;player.nextGuaranteedCrit--;}
+  else if(Math.random()*100<player.critRate){dmg*=2;crit=true;}
+  // Gloves-blue: crit dmg +50%
+  if(crit&&player.gskills&&player.gskills.gloves&&player.gskills.gloves.ri>=2)dmg*=1.5;
   e.hp-=dmg;e.flashTimer=.08;spawnParticles2(e.x,e.y,'#fff',2);
   spawnDmgPop(e.x,e.y-e.radius,dmg,WEAPON_DEFS[wid]&&WEAPON_DEFS[wid].evolved,crit);
+  if(crit&&player.gskills&&player.gskills.gloves){
+    const gri=player.gskills.gloves.ri;
+    if(gri>=3)player.hp=Math.min(player.maxHp,player.hp+3); // purple heal
+    if(gri>=4){ // gold splash
+      for(const e2 of enemies)if(e2!==e&&distXY(e.x,e.y,e2.x,e2.y)<80){e2.hp-=dmg*0.3;e2.flashTimer=.05;}
+    }
+    if(gri>=5){ // red combo
+      player.critCombo=(player.critCombo||0)+1;
+      if(player.critCombo>=5){player.critCombo=0;player.nextGuaranteedCrit=1;}
+    }
+  }
 }
 
 /* Wave */
@@ -1042,11 +1434,21 @@ function updateWeapons(){
         }
         break;}
       case'kunai':case'thousandEdge':{
-        const cnt=wCount(w);const spd=def.baseSpd||520;const pierce=(def.basePierce||2)+Math.floor((w.lv-1)*0.4);
+        const cnt=wCount(w);const spd=def.baseSpd||520;
+        const wgs=player.gskills.weapon;
+        let pierce=(def.basePierce||2)+Math.floor((w.lv-1)*0.4);
+        if(wgs&&wgs.ri>=2)pierce+=1; // weapon-blue
         for(let i=0;i<cnt;i++){
           const sp=(i-(cnt-1)/2)*(w.id==='thousandEdge'?(Math.PI*2/cnt):0.12);
           const ang=w.id==='thousandEdge'?(Math.PI*2/cnt)*i:Math.atan2(player.lastDy,player.lastDx)+sp;
           bullets.push({x:player.x,y:player.y,radius:4,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,damage:dmg,pierce,life:1.5,color:def.color,wid:w.id,kind:'kunai',angle:ang});
+          // weapon-red: split into ±0.3rad
+          if(wgs&&wgs.ri>=5&&w.id!=='thousandEdge'){
+            for(const off of[-0.3,0.3]){
+              const a2=ang+off;
+              bullets.push({x:player.x,y:player.y,radius:3,vx:Math.cos(a2)*spd,vy:Math.sin(a2)*spd,damage:dmg*0.7,pierce,life:1.2,color:'#f44',wid:w.id,kind:'kunai',angle:a2});
+            }
+          }
         }break;}
       case'bow':case'sniperBow':{
         const cnt=wCount(w);const spd=def.baseSpd||300;const pierce=def.basePierce||1;
@@ -1290,6 +1692,10 @@ function updateBattle(){
         if(b.vx||b.vy){const sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);if(sp>0){e.kbx=(b.vx/sp)*22;e.kby=(b.vy/sp)*22;e.kbT=0.1;}}
         SFX.hit();
         if(b.slow)e.speed=Math.max(e.speed*0.3,5);
+        // Weapon-purple: 10% slow on hit
+        if(player.gskills.weapon&&player.gskills.weapon.ri>=3&&Math.random()<0.1)e.speed=Math.max(e.speed*0.5,5);
+        // Weapon-gold: 0.5% chest drop on hit (if not boss; chest only for non-boss not allowed normally)
+        if(player.gskills.weapon&&player.gskills.weapon.ri>=4&&Math.random()<0.005&&!e.isBoss)chests2.push({x:e.x,y:e.y,radius:18,bob:0});
         b.pierce--;
         if(b.pierce<=0){bullets.splice(i,1);break;}
       }
@@ -1308,6 +1714,8 @@ function updateBattle(){
     if(e.hp<=0){
       spawnParticles2(e.x,e.y,'#fa0',e.isBoss?20:6);runKills++;
       deadFx.push({x:e.x,y:e.y,life:0.3,maxLife:0.3,sprite:e.isBoss?'boss_zombie':'enemy_'+e.typeId,radius:e.radius,color:e.color});
+      // Armor-gold: +1 HP per kill
+      if(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=4)player.hp=Math.min(player.maxHp,player.hp+1);
       gems.push({x:e.x,y:e.y,radius:e.isBoss?8:5,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
       // Coins: 3% normal, boss = 50-100
       const coinChance=e.isBoss?1:.03*chap.coinMult;
@@ -1332,7 +1740,10 @@ function updateBattle(){
     }
     if(dist2(e,player)<e.radius+player.radius&&player.invTimer<=0){
       let dmg=e.damage-player.armor;dmg*=(1-player.knightReduction);if(dmg<1)dmg=1;
-      player.hp-=dmg;player.invTimer=.5;spawnParticles2(player.x,player.y,'#f44',4);
+      player.hp-=dmg;
+      // Armor-blue: 2s i-frames
+      player.invTimer=(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=2)?2:.5;
+      spawnParticles2(player.x,player.y,'#f44',4);
       playerDmgFlash=0.2;SFX.damage();
       if(player.hp<=0){player.hp=0;bState='done';endBattle(false);return;}
     }
