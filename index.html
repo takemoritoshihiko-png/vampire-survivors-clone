@@ -9,7 +9,9 @@
 body{background:#0a0a1a;color:#fff;overflow:hidden;height:100vh;width:100vw;position:fixed}
 .screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto}
 .screen.active{display:flex;flex-direction:column}
-canvas{display:block;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#game{width:100vw;height:100vh;display:block}
+#battle{width:100vw;height:100vh;overflow:hidden;background:#0a0a1a}
 img{image-rendering:pixelated;image-rendering:crisp-edges}
 
 /* ─── HOME ─── */
@@ -1550,7 +1552,10 @@ const ctx=canvas2.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 const W=1280,H=720;
 
-function resizeCanvas(){const r=Math.min(window.innerWidth/W,window.innerHeight/H);canvas2.style.width=W*r+'px';canvas2.style.height=H*r+'px';}
+// Canvas is stretched to viewport via CSS (width:100vw; height:100vh).
+// Internal backbuffer stays 1280x720 so all hard-coded HUD/level-up
+// coordinates keep working — browser scales the bitmap to fit.
+function resizeCanvas(){/* no-op; CSS handles fitting */}
 resizeCanvas();window.addEventListener('resize',resizeCanvas);
 
 const keys={};
