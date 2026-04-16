@@ -223,8 +223,9 @@ function audioInit(){
 }
 function audioToggleMute(){
   AUDIO.muted=!AUDIO.muted;
-  if(AUDIO.master)AUDIO.master.gain.value=AUDIO.muted?0:(AUDIO.bossPlaying?0.06:0.3);
+  if(AUDIO.master)AUDIO.master.gain.value=AUDIO.muted?0:0.3;
   if(AUDIO.bossBGM)AUDIO.bossBGM.muted=AUDIO.muted;
+  if(AUDIO.battleBGM)AUDIO.battleBGM.muted=AUDIO.muted;
   const b=document.getElementById('muteBtn');if(b)b.textContent=AUDIO.muted?'🔇':'🔊';
   try{localStorage.setItem('dada_muted',AUDIO.muted?'1':'0');}catch(e){}
 }
@@ -264,18 +265,11 @@ const SFX={
   damage(){playNoise(0.12,0.18,800);},
 };
 
-/* BGM: procedural per chapter */
-function bgmStop(){
-  if(AUDIO.bgmTimer){clearInterval(AUDIO.bgmTimer);AUDIO.bgmTimer=null;}
-  for(const n of AUDIO.bgmNodes){try{n.stop();}catch(e){}try{n.disconnect();}catch(e){}}
-  AUDIO.bgmNodes=[];
-  // Also stop boss BGM if active
-  bgmStopBoss(true);
-}
+/* BGM: HTMLAudio (battle + boss) with cross-fading; procedural fallback */
+AUDIO.battleBGM=null;AUDIO.bossBGM=null;
+AUDIO.battlePlaying=false;AUDIO.bossPlaying=false;
+AUDIO.battleFailed=false;AUDIO.savedChapter=null;AUDIO.fadeTimers=[];
 
-/* Boss BGM: HTMLAudio file, fades in/out over chapter BGM */
-AUDIO.bossBGM=null;AUDIO.bossPlaying=false;AUDIO.savedChapter=null;
-AUDIO.fadeTimers=[];
 function bgmAudioFade(audio,from,to,dur,done){
   if(!audio)return;
   const steps=30,intv=dur/steps;let i=0;
@@ -287,6 +281,16 @@ function bgmAudioFade(audio,from,to,dur,done){
   },intv);
   AUDIO.fadeTimers.push(t);
 }
+
+function bgmInitBattle(){
+  if(AUDIO.battleBGM||AUDIO.battleFailed)return;
+  try{
+    const a=new Audio('assets/bgm/Calculated_Strike.mp3');
+    a.loop=true;a.volume=0;a.preload='auto';
+    a.addEventListener('error',()=>{AUDIO.battleBGM=null;AUDIO.battleFailed=true;});
+    AUDIO.battleBGM=a;
+  }catch(e){AUDIO.battleBGM=null;AUDIO.battleFailed=true;}
+}
 function bgmInitBoss(){
   if(AUDIO.bossBGM)return;
   try{
@@ -296,6 +300,71 @@ function bgmInitBoss(){
     AUDIO.bossBGM=a;
   }catch(e){AUDIO.bossBGM=null;}
 }
+
+function bgmStartProcedural(chap){
+  // Last-resort fallback if MP3 fails to load
+  if(!AUDIO.ctx)return;
+  if(chap===1){
+    const notes=[523.25,659.25,783.99,880,783.99,659.25,523.25,440];
+    let i=0;
+    const tick=()=>{if(AUDIO.muted||!AUDIO.ctx)return;
+      const t=AUDIO.ctx.currentTime;
+      playTone(notes[i%notes.length],0.22,'square',0.10,t);
+      playTone(notes[i%notes.length]/2,0.22,'triangle',0.06,t);i++;};
+    tick();AUDIO.bgmTimer=setInterval(tick,260);
+  } else if(chap===2){
+    const t=AUDIO.ctx.currentTime;
+    const o=AUDIO.ctx.createOscillator();o.type='sawtooth';o.frequency.value=55;
+    const g=AUDIO.ctx.createGain();g.gain.value=0.07;
+    o.connect(g);g.connect(AUDIO.master);o.start(t);AUDIO.bgmNodes.push(o);
+    AUDIO.bgmTimer=setInterval(()=>{if(AUDIO.muted||!AUDIO.ctx)return;
+      playTone([110,138.6,164.8,207.7][Math.floor(Math.random()*4)],0.6,'sine',0.05,AUDIO.ctx.currentTime);},1800);
+  } else {
+    const chord=[[220,261.6,329.6],[174.6,220,261.6],[196,246.9,293.6],[164.8,196,246.9]];
+    let i=0;
+    const tick=()=>{if(AUDIO.muted||!AUDIO.ctx)return;
+      const t=AUDIO.ctx.currentTime;
+      for(const f of chord[i%chord.length])playTone(f,0.18,'sawtooth',0.06,t);
+      playNoise(0.05,0.12,5000);i++;};
+    tick();AUDIO.bgmTimer=setInterval(tick,170);
+  }
+}
+function bgmStopProcedural(){
+  if(AUDIO.bgmTimer){clearInterval(AUDIO.bgmTimer);AUDIO.bgmTimer=null;}
+  for(const n of AUDIO.bgmNodes){try{n.stop();}catch(e){}try{n.disconnect();}catch(e){}}
+  AUDIO.bgmNodes=[];
+}
+
+function bgmStart(chap){
+  bgmStopProcedural();
+  AUDIO.savedChapter=chap;
+  bgmInitBattle();
+  if(AUDIO.battleBGM&&!AUDIO.battleFailed){
+    AUDIO.battlePlaying=true;
+    try{AUDIO.battleBGM.currentTime=0;}catch(e){}
+    AUDIO.battleBGM.muted=AUDIO.muted;
+    const p=AUDIO.battleBGM.play();
+    if(p&&p.catch)p.catch(()=>{AUDIO.battleFailed=true;bgmStartProcedural(chap);});
+    bgmAudioFade(AUDIO.battleBGM,0,0.6,1500);
+  } else {
+    bgmStartProcedural(chap);
+  }
+}
+
+function bgmStop(){
+  // Stop procedural (always safe to call)
+  bgmStopProcedural();
+  // Fade out battle BGM
+  if(AUDIO.battleBGM&&AUDIO.battlePlaying){
+    bgmAudioFade(AUDIO.battleBGM,AUDIO.battleBGM.volume,0,1000,()=>{
+      try{AUDIO.battleBGM.pause();AUDIO.battleBGM.currentTime=0;}catch(e){}
+    });
+  }
+  AUDIO.battlePlaying=false;
+  // Stop boss instantly
+  bgmStopBoss(true);
+}
+
 function bgmStartBoss(chap){
   if(AUDIO.muted)return;
   bgmInitBoss();
@@ -303,79 +372,46 @@ function bgmStartBoss(chap){
   if(AUDIO.bossPlaying)return;
   AUDIO.bossPlaying=true;
   AUDIO.savedChapter=chap||AUDIO.savedChapter;
-  // Fade out chapter BGM volume via master? Cleaner: stop chapter BGM cleanly
-  if(AUDIO.master){
-    const startVol=AUDIO.master.gain.value;
+  // Fade out battle BGM (file or procedural)
+  if(AUDIO.battleBGM&&AUDIO.battlePlaying){
+    bgmAudioFade(AUDIO.battleBGM,AUDIO.battleBGM.volume,0,1000,()=>{
+      try{AUDIO.battleBGM.pause();}catch(e){}
+    });
+  } else if(AUDIO.master){
+    // procedural fallback: duck master gain
     const t=AUDIO.ctx.currentTime;
     AUDIO.master.gain.cancelScheduledValues(t);
-    AUDIO.master.gain.setValueAtTime(startVol,t);
+    AUDIO.master.gain.setValueAtTime(AUDIO.master.gain.value,t);
     AUDIO.master.gain.linearRampToValueAtTime(0.06,t+1.0);
   }
-  // Fade in boss track
+  // Fade in boss
   try{AUDIO.bossBGM.currentTime=0;}catch(e){}
+  AUDIO.bossBGM.muted=AUDIO.muted;
   const p=AUDIO.bossBGM.play();
   if(p&&p.catch)p.catch(()=>{});
   bgmAudioFade(AUDIO.bossBGM,0,0.7,1500);
 }
+
 function bgmStopBoss(silent){
   if(!AUDIO.bossPlaying){if(AUDIO.bossBGM){try{AUDIO.bossBGM.pause();}catch(e){}}return;}
   AUDIO.bossPlaying=false;
-  // Fade out boss track and resume chapter master volume
   bgmAudioFade(AUDIO.bossBGM,AUDIO.bossBGM.volume,0,silent?200:1500,()=>{
     try{AUDIO.bossBGM.pause();}catch(e){}
   });
-  if(AUDIO.master&&!silent){
+  if(silent)return;
+  // Resume battle BGM
+  if(AUDIO.battleBGM&&!AUDIO.battleFailed){
+    AUDIO.battlePlaying=true;
+    AUDIO.battleBGM.muted=AUDIO.muted;
+    const p=AUDIO.battleBGM.play();
+    if(p&&p.catch)p.catch(()=>{});
+    bgmAudioFade(AUDIO.battleBGM,0,0.6,1500);
+  } else if(AUDIO.master){
+    // procedural fallback: restore master gain
     const t=AUDIO.ctx.currentTime;
     AUDIO.master.gain.cancelScheduledValues(t);
     AUDIO.master.gain.setValueAtTime(AUDIO.master.gain.value,t);
     AUDIO.master.gain.linearRampToValueAtTime(AUDIO.muted?0:0.3,t+1.5);
-  } else if(AUDIO.master&&silent){
-    AUDIO.master.gain.value=AUDIO.muted?0:0.3;
-  }
-}
-function bgmStart(chap){
-  if(!AUDIO.ctx)return;
-  bgmStop();
-  if(chap===1){
-    const notes=[523.25,659.25,783.99,880,783.99,659.25,523.25,440];
-    let i=0;
-    const tick=()=>{
-      if(AUDIO.muted||!AUDIO.ctx)return;
-      const t=AUDIO.ctx.currentTime;
-      playTone(notes[i%notes.length],0.22,'square',0.10,t);
-      playTone(notes[i%notes.length]/2,0.22,'triangle',0.06,t);
-      i++;
-    };
-    tick();AUDIO.bgmTimer=setInterval(tick,260);
-  } else if(chap===2){
-    // Low drone
-    const t=AUDIO.ctx.currentTime;
-    const o=AUDIO.ctx.createOscillator();o.type='sawtooth';o.frequency.value=55;
-    const g=AUDIO.ctx.createGain();g.gain.value=0.07;
-    o.connect(g);g.connect(AUDIO.master);o.start(t);
-    AUDIO.bgmNodes.push(o);
-    const o2=AUDIO.ctx.createOscillator();o2.type='sine';o2.frequency.value=82.4;
-    const g2=AUDIO.ctx.createGain();g2.gain.value=0.05;
-    o2.connect(g2);g2.connect(AUDIO.master);o2.start(t);
-    AUDIO.bgmNodes.push(o2);
-    AUDIO.bgmTimer=setInterval(()=>{
-      if(AUDIO.muted||!AUDIO.ctx)return;
-      const tn=AUDIO.ctx.currentTime;
-      playTone([110,138.6,164.8,207.7][Math.floor(Math.random()*4)],0.6,'sine',0.05,tn);
-    },1800);
-  } else {
-    // Hell: fast minor pattern + drum
-    const chord=[[220,261.6,329.6],[174.6,220,261.6],[196,246.9,293.6],[164.8,196,246.9]];
-    let i=0;
-    const tick=()=>{
-      if(AUDIO.muted||!AUDIO.ctx)return;
-      const t=AUDIO.ctx.currentTime;
-      const c=chord[i%chord.length];
-      for(const f of c)playTone(f,0.18,'sawtooth',0.06,t);
-      playNoise(0.05,0.12,5000);
-      i++;
-    };
-    tick();AUDIO.bgmTimer=setInterval(tick,170);
   }
 }
 
