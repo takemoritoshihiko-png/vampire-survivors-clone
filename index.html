@@ -192,6 +192,9 @@ const SPRITE_FILES={
   boss_zombie:'assets/boss_zombie.png',
   weapon_kunai:'assets/weapon_kunai.png',weapon_bow:'assets/weapon_bow.png',weapon_sword:'assets/weapon_sword.png',
   weapon_garlic:'assets/weapon_garlic.png',weapon_bible:'assets/weapon_bible.png',weapon_lightning:'assets/weapon_lightning.png',
+  weapon_katana:'assets/weapon_katana.png',weapon_shotgun:'assets/weapon_shotgun.png',weapon_drill:'assets/weapon_drill.png',
+  weapon_soccer:'assets/weapon_soccer.png',weapon_lightchaser:'assets/weapon_lightchaser.png',weapon_force:'assets/weapon_force.png',
+  weapon_chaos:'assets/weapon_chaos.png',weapon_lightchaser_s:'assets/weapon_lightchaser_s.png',weapon_force_s:'assets/weapon_force_s.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
 function preloadSprites(cb){
@@ -393,6 +396,8 @@ function defaultSave(){
     eqIdCounter:0,
     basetech:0,cores:0,
     talents:{atk:0,hp:0,speed:0,coin:0,xp:0,cd:0},
+    weaponsOwned:{kunai:'gray'},
+    selectedWeapon:'kunai',
     daily:{date:'',progress:{battle:0,kills:0,gacha:0,survive3:0,levelup5:0},claimed:{battle:false,kills:false,gacha:false,survive3:false,levelup5:false}},
     records:{totalBattles:0,totalKills:0,totalPlayTime:0,longestSurvival:0,highestLevel:1,totalEvolutions:0,achievements:{},weaponsUsed:[],bossesKilled:0,chaptersCleared:{},gachaTotal:0,mythicCount:0},
   };
@@ -415,6 +420,8 @@ if(save.basetech===undefined)save.basetech=0;
 if(save.cores===undefined)save.cores=0;
 delete save.shopDaily;
 if(!save.talents)save.talents={atk:0,hp:0,speed:0,coin:0,xp:0,cd:0};
+if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
+if(!save.selectedWeapon)save.selectedWeapon='kunai';
 for(const e of save.equipment){if(e.level===undefined)e.level=1;if(e.sub===undefined)e.sub=0;if(e.astral===undefined)e.astral=0;}
 
 /* ═══════════════════════════════════════════════════════
@@ -692,8 +699,48 @@ function renderChars(p){
     h+=`</div>`;
   }
   h+='</div>';
+  // Main weapon slot (selected character only)
+  const mw=save.selectedWeapon||'kunai';const wd=WEAPON_DEFS[mw];
+  const mwRank=save.weaponsOwned[mw]||'gray';
+  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">⚔️ Main Weapon</div>`;
+  h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+    <div class="game-card rank-${mwRank}" style="cursor:pointer;width:240px;text-align:center;padding:14px;margin:0" onclick="openWeaponPicker()">
+      <div style="font-size:36px">${wd?wd.icon:'?'}</div>
+      <div style="font-size:14px;color:${wd?wd.color:'#fff'};font-weight:bold;margin-top:4px">${wd?wd.name:'(none)'} <span style="color:${RANK_COLORS[mwRank]};font-size:11px">[${RANK_NAMES[mwRank]}]</span></div>
+      <div style="font-size:11px;color:#aaa;margin-top:4px">${wd?wd.desc(1):''}</div>
+      <div style="font-size:10px;color:#0af;margin-top:6px">タップして変更</div>
+    </div>
+  </div>`;
   p.innerHTML=h;
 }
+
+window.openWeaponPicker=function(){
+  const owned=Object.keys(save.weaponsOwned).filter(id=>WEAPON_DEFS[id]&&!WEAPON_DEFS[id].evolved);
+  if(owned.length===0){flashMsg('No weapons owned');return;}
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  let inner=`<div style="max-width:780px;width:100%"><div style="text-align:center;color:#fa0;font-weight:bold;font-size:18px;margin-bottom:14px">⚔️ Select Main Weapon</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">`;
+  for(const id of owned){
+    const d=WEAPON_DEFS[id];const r=save.weaponsOwned[id]||'gray';
+    const isS=d.tier==='S';
+    inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;cursor:pointer;${isS?'border-width:3px':''}" onclick="pickWeapon('${id}')">
+      ${isS?`<div style="font-size:9px;color:#fc0;font-weight:bold;margin-bottom:4px">✨ S級 ${d.name.replace(/^S\s/,'').toUpperCase()} ✨</div>`:''}
+      <div style="font-size:36px">${d.icon}</div>
+      <div style="font-size:13px;color:${d.color};font-weight:bold;margin-top:4px">${d.name}</div>
+      <div style="font-size:10px;color:${RANK_COLORS[r]}">[${RANK_NAMES[r]}]</div>
+      <div style="font-size:10px;color:#aaa;margin-top:4px">${d.desc(1)}</div>
+    </div>`;
+  }
+  inner+=`</div><div style="text-align:center;margin-top:16px"><button class="btn btn-orange" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button></div></div>`;
+  ov.innerHTML=inner;
+  document.body.appendChild(ov);
+};
+window.pickWeapon=function(id){
+  if(!save.weaponsOwned[id]){flashMsg('Not owned');return;}
+  save.selectedWeapon=id;saveSave();
+  document.querySelectorAll('div[style*="z-index:300"]').forEach(d=>d.remove());
+  renderHome();SFX.coin();
+};
 window.selectChar=function(id){if(!save.chars[id].unlocked)return;save.selectedChar=id;saveSave();renderHome();};
 window.unlockChar=function(id){const c=CHARS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chars[id].unlocked=true;saveSave();renderHome();};
 window.upgradeChar=function(id){const d=save.chars[id];if(!d.unlocked||d.lv>=MAX_CHAR_LV)return;const c=charLvCost(d.lv);if(save.coins<c)return;save.coins-=c;d.lv++;saveSave();renderHome();};
@@ -1027,13 +1074,48 @@ window.buyMaterial=function(kind){
   }
 };
 
+// Weapon pool by rank availability
+const NORMAL_WEAPONS=['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer'];
+const GREEN_WEAPONS=['kunai','bat','shotgun','drill','soccer'];
+const S_WEAPONS=['lightChaserS','forceS','chaosBlade'];
+function _grantWeapon(id,rank){
+  const cur=save.weaponsOwned[id];
+  if(!cur||RANKS.indexOf(rank)>RANKS.indexOf(cur))save.weaponsOwned[id]=rank;
+  return {kind:'weapon',id,rank};
+}
+function _gachaResult(rank,gachaType){
+  // 30% chance to get a weapon (if pool non-empty for the rank), else equipment
+  let pool=null;
+  if(rank==='gray')pool=null; // gray weapons not allowed (defense only)
+  else if(rank==='green')pool=GREEN_WEAPONS;
+  else pool=NORMAL_WEAPONS;
+  if(rank==='red'&&gachaType==='s'){
+    // 70% normal red weapon, 30% S-weapon
+    if(Math.random()<0.30){
+      const sw=S_WEAPONS[Math.floor(Math.random()*S_WEAPONS.length)];
+      // S-rank prob: 40% lcS, 40% forceS, 20% chaos — roll again
+      const r=Math.random();
+      const swPick=r<0.4?'lightChaserS':r<0.8?'forceS':'chaosBlade';
+      return _grantWeapon(swPick,'red');
+    }
+  }
+  if(pool&&Math.random()<0.30){
+    const wid=pool[Math.floor(Math.random()*pool.length)];
+    return _grantWeapon(wid,rank);
+  }
+  // Equipment
+  const slots=Object.keys(SLOT_NAMES);
+  const slot=slots[Math.floor(Math.random()*slots.length)];
+  const id=makeEquip(slot,rank);
+  const eq=save.equipment.find(e=>e.id===id);
+  return {kind:'equip',eq,rank};
+}
 window.doGacha=function(type,count){
   const cost=type==='normal'?(count===1?100:500):(count===1?300:2680);
   if(save.coins<cost){flashMsg('Not enough coins!');return;}
   if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
   save.coins-=cost;
   const results=[];
-  const slots=Object.keys(SLOT_NAMES);
   for(let i=0;i<count;i++){
     if(save.equipment.length>=50)break;
     let rank;
@@ -1045,9 +1127,8 @@ window.doGacha=function(type,count){
       if(save.sgachaPity>=50){rank='red';save.sgachaPity=0;}
       else{const r=Math.random();rank=r<0.40?'purple':r<0.80?'gold':'red';if(rank==='red')save.sgachaPity=0;}
     }
-    const slot=slots[Math.floor(Math.random()*slots.length)];
-    const id=makeEquip(slot,rank);
-    results.push(save.equipment.find(e=>e.id===id));
+    const res=_gachaResult(rank,type);
+    results.push(res);
     save.gachaTotal++;
     save.records.gachaTotal=(save.records.gachaTotal||0)+1;
     if(rank==='red')save.records.mythicCount=(save.records.mythicCount||0)+1;
@@ -1055,9 +1136,29 @@ window.doGacha=function(type,count){
   dailyProgress('gacha',1);
   saveSave();
   audioInit();SFX.gacha();
+  // Trigger S-rank intro if any S-weapon was pulled
+  const sPull=results.find(r=>r.kind==='weapon'&&WEAPON_DEFS[r.id]&&WEAPON_DEFS[r.id].tier==='S');
+  if(sPull){flashSWeapon(sPull.id);}
   showGachaPopup(results);
   renderHome();
 };
+
+function flashSWeapon(id){
+  const d=WEAPON_DEFS[id];
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:radial-gradient(circle,#fc0,#000);opacity:0;pointer-events:none;z-index:250;animation:astralFlash 2.2s';
+  document.body.appendChild(ov);
+  const tx=document.createElement('div');
+  tx.innerHTML=`<div style="font-size:22px;color:#fff">✨ S-RANK WEAPON ✨</div><div style="font-size:60px;margin-top:14px">${d.icon}</div><div style="font-size:30px;color:${d.color};margin-top:8px;font-weight:bold">${d.name}</div><div style="font-size:14px;color:#fa0;margin-top:8px">→ Inventory</div>`;
+  tx.style.cssText='position:fixed;top:30%;left:50%;transform:translateX(-50%);text-align:center;color:#fff;font-weight:bold;text-shadow:0 0 30px #fa0;pointer-events:none;z-index:251;animation:astralText 2.2s';
+  document.body.appendChild(tx);
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div');s.textContent='★';
+    s.style.cssText=`position:fixed;top:-30px;left:${Math.random()*100}%;color:#fa0;font-size:${16+Math.random()*32}px;text-shadow:0 0 12px #f80;pointer-events:none;z-index:252;animation:starFall ${1.5+Math.random()*1.2}s ease-in;animation-delay:${Math.random()*0.5}s`;
+    document.body.appendChild(s);setTimeout(()=>s.remove(),3000);
+  }
+  setTimeout(()=>{ov.remove();tx.remove();},2200);
+}
 
 function showGachaPopup(results){
   const cards=document.getElementById('gachaCards');cards.innerHTML='';
@@ -1079,10 +1180,21 @@ function showGachaPopup(results){
     const c=document.createElement('div');
     c.className=`gacha-card rank-${r.rank}`;
     c.style.borderColor=RANK_COLORS[r.rank];
-    c.innerHTML=`<div class="gc-icon">${SLOT_ICONS[r.slot]}</div>
-      <div class="gc-rank" style="color:${RANK_COLORS[r.rank]}">${RANK_NAMES[r.rank]}</div>
-      <div class="gc-slot">${SLOT_NAMES[r.slot]}</div>
-      <div style="font-size:9px;color:#0f0;margin-top:3px">+${eqStatValue(r.slot,r.rank)}% ${SLOT_EFFECTS[r.slot]}</div>`;
+    if(r.kind==='weapon'){
+      const d=WEAPON_DEFS[r.id];
+      const isS=d.tier==='S';
+      c.innerHTML=`<div class="gc-icon">${d.icon}</div>
+        <div class="gc-rank" style="color:${RANK_COLORS[r.rank]}">${isS?'✨ S級':RANK_NAMES[r.rank]}</div>
+        <div class="gc-slot">${d.name}</div>
+        <div style="font-size:9px;color:#fa0;margin-top:3px">⚔️ Weapon</div>`;
+      if(isS)c.style.borderWidth='3px';
+    } else {
+      const eq=r.eq;
+      c.innerHTML=`<div class="gc-icon">${SLOT_ICONS[eq.slot]}</div>
+        <div class="gc-rank" style="color:${RANK_COLORS[r.rank]}">${RANK_NAMES[r.rank]}</div>
+        <div class="gc-slot">${SLOT_NAMES[eq.slot]}</div>
+        <div style="font-size:9px;color:#0f0;margin-top:3px">+${eqStatValue(eq.slot,r.rank)}% ${SLOT_EFFECTS[eq.slot]}</div>`;
+    }
     cards.appendChild(c);
   }
   document.getElementById('gachaPopup').classList.add('show');
@@ -1310,51 +1422,86 @@ let waveText,waveTimer,lastWaveMin;
 let runGold,runKills,runEquipsDropped;
 let pet={x:0,y:0,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
 
-/* DadaSurvivor-style: attack skills ★1-5 + aux skills (single-pick) + evolved */
+/* DadaSurvivor-style: 8 normal + 3 S-rank attack skills + aux + evolved */
 const WEAPON_DEFS={
-  kunai:{name:'Kunai',icon:'🗡️',color:'#ff0',sprite:'weapon_kunai',maxLv:5,
+  kunai:{name:'Kunai',icon:'🗡️',color:'#ff0',sprite:'weapon_kunai',maxLv:5,tier:'N',
     rate:[2,3,4,5,7],dmgMul:[1,1,1.2,1.4,1.6],count:[1,1,1,1,2],pierce:2,
-    desc:s=>`★${s} ${({1:'2/s nearest',2:'3/s, +1',3:'4/s, +20% dmg',4:'5/s, +40% dmg',5:'7/s, +60% dmg, +2 count'})[s]}`,evolved:false},
-  shotgun:{name:'Shotgun',icon:'🔫',color:'#fa0',sprite:'weapon_bow',maxLv:5,
+    desc:s=>`★${s} ${({1:'2/s nearest',2:'3/s, +1',3:'4/s, +20% dmg',4:'5/s, +40% dmg',5:'7/s, +60% dmg, +2'})[s]}`,evolved:false},
+  katana:{name:'Katana',icon:'⚔️',color:'#fff',sprite:'weapon_katana',maxLv:5,tier:'N',
+    cd:[0.7,0.6,0.55,0.5,0.45],dmgMul:[1,1.1,1.2,1.4,1.6],
+    desc:s=>`★${s} ${({1:'forward 120° slash',2:'+10% dmg',3:'5x → 4-way wave',4:'4-way wave +50%',5:'wave splits'})[s]}`,evolved:false},
+  bat:{name:'Bat',icon:'🏏',color:'#fa0',sprite:'weapon_sword',maxLv:5,tier:'N',
+    orbits:[1,2,2,3,5],spd:[3,3,3.9,3.9,4.5],dmgMul:[1,1,1,1.5,1.7],orbitR:90,
+    desc:s=>`★${s} ${({1:'1 orbit',2:'2 orbits',3:'+30% rot',4:'3 orbits, +50% dmg',5:'5 orbits + AoE'})[s]}`,evolved:false},
+  shotgun:{name:'Shotgun',icon:'🔫',color:'#fa0',sprite:'weapon_shotgun',maxLv:5,tier:'N',
     pellets:[3,4,5,7,10],spread:[0.5,0.5,0.6,0.7,0.7],cd:[1.0,1.0,1.0,0.9,0.7],dmgMul:[1,1,1.1,1.2,1.4],
     desc:s=>`★${s} ${({1:'3 forward',2:'+1',3:'+1, +20% area',4:'+2',5:'+3, -30% CD'})[s]}`,evolved:false},
-  lightning:{name:'Lightning',icon:'⚡',color:'#ff0',sprite:'weapon_lightning',maxLv:5,
-    targets:[1,2,3,5,99],chain:[0,1,2,2,3],cd:[1.5,1.4,1.3,1.2,1.0],dmgMul:[1,1,1.1,1.2,1.4],
-    desc:s=>`★${s} ${({1:'1 random',2:'2 + chain',3:'3 + chain×2',4:'5 strikes',5:'all on screen'})[s]}`,evolved:false},
-  bat:{name:'Bat',icon:'🏏',color:'#fa0',sprite:'weapon_sword',maxLv:5,
-    orbits:[1,2,2,3,5],spd:[3,3,3.9,3.9,4.5],dmgMul:[1,1,1,1.5,1.7],orbitR:90,
-    desc:s=>`★${s} ${({1:'1 orbit',2:'2 orbits',3:'+30% rot speed',4:'3 orbits, +50% dmg',5:'5 orbits + AoE'})[s]}`,evolved:false},
-  droneA:{name:'Drone-A',icon:'🤖',color:'#4af',sprite:'weapon_bible',maxLv:5,
-    cd:[0.6,0.5,0.4,0.35,0.3],dmgMul:[1,1.15,1.3,1.5,1.8],
-    desc:s=>`★${s} follower drone shoots`,evolved:false},
-  droneB:{name:'Drone-B',icon:'🛸',color:'#0fa',sprite:'weapon_bible',maxLv:5,
-    cd:[0.9,0.8,0.7,0.6,0.5],dmgMul:[1.4,1.6,1.8,2.1,2.4],
-    desc:s=>`★${s} heavy follower drone`,evolved:false},
+  lightchaser:{name:'Light Chaser',icon:'⚡',color:'#0ff',sprite:'weapon_lightchaser',maxLv:5,tier:'N',
+    rays:[2,3,5,6,8],cd:[0.7,0.65,0.6,0.55,0.5],dmgMul:[1,1.1,1.2,1.3,1.5],
+    desc:s=>`★${s} ${({1:'2-way slash',2:'3-way',3:'5-way',4:'6-way',5:'8-way + sword aura'})[s]}`,evolved:false},
+  force:{name:'Force Blast',icon:'💣',color:'#a0f',sprite:'weapon_force',maxLv:5,tier:'N',
+    cd:[2.0,1.8,1.6,1.4,1.2],dmgMul:[1,1.2,1.4,1.7,2.0],
+    desc:s=>`★${s} ${({1:'1 blackhole',2:'+CD',3:'pull radius+',4:'+dmg',5:'2× burst dmg'})[s]}`,evolved:false},
+  drill:{name:'Drill',icon:'🔩',color:'#ccf',sprite:'weapon_drill',maxLv:5,tier:'N',
+    cd:[1.0,0.9,0.8,0.7,0.6],dmgMul:[1.2,1.3,1.4,1.5,1.7],pierce:[3,3,4,5,6],
+    desc:s=>`★${s} ${({1:'pierce 3',2:'pierce 3 +CD',3:'bounce on edge',4:'pierce 5',5:'pierce 6 +faster'})[s]}`,evolved:false},
+  soccer:{name:'Soccer Ball',icon:'⚽',color:'#fff',sprite:'weapon_soccer',maxLv:5,tier:'N',
+    balls:[1,2,3,3,4],bounces:[3,3,4,5,6],cd:[1.5,1.4,1.3,1.2,1.0],dmgMul:[1,1.1,1.2,1.3,1.5],
+    desc:s=>`★${s} ${({1:'1 bouncing ball',2:'2 balls',3:'3 balls +bounce',4:'+1 bounce',5:'4 balls +bounces'})[s]}`,evolved:false},
+  // S-rank weapons
+  lightChaserS:{name:'S Light Chaser',icon:'✨',color:'#fc0',sprite:'weapon_lightchaser_s',maxLv:5,tier:'S',
+    rays:[8,10,12,14,16],cd:[0.5,0.45,0.4,0.35,0.3],dmgMul:[1.5,1.7,1.9,2.2,2.6],
+    desc:s=>`★${s} 8-16 way golden rays + aura`,evolved:false},
+  forceS:{name:'S Force Blast',icon:'💥',color:'#a0f',sprite:'weapon_force_s',maxLv:5,tier:'S',
+    cd:[1.5,1.4,1.3,1.2,1.0],dmgMul:[1.5,1.8,2.0,2.4,2.8],count:[2,2,2,2,2],
+    desc:s=>`★${s} 2 blackholes`,evolved:false},
+  chaosBlade:{name:'S Chaos Blade',icon:'🌀',color:'#f44',sprite:'weapon_chaos',maxLv:5,tier:'S',
+    cd:[0.6,0.55,0.5,0.45,0.4],dmgMul:[1.4,1.6,1.8,2.1,2.5],executePct:[5,7,10,15,20],
+    desc:s=>`★${s} chaos slash + ${[5,7,10,15,20][s-1]}% execute`,evolved:false},
   // Evolved (★ unused; treated as max)
   spiritBlade:{name:'霊力の刃',icon:'👻',color:'#8ff',sprite:'weapon_kunai',maxLv:1,
-    desc:()=>'Homing ghost shuriken, pierce, 2× dmg',evolved:true},
-  hyperShot:{name:'ハイパーショット',icon:'🔥',color:'#fa0',sprite:'weapon_bow',maxLv:1,
-    desc:()=>'180° spread, 3× count, 50% CD',evolved:true},
-  thunderWrath:{name:'雷神の怒り',icon:'⛈️',color:'#ff0',sprite:'weapon_lightning',maxLv:1,
-    desc:()=>'All enemies, chain unlimited, 3s CD',evolved:true},
+    desc:()=>'Homing ghost shuriken, pierce, 2× dmg',evolved:true,from:'kunai'},
+  yotou:{name:'妖刀',icon:'🌙',color:'#a0f',sprite:'weapon_katana',maxLv:1,
+    desc:()=>'Slash heals 2 HP, pierces all',evolved:true,from:'katana'},
   lucille:{name:'ルシール',icon:'🔥',color:'#f44',sprite:'weapon_sword',maxLv:1,
-    desc:()=>'Flame bat, 3× rot, burn 3s',evolved:true},
-  destroyer:{name:'破壊者',icon:'💥',color:'#fa0',sprite:'weapon_bible',maxLv:1,
-    desc:()=>'Combined drone, lock-on missile barrage',evolved:true},
+    desc:()=>'Flame bat, 3× rot, burn 3s',evolved:true,from:'bat'},
+  hyperShot:{name:'ハイパーショット',icon:'🔥',color:'#fa0',sprite:'weapon_shotgun',maxLv:1,
+    desc:()=>'180° spread, 3× count, 50% CD',evolved:true,from:'shotgun'},
+  swordArray:{name:'光剣陣',icon:'⚜️',color:'#0ff',sprite:'weapon_lightchaser',maxLv:1,
+    desc:()=>'12-way + sword aura at every salvo',evolved:true,from:'lightchaser'},
+  forceMastery:{name:'破壊の極致',icon:'🌑',color:'#a0f',sprite:'weapon_force',maxLv:1,
+    desc:()=>'2× blackhole + shield burst',evolved:true,from:'force'},
+  vibrationDrill:{name:'超振動ドリル',icon:'🛠️',color:'#ccf',sprite:'weapon_drill',maxLv:1,
+    desc:()=>'Homing drill + shockwave',evolved:true,from:'drill'},
+  quantumBall:{name:'量子ボール',icon:'🌐',color:'#fff',sprite:'weapon_soccer',maxLv:1,
+    desc:()=>'Teleporting multi-hit ball',evolved:true,from:'soccer'},
+  // S-rank evolved
+  sLightArray:{name:'超光剣陣',icon:'🌟',color:'#fc0',sprite:'weapon_lightchaser_s',maxLv:1,
+    desc:()=>'24-way + auto sword aura',evolved:true,from:'lightChaserS'},
+  voidLord:{name:'虚空の支配者',icon:'🕳️',color:'#a0f',sprite:'weapon_force_s',maxLv:1,
+    desc:()=>'4 blackholes + chain blast',evolved:true,from:'forceS'},
+  chaosJudge:{name:'混沌の断罪',icon:'☠️',color:'#f44',sprite:'weapon_chaos',maxLv:1,
+    desc:()=>'80% execute / 20% on boss + omni-wave',evolved:true,from:'chaosBlade'},
 };
 
 const PASSIVE_DEFS={
   ninjaScroll:{name:'究極忍法書',icon:'📜',color:'#fa0',evolveTarget:'kunai',maxLv:1,
     desc:()=>'XP +20%',apply:p=>{p.xpMult*=1.2;}},
-  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',evolveTarget:'shotgun',maxLv:1,
-    desc:()=>'Skill area +15%',apply:p=>{p.areaMult=(p.areaMult||1)*1.15;}},
-  thunderGen:{name:'雷発生器',icon:'🔌',color:'#ff0',evolveTarget:'lightning',maxLv:1,
-    desc:()=>'All CD -10%',apply:p=>{p.cdReduction+=0.10;}},
+  kogaScroll:{name:'甲賀忍法書',icon:'🥷',color:'#a8f',evolveTarget:'katana',maxLv:1,
+    desc:()=>'ATK +10%',apply:p=>{p.might*=1.10;}},
   fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',evolveTarget:'bat',maxLv:1,
     desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.2);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.2),p.maxHp);}},
-  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',evolveTarget:'droneA',maxLv:1,
-    desc:()=>'Drone auto-lock nearest',apply:p=>{p.droneLock=true;}},
-  energyCube:{name:'エナジーキューブ',icon:'🟦',color:'#0ff',evolveTarget:null,maxLv:1,
+  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',evolveTarget:'shotgun',maxLv:1,
+    desc:()=>'Skill area +15%',apply:p=>{p.areaMult=(p.areaMult||1)*1.15;}},
+  laserGen:{name:'レーザー発振器',icon:'🔆',color:'#0ff',evolveTarget:'lightchaser',maxLv:1,
+    desc:()=>'All CD -10%',apply:p=>{p.cdReduction+=0.10;}},
+  gauntlet:{name:'外付け籠手',icon:'🥊',color:'#a0f',evolveTarget:'force',maxLv:1,
+    desc:()=>'Force duration +30%',apply:p=>{p.forceDur=(p.forceDur||1)+0.3;}},
+  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',evolveTarget:'drill',maxLv:1,
+    desc:()=>'Drill homing',apply:p=>{p.drillHoming=true;}},
+  quantumEngine:{name:'量子エンジン',icon:'🟦',color:'#fff',evolveTarget:'soccer',maxLv:1,
+    desc:()=>'+3 bounces',apply:p=>{p.extraBounces=(p.extraBounces||0)+3;}},
+  energyCube:{name:'エナジーキューブ',icon:'⚡',color:'#0ff',evolveTarget:null,maxLv:1,
     desc:()=>'All CD -15%',apply:p=>{p.cdReduction+=0.15;}},
   hollowPoint:{name:'強力銃弾',icon:'💥',color:'#f44',evolveTarget:null,maxLv:1,
     desc:()=>'ATK +15%',apply:p=>{p.might*=1.15;}},
@@ -1374,10 +1521,17 @@ const ENEMY_TYPES={
 
 const EVOLUTIONS=[
   {weapon:'kunai',passive:'ninjaScroll',evolved:'spiritBlade'},
-  {weapon:'shotgun',passive:'highExplosive',evolved:'hyperShot'},
-  {weapon:'lightning',passive:'thunderGen',evolved:'thunderWrath'},
+  {weapon:'katana',passive:'kogaScroll',evolved:'yotou'},
   {weapon:'bat',passive:'fitnessGuide',evolved:'lucille'},
-  // Destroyer requires droneA★5 + droneB★5 (special-cased in evolution check)
+  {weapon:'shotgun',passive:'highExplosive',evolved:'hyperShot'},
+  {weapon:'lightchaser',passive:'laserGen',evolved:'swordArray'},
+  {weapon:'force',passive:'gauntlet',evolved:'forceMastery'},
+  {weapon:'drill',passive:'precision',evolved:'vibrationDrill'},
+  {weapon:'soccer',passive:'quantumEngine',evolved:'quantumBall'},
+  // S-rank evolves: same aux but on S weapon → S-evo
+  {weapon:'lightChaserS',passive:'laserGen',evolved:'sLightArray'},
+  {weapon:'forceS',passive:'gauntlet',evolved:'voidLord'},
+  {weapon:'chaosBlade',passive:'kogaScroll',evolved:'chaosJudge'},
 ];
 
 function distXY(ax,ay,bx,by){const d1=ax-bx,d2=ay-by;return Math.sqrt(d1*d1+d2*d2);}
@@ -1386,8 +1540,12 @@ function rnd(a,b){return a+Math.random()*(b-a);}
 
 function getW(id){return player.weapons.find(w=>w.id===id);}
 function getP(id){return player.passives.find(p=>p.id===id);}
-const _BASE_DMG={kunai:8,shotgun:10,lightning:25,bat:14,droneA:9,droneB:18,
-  spiritBlade:18,hyperShot:14,thunderWrath:40,lucille:22,destroyer:30};
+const _BASE_DMG={
+  kunai:8,katana:14,bat:14,shotgun:10,lightchaser:14,force:25,drill:18,soccer:12,
+  lightChaserS:22,forceS:35,chaosBlade:24,
+  spiritBlade:18,yotou:24,lucille:22,hyperShot:14,swordArray:22,
+  forceMastery:38,vibrationDrill:30,quantumBall:22,
+  sLightArray:32,voidLord:50,chaosJudge:36};
 function wDmg(w){const def=WEAPON_DEFS[w.id];const base=_BASE_DMG[w.id]||10;
   const mul=(def.dmgMul&&def.dmgMul[w.lv-1])||1;
   return base*mul*player.might;
@@ -1440,9 +1598,12 @@ function initBattle(){
     player.baseMight*=1+(spdRatio-1)*0.6;player.might=player.baseMight;
   }
   // Armor-purple: HP<50% ATK+20% (handled dynamically — flag only)
-  player.weapons.push({id:ch.initWeapon,lv:1,timer:0});
+  // Resolve main weapon: selected if owned + valid, else fall back to kunai
+  let mainW=save.selectedWeapon;
+  if(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW])mainW='kunai';
+  player.weapons.push({id:mainW,lv:1,timer:0});
   if(!save.records.weaponsUsed)save.records.weaponsUsed=[];
-  if(!save.records.weaponsUsed.includes(ch.initWeapon))save.records.weaponsUsed.push(ch.initWeapon);
+  if(!save.records.weaponsUsed.includes(mainW))save.records.weaponsUsed.push(mainW);
 
   bullets=[];enemies=[];gems=[];coins2=[];particles=[];chests2=[];energyDrinks=[];
   weaponProjectiles=[];lightningFx=[];whipFx=[];dmgPopups=[];deadFx=[];
@@ -1609,51 +1770,137 @@ function updateWeapons(){
           damage:dmg,pierce:1,life:0.7,color:def.color,wid:w.id,kind:'pellet',angle:ang});
       }
     }
-    else if(w.id==='lightning'||w.id==='thunderWrath'){
-      const isEv=w.id==='thunderWrath';
-      const baseCd=isEv?3.0:def.cd[s-1];
+    else if(w.id==='katana'||w.id==='yotou'){
+      const isEv=w.id==='yotou';
+      const baseCd=isEv?0.4:def.cd[s-1];
       const cd=wCdFinal(baseCd);
       w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
-      let tgts;
-      if(isEv){tgts=enemies.filter(e=>dist2(e,player)<900);}
-      else{
-        const tn=def.targets[s-1];
-        tgts=enemies.filter(e=>dist2(e,player)<700).sort(()=>Math.random()-.5).slice(0,Math.min(tn,enemies.length));
+      const ang=Math.atan2(player.lastDy,player.lastDx);
+      const reach=120;
+      // Forward 120° arc swing
+      whipFx.push({x:player.x,y:player.y,dir:Math.cos(ang)>=0?1:-1,area:reach,life:.18,maxLife:.18,color:def.color,arcAng:ang});
+      for(const e of enemies){
+        const ea=Math.atan2(e.y-player.y,e.x-player.x);
+        let da=ea-ang;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+        if(Math.abs(da)<Math.PI/3&&dist2(e,player)<reach+e.radius){
+          applyDmg(e,dmg,w.id);
+          if(isEv)player.hp=Math.min(player.maxHp,player.hp+2);
+        }
       }
-      const chainCount=isEv?99:def.chain[s-1];
-      for(const e of tgts){
-        applyDmg(e,dmg,w.id);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3});
-        // Chain to nearby
-        let cur=e;const hit=new Set([e]);
-        for(let c=0;c<chainCount;c++){
-          let near=null,nd=Infinity;
-          for(const e2 of enemies){if(hit.has(e2))continue;const d=distXY(cur.x,cur.y,e2.x,e2.y);if(d<nd&&d<200){nd=d;near=e2;}}
-          if(!near)break;
-          applyDmg(near,dmg*0.7,w.id);lightningFx.push({x:near.x,y:near.y,life:.25,maxLife:.25});
-          hit.add(near);cur=near;
+      // Every 5 hits at ★3+: 4-way wave
+      w.hitCnt=(w.hitCnt||0)+1;
+      if(((s>=3&&!isEv)||isEv)&&w.hitCnt%5===0){
+        for(let d=0;d<4;d++){
+          const wa=d*Math.PI/2;
+          fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(wa)*340,vy:Math.sin(wa)*340,
+            damage:dmg*0.7,pierce:isEv?99:3,life:1.2,color:'#a0f',wid:w.id,kind:'wave',angle:wa});
+          if((s===5&&!isEv)||isEv){
+            // splits
+            for(const off of[-0.4,0.4]){
+              fireBullet({x:player.x,y:player.y,radius:6,vx:Math.cos(wa+off)*320,vy:Math.sin(wa+off)*320,
+                damage:dmg*0.5,pierce:2,life:1.0,color:'#a0f',wid:w.id,kind:'wave',angle:wa+off});
+            }
+          }
         }
       }
     }
     else if(w.id==='bat'||w.id==='lucille'){
       // Orbit logic handled in updateOrbits
-      w.timer=0; // unused for orbits
+      w.timer=0;
     }
-    else if(w.id==='droneA'||w.id==='droneB'||w.id==='destroyer'){
-      const baseCd=def.cd?def.cd[s-1]:0.5;
+    else if(w.id==='lightchaser'||w.id==='lightChaserS'||w.id==='swordArray'||w.id==='sLightArray'){
+      const isS=w.id==='lightChaserS'||w.id==='sLightArray';
+      const isEv=w.id==='swordArray'||w.id==='sLightArray';
+      const baseCd=isEv?0.5:def.cd[s-1];
       const cd=wCdFinal(baseCd);
       w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
-      // Find drone position (offset from player)
-      const isB=w.id==='droneB';const isD=w.id==='destroyer';
-      const off=isD?{x:0,y:-30}:isB?{x:30,y:-20}:{x:-30,y:-20};
-      const dx=player.x+off.x,dy=player.y+off.y;
+      const rays=isEv?(isS?24:12):def.rays[s-1];
+      const spd=isS?500:440;
+      for(let r=0;r<rays;r++){
+        const ang=(Math.PI*2/rays)*r+gameTime*0.8;
+        fireBullet({x:player.x,y:player.y,radius:5,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+          damage:dmg,pierce:isEv?6:3,life:0.7,color:def.color,wid:w.id,kind:'ray',angle:ang});
+      }
+      // Sword Aura at ★5 (every 10 fires) or always for evolved
+      w.fireCnt=(w.fireCnt||0)+1;
+      if((s===5&&!isEv&&w.fireCnt%10===0)||(isEv&&w.fireCnt%4===0)){
+        for(const e of enemies)if(dist2(e,player)<260)applyDmg(e,dmg*1.4,w.id);
+        whipFx.push({x:player.x,y:player.y,dir:0,area:260,life:.4,maxLife:.4,color:'#fc0'});
+      }
+    }
+    else if(w.id==='force'||w.id==='forceS'||w.id==='forceMastery'||w.id==='voidLord'){
+      const isS=w.id==='forceS'||w.id==='voidLord';
+      const isEv=w.id==='forceMastery'||w.id==='voidLord';
+      const baseCd=def.cd?def.cd[s-1]:1.5;
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const cnt=w.id==='voidLord'?4:isEv?2:isS?2:1;
+      const ang0=Math.atan2(player.lastDy,player.lastDx);
+      for(let i=0;i<cnt;i++){
+        const off=(i-(cnt-1)/2)*0.5;const ang=ang0+off;
+        const spd=260;
+        bullets.push({x:player.x,y:player.y,radius:14,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+          damage:dmg*0.4,pierce:99,life:2.5*(player.forceDur||1),color:def.color,wid:w.id,kind:'blackhole',
+          ttl:1.5*(player.forceDur||1),pull:140,burstDmg:dmg,burstR:120});
+      }
+    }
+    else if(w.id==='drill'||w.id==='vibrationDrill'){
+      const isEv=w.id==='vibrationDrill';
+      const baseCd=isEv?0.5:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
       const tgt=nearestEnemy();
-      if(!tgt)continue;
-      const ang=Math.atan2(tgt.y-dy,tgt.x-dx);
-      const spd=isD?500:420;
-      const homing=isD||player.droneLock;
-      fireBullet({x:dx,y:dy,radius:isD?6:4,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-        damage:dmg*(isD?1.6:1),pierce:isD?3:1,life:isD?2:1.4,color:def.color,wid:w.id,
-        kind:'pellet',angle:ang,homing});
+      const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):Math.atan2(player.lastDy,player.lastDx);
+      const spd=isEv?620:500;
+      const pierce=isEv?99:def.pierce[s-1];
+      const bouncy=isEv||s>=3;
+      bullets.push({x:player.x,y:player.y,radius:7,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+        damage:dmg,pierce,life:1.6,color:def.color,wid:w.id,kind:'drill',angle:ang,
+        homing:isEv||player.drillHoming,bounces:bouncy?(isEv?6:3):0});
+    }
+    else if(w.id==='soccer'||w.id==='quantumBall'){
+      const isEv=w.id==='quantumBall';
+      const baseCd=isEv?0.7:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const cnt=isEv?5:def.balls[s-1];
+      const bnc=(isEv?8:def.bounces[s-1])+(player.extraBounces||0);
+      const dirs=cnt===1?[0]:cnt===2?[0,Math.PI]:cnt===3?[0,2*Math.PI/3,4*Math.PI/3]:[0,Math.PI/2,Math.PI,3*Math.PI/2];
+      for(const ang of dirs){
+        const spd=380;
+        bullets.push({x:player.x,y:player.y,radius:9,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+          damage:dmg,pierce:99,life:6,color:'#fff',wid:w.id,kind:'soccer',angle:ang,
+          bounces:bnc,homing:isEv,bounceTeleport:isEv});
+      }
+    }
+    else if(w.id==='chaosBlade'||w.id==='chaosJudge'){
+      const isEv=w.id==='chaosJudge';
+      const baseCd=isEv?0.3:def.cd[s-1];
+      const cd=wCdFinal(baseCd);
+      w.timer+=dt2;if(w.timer<cd)continue;w.timer=0;
+      const ang=Math.atan2(player.lastDy,player.lastDx);
+      const reach=140;
+      whipFx.push({x:player.x,y:player.y,dir:0,area:reach,life:.22,maxLife:.22,color:'#f44',arcAng:ang,chaos:true});
+      const exec=def.executePct?def.executePct[s-1]:0;
+      for(const e of enemies){
+        const dd=dist2(e,player);
+        if(dd<reach+e.radius){
+          let killed=false;
+          if(isEv){
+            const ex=e.isBoss?20:80;
+            if(Math.random()*100<ex){e.hp=0;killed=true;}
+          } else if(!e.isBoss&&Math.random()*100<exec){e.hp=0;killed=true;}
+          if(!killed)applyDmg(e,dmg,w.id);
+        }
+      }
+      if(isEv){
+        // Omni-wave on every swing
+        for(let d=0;d<8;d++){
+          const wa=d*Math.PI/4;
+          fireBullet({x:player.x,y:player.y,radius:6,vx:Math.cos(wa)*360,vy:Math.sin(wa)*360,
+            damage:dmg*0.6,pierce:5,life:1.2,color:'#f44',wid:w.id,kind:'wave',angle:wa});
+        }
+      }
     }
   }
 }
@@ -1785,8 +2032,6 @@ function pickChoices(){
     levelUpChoices=[{type:'evolve',tag:'⚡ EVOLVE!',name:d.name,desc:d.desc(),color:d.color,icon:d.icon,evolve:true,
       apply:()=>{
         evo.w.id=evo.evolved;evo.w.lv=1;evo.w.timer=0;evo.w.evolvedDone=true;
-        // Destroyer: also remove droneB
-        if(evo.evolved==='destroyer'){const idx=player.weapons.findIndex(x=>x.id==='droneB');if(idx>=0)player.weapons.splice(idx,1);}
         weaponProjectiles=[];
         save.records.totalEvolutions++;saveSave();
         SFX.evolution();flashAstralForge(3);
@@ -1798,10 +2043,10 @@ function pickChoices(){
   for(const w of player.weapons){const d=WEAPON_DEFS[w.id];if(!d.evolved&&w.lv<d.maxLv){const ns=w.lv+1;
     ch.push({type:'weapon',tag:`★UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }}
-  // New attack skills
+  // New attack skills (only Normal-tier randomly-pickable; S-tier comes via main weapon slot)
   if(player.weapons.length<6){
     const owned=new Set(player.weapons.map(w=>w.id));
-    for(const id of['kunai','shotgun','lightning','bat','droneA','droneB']){
+    for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer']){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
         ch.push({type:'weapon',tag:'NEW SKILL',name:d.name,desc:d.desc(1),color:d.color,icon:d.icon,sprite:d.sprite,star:1,
           apply:()=>{player.weapons.push({id,lv:1,timer:0});if(!save.records.weaponsUsed)save.records.weaponsUsed=[];if(!save.records.weaponsUsed.includes(id))save.records.weaponsUsed.push(id);}});
@@ -1936,8 +2181,48 @@ function updateBattle(){
         b.vx=Math.cos(na)*sp;b.vy=Math.sin(na)*sp;b.angle=na;
       }
     }
+    // Blackhole: decelerate, pull enemies, burst on ttl
+    if(b.kind==='blackhole'){
+      b.vx*=0.94;b.vy*=0.94;
+      for(const e of enemies){
+        const d=distXY(b.x,b.y,e.x,e.y);
+        if(d<b.pull&&d>2){
+          const a=Math.atan2(b.y-e.y,b.x-e.x);
+          e.x+=Math.cos(a)*180*dt2;e.y+=Math.sin(a)*180*dt2;
+        }
+      }
+      b.ttl-=dt2;
+      if(b.ttl<=0){
+        // Burst
+        for(const e of enemies)if(distXY(b.x,b.y,e.x,e.y)<b.burstR){
+          applyDmg(e,b.burstDmg,b.wid);
+        }
+        lightningFx.push({x:b.x,y:b.y,life:.4,maxLife:.4,kind:'explosion'});
+        for(let p=0;p<14;p++)particles.push({x:b.x,y:b.y,vx:rnd(-200,200),vy:rnd(-200,200),life:.5,maxLife:.6,radius:3,color:'#a0f'});
+        bullets.splice(i,1);continue;
+      }
+    }
     b.x+=b.vx*dt2;b.y+=b.vy*dt2;b.life-=dt2;
     if(b.life<=0){bullets.splice(i,1);continue;}
+    // Soccer/drill bounce on far edge of camera
+    if((b.kind==='soccer'||b.kind==='drill')&&b.bounces>0){
+      const margin=20;
+      let bounced=false;
+      if(b.x<camera.x+margin||b.x>camera.x+W-margin){b.vx=-b.vx;b.x=Math.max(camera.x+margin,Math.min(camera.x+W-margin,b.x));bounced=true;}
+      if(b.y<camera.y+margin||b.y>camera.y+H-margin){b.vy=-b.vy;b.y=Math.max(camera.y+margin,Math.min(camera.y+H-margin,b.y));bounced=true;}
+      if(bounced){
+        b.bounces--;
+        if(b.bounceTeleport){
+          // Teleport to nearest enemy
+          let n=null,nd=Infinity;
+          for(const e of enemies){const d=distXY(b.x,b.y,e.x,e.y);if(d<nd){nd=d;n=e;}}
+          if(n){const sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+            const a=Math.atan2(n.y-b.y,n.x-b.x);
+            b.x=n.x-Math.cos(a)*40;b.y=n.y-Math.sin(a)*40;
+            b.vx=Math.cos(a)*sp;b.vy=Math.sin(a)*sp;}
+        }
+      }
+    }
     for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];
       if(dist2(b,e)<b.radius+e.radius){
         applyDmg(e,b.damage,b.wid);
@@ -2336,16 +2621,33 @@ function drawBattle(){
     ctx.globalAlpha=1;
   }
 
-  // Sword arc
+  // Sword/katana arcs + sword aura rings
   for(const w of whipFx){
     const a=w.life/w.maxLife;
-    ctx.globalAlpha=a*.55;
-    ctx.strokeStyle=w.color;ctx.lineWidth=12;
-    ctx.beginPath();
-    const startA=w.dir>0?-Math.PI/3:Math.PI*2/3;
-    const endA=w.dir>0?Math.PI/3:Math.PI*4/3;
-    ctx.arc(player.x,player.y,w.area*0.6,startA,endA);
-    ctx.stroke();
+    if(w.arcAng!==undefined){
+      // Directional 120° forward arc (katana/chaos)
+      ctx.globalAlpha=a*0.7;
+      ctx.strokeStyle=w.color;ctx.lineWidth=w.chaos?16:12;
+      ctx.shadowColor=w.color;ctx.shadowBlur=w.chaos?22:14;
+      ctx.beginPath();
+      ctx.arc(player.x,player.y,w.area*0.7,w.arcAng-Math.PI/3,w.arcAng+Math.PI/3);
+      ctx.stroke();ctx.shadowBlur=0;
+    } else if(w.dir===0){
+      // Full ring (sword aura / lightchaser ★5 / chaos)
+      ctx.globalAlpha=a*0.65;
+      ctx.strokeStyle=w.color;ctx.lineWidth=8;
+      ctx.shadowColor=w.color;ctx.shadowBlur=18;
+      ctx.beginPath();ctx.arc(player.x,player.y,w.area,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;
+    } else {
+      ctx.globalAlpha=a*.55;
+      ctx.strokeStyle=w.color;ctx.lineWidth=12;
+      ctx.beginPath();
+      const startA=w.dir>0?-Math.PI/3:Math.PI*2/3;
+      const endA=w.dir>0?Math.PI/3:Math.PI*4/3;
+      ctx.arc(player.x,player.y,w.area*0.6,startA,endA);
+      ctx.stroke();
+    }
     ctx.globalAlpha=1;
   }
 
@@ -2421,6 +2723,39 @@ function drawBattle(){
       ctx.fillStyle=b.color||'#fff';ctx.shadowColor=b.color||'#fff';ctx.shadowBlur=4;
       ctx.fillRect(-4,-1,8,2);
       ctx.beginPath();ctx.moveTo(4,-3);ctx.lineTo(8,0);ctx.lineTo(4,3);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='ray'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);
+      const c=b.color||'#0ff';
+      ctx.strokeStyle=c;ctx.shadowColor=c;ctx.shadowBlur=12;ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(-10,0);ctx.lineTo(10,0);ctx.stroke();
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(10,-3);ctx.lineTo(16,0);ctx.lineTo(10,3);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='wave'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);
+      ctx.fillStyle=b.color||'#a0f';ctx.shadowColor=b.color||'#a0f';ctx.shadowBlur=14;
+      ctx.beginPath();ctx.arc(0,0,b.radius,-Math.PI/2.5,Math.PI/2.5);ctx.lineTo(0,0);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='blackhole'){
+      const wob=Math.sin(gameTime*8)*2;
+      ctx.fillStyle='rgba(160,0,255,0.28)';ctx.beginPath();ctx.arc(b.x,b.y,b.pull,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';ctx.shadowColor='#a0f';ctx.shadowBlur=22;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.radius+wob,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#a0f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.radius+5+wob,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;
+    } else if(b.kind==='drill'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(gameTime*30);
+      ctx.fillStyle=b.color||'#ccf';ctx.shadowColor='#fff';ctx.shadowBlur=10;
+      ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,5);ctx.lineTo(-7,-5);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#888';ctx.fillRect(-9,-3,4,6);
+      ctx.shadowBlur=0;ctx.restore();
+    } else if(b.kind==='soccer'){
+      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(gameTime*6);
+      ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(0,0,b.radius,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';
+      for(let p=0;p<5;p++){const a=p*Math.PI*2/5;ctx.beginPath();ctx.arc(Math.cos(a)*5,Math.sin(a)*5,2,0,Math.PI*2);ctx.fill();}
       ctx.shadowBlur=0;ctx.restore();
     } else {
       ctx.fillStyle=b.color||'#ff0';ctx.shadowColor=b.color||'#ff0';ctx.shadowBlur=5;
