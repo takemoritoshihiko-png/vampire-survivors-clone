@@ -2511,11 +2511,11 @@ function updateBattle(){
   // Clear check
   if(gameTime>=clearTime&&!bossActive){bState='done';endBattle(true);return;}
 
-  // Boss victory: 2s fanfare → win screen
+  // Boss victory fanfare: 2s of celebration particles + on-screen text only.
+  // The battle KEEPS RUNNING — do not call endBattle here. Skills, stars,
+  // and main weapon stay exactly as they are.
   if(bossVictoryT>0){
     bossVictoryT-=dt2;
-    if(bossVictoryT<=0){bState='done';endBattle(true,true);return;}
-    // Spawn explosion particles during fanfare
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
@@ -2672,8 +2672,10 @@ function updateBattle(){
         // Trigger boss-victory fanfare → result screen
         bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
       }
-      // Energy drink: 0.2% normal, 4% elite, 50% boss
-      const edChance=e.isBoss?0.5:e.isElite?0.04:0.002;
+      // Energy drink (manual skill-reset pickup): 0.2% normal kill, 4% elite.
+      // Bosses NEVER drop energy drinks — boss defeat must not lead to a
+      // skill reset (player.weapons / player.passives stay intact).
+      const edChance=e.isBoss?0:e.isElite?0.04:0.002;
       if(Math.random()<edChance)energyDrinks.push({x:e.x,y:e.y,radius:11,bob:Math.random()*6});
       enemies.splice(i,1);continue;
     }
