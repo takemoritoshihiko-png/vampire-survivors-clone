@@ -507,11 +507,11 @@ const SLOT_ICONS={armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',neck
 const SLOT_EFFECTS={armor:'MaxHP',boots:'Speed',belt:'XP Gain',gloves:'Crit%',necklace:'CD Reduce'};
 
 const CHARS={
-  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:100,baseHp:100,
+  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:70,baseHp:80,
     skill:'5% double coin drop',color:'#4af',outline:'#f80',letter:'C'},
-  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:130,baseHp:80,
+  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:90,baseHp:65,
     skill:'Bow range +30%',cost:500,color:'#0a0',outline:'#0f0',letter:'A'},
-  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:80,baseHp:150,
+  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:55,baseHp:120,
     skill:'Damage taken -15%',cost:1000,color:'#c22',outline:'#f44',letter:'K'},
 };
 
@@ -1709,12 +1709,12 @@ const PASSIVE_DEFS={
 };
 
 const ENEMY_TYPES={
-  zombie:{name:'Zombie',color:'#7c4',radius:12,hp:18,speed:40,damage:4,xp:2},
-  skeleton:{name:'Skeleton',color:'#eee',radius:13,hp:40,speed:65,damage:8,xp:4},
-  armorZombie:{name:'ArmorZombie',color:'#888',outline:'#ff0',radius:18,hp:120,speed:35,damage:18,xp:10},
-  ghost:{name:'Ghost',color:'#a4f',alpha:0.55,radius:14,hp:50,speed:85,damage:10,xp:6,
+  zombie:{name:'Zombie',color:'#7c4',radius:12,hp:30,speed:55,damage:8,xp:2},
+  skeleton:{name:'Skeleton',color:'#eee',radius:13,hp:50,speed:70,damage:10,xp:4},
+  armorZombie:{name:'ArmorZombie',color:'#888',outline:'#ff0',radius:18,hp:120,speed:40,damage:15,xp:10},
+  ghost:{name:'Ghost',color:'#a4f',alpha:0.55,radius:14,hp:60,speed:90,damage:12,xp:6,
     move:(e,px,py)=>{const a=Math.atan2(py-e.y,px-e.x)+Math.sin(gameTime*4+e.st*10)*1.5;e.x+=Math.cos(a)*e.speed*dt2;e.y+=Math.sin(a)*e.speed*dt2;}},
-  demon:{name:'Demon',color:'#e22',radius:16,hp:70,speed:55,damage:14,xp:8,
+  demon:{name:'Demon',color:'#e22',radius:16,hp:80,speed:85,damage:18,xp:8,
     move:(e,px,py)=>{if(!e.ct)e.ct=0;e.ct+=dt2;const s=e.ct%3<0.5?e.speed*3.5:e.speed;const a=Math.atan2(py-e.y,px-e.x);e.x+=Math.cos(a)*s*dt2;e.y+=Math.sin(a)*s*dt2;}},
 };
 
@@ -1726,6 +1726,20 @@ const EVOLUTIONS=[
   {weapon:'lightning',passive:'thunderGen',evolved:'thunderWrath'},
   {weapon:'drone',passive:'precision',evolved:'destroyer'},
 ];
+
+const MAIN_WEAPON_EVOLVE={
+  kunai:{passive:'attractorb',evolved:'spiritBlade',name:'霊力の刃',desc:'Homing pierce, 2× dmg'},
+  katana:{passive:'gauntlet',evolved:'yotou',name:'妖刀・鬼斬',desc:'HP 2% heal, all-way wave, 3× dmg'},
+  bat:{passive:'fitnessGuide',evolved:'lucille',name:'ルシール',desc:'Flame 3× rot, burn DOT'},
+  shotgun:{passive:'highExplosive',evolved:'hyperShot',name:'ハイパーショット',desc:'180° spread, 3× count, 50% CD'},
+  lightchaser:{passive:'thunderGen',evolved:'swordArray',name:'光剣陣・極',desc:'12-way + auto sword aura'},
+  force:{passive:'emptyTome',evolved:'forceMastery',name:'虚空の支配者',desc:'2× blackhole + shield burst'},
+  drill:{passive:'precision',evolved:'vibrationDrill',name:'超振動ドリル',desc:'Homing + shockwave'},
+  soccer:{passive:'attractorb',evolved:'quantumBall',name:'量子ボール',desc:'Teleport + multi-hit'},
+  lightChaserS:{passive:'thunderGen',evolved:'sLightArray',name:'究極光剣陣',desc:'24-way + auto aura'},
+  forceS:{passive:'highExplosive',evolved:'voidLord',name:'宇宙崩壊',desc:'4 blackholes + chain'},
+  chaosBlade:{passive:'gauntlet',evolved:'chaosJudge',name:'混沌の断罪',desc:'80% execute + omni-wave'},
+};
 
 function distXY(ax,ay,bx,by){const d1=ax-bx,d2=ay-by;return Math.sqrt(d1*d1+d2*d2);}
 function dist2(a,b){return distXY(a.x,a.y,b.x,b.y);}
@@ -1767,7 +1781,7 @@ function initBattle(){
     level:1,xp:0,xpToNext:8,
     baseMight,might:baseMight,
     armor:0,baseCdReduction:cdBonus/100+tCd,cdReduction:cdBonus/100+tCd,
-    magnetRange:100,hpRegen:0.5,
+    magnetRange:100,hpRegen:0.1,
     invTimer:0,
     weapons:[],passives:[],
     charId:save.selectedChar,
@@ -1906,13 +1920,13 @@ function spawnEnemy2(typeId,opts){
   const chap=CHAPTER_DEFS[save.selectedChapter];
   const a=Math.random()*Math.PI*2,d=500+Math.random()*200;
   const tf=Math.min(gameTime/(chap.time||600),1);
-  const hpScale=(1+tf*2)*chap.diff;
+  const mins=gameTime/60;
+  const hpScale=(1+mins*0.20)*chap.diff;
   const isElite=!!opts.elite;
   const e={x:player.x+Math.cos(a)*d,y:player.y+Math.sin(a)*d,
     radius:def.radius*(isElite?1.5:1),
     hp:def.hp*hpScale*(isElite?6:1),maxHp:def.hp*hpScale*(isElite?6:1),
-    speed:def.speed+tf*20,
-    damage:def.damage*chap.diff*(1+tf*0.3)*(isElite?1.5:1),
+    speed:def.speed*(1+mins*0.05),damage:def.damage*chap.diff*(1+mins*0.10)*(isElite?1.5:1),
     flashTimer:0,color:def.color,typeId,isBoss:false,st:gameTime,
     xpValue:def.xp*(isElite?6:1),isElite,eliteName:isElite?('ELITE '+def.name.toUpperCase()):null};
   enemies.push(e);
@@ -2379,6 +2393,23 @@ function readyEvolutions(){
 function evolutionReady(){return readyEvolutions().length>0;}
 
 function pickChoices(){
+  // Main weapon evolve check (★5 + matching aux)
+  const mw=player.weapons.find(w=>w.id===player.mainWeaponId);
+  if(mw&&mw.lv>=5&&!mw.evolvedDone&&MAIN_WEAPON_EVOLVE[mw.id]){
+    const mwEvo=MAIN_WEAPON_EVOLVE[mw.id];
+    const hasAux=player.passives.some(p=>p.id===mwEvo.passive);
+    if(hasAux){
+      const d=WEAPON_DEFS[mwEvo.evolved];
+      levelUpChoices=[{type:'evolve',tag:'⚡ WEAPON EVOLVE!',name:mwEvo.name,desc:mwEvo.desc,color:d?d.color:'#fc0',icon:d?d.icon:'⚡',sprite:d?d.sprite:null,evolve:true,
+        apply:()=>{
+          mw.id=mwEvo.evolved;mw.lv=1;mw.timer=0;mw.evolvedDone=true;
+          weaponProjectiles=[];
+          save.records.totalEvolutions++;saveSave();
+          SFX.evolution();flashAstralForge(3);
+        }}];
+      selectedChoice=-1;return;
+    }
+  }
   // If an evolution is ready: dedicated EVOLVE choice as the only card
   const ready=readyEvolutions();
   if(ready.length>0){
@@ -2393,11 +2424,12 @@ function pickChoices(){
     selectedChoice=-1;return;
   }
   const ch=[];
-  // Sub-skill ★UP (skip the main weapon — that's controlled from the Characters slot only)
+  // Skill ★UP (sub-skills + main weapon)
   for(const w of player.weapons){
-    if(w.id===player.mainWeaponId)continue;
     const d=WEAPON_DEFS[w.id];
-    if(!d||!d.sub||d.evolved||w.lv>=d.maxLv)continue;
+    if(!d||d.evolved||w.lv>=d.maxLv)continue;
+    // Skip sub check for main weapon (it doesn't have .sub flag)
+    if(w.id!==player.mainWeaponId&&!d.sub)continue;
     const ns=w.lv+1;
     ch.push({type:'weapon',weaponId:w.id,tag:`⭐ STAR UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }
@@ -3387,6 +3419,13 @@ function drawHUD(){
   ctx.fillRect(SL+7,12,206*hpR,18);
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
   ctx.fillText(`❤ ${Math.ceil(player.hp)}/${player.maxHp}`,SL+110,26);
+  if(player.hp<player.maxHp*0.3){
+    const da=Math.sin(Date.now()/150)>.3?1:0;
+    if(da){ctx.fillStyle='rgba(255,0,0,0.15)';ctx.fillRect(0,0,W,H);}
+    ctx.fillStyle=player.hp<player.maxHp*0.1?'#f00':'#fa0';
+    ctx.font='bold 20px monospace';ctx.textAlign='center';
+    ctx.fillText(player.hp<player.maxHp*0.1?'💀 CRITICAL!':'⚠️ DANGER!',W/2,70);
+  }
 
   const mins=Math.floor(gameTime/60),secs=Math.floor(gameTime%60);
   ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(W/2-65,8,130,28);
