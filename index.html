@@ -1582,7 +1582,7 @@ let camera={x:0,y:0};
 let player,bullets,enemies,gems,coins2,particles,chests2,weaponProjectiles;
 let lightningFx,whipFx,dmgPopups,deadFx;
 let bossActive,bossesSpawned,deathEntity,deathWarnTimer;
-let levelUpFlash=0,runLevelUps=0,playerMoving=false,playerDmgFlash=0,energyDrinks,resetFlash=0;
+let levelUpFlash=0,runLevelUps=0,playerMoving=false,playerDmgFlash=0;
 let bossVictoryT=0,bossVictoryX=0,bossVictoryY=0,equipPopups,fireZones;
 let enemySpawnTimer,pendingLvl,levelUpChoices,selectedChoice;
 let waveText,waveTimer,lastWaveMin;
@@ -1818,10 +1818,10 @@ function initBattle(){
     if(!save.records.weaponsUsed.includes(mainW))save.records.weaponsUsed.push(mainW);
   }
 
-  bullets=[];enemies=[];gems=[];coins2=[];particles=[];chests2=[];energyDrinks=[];
+  bullets=[];enemies=[];gems=[];coins2=[];particles=[];chests2=[];
   weaponProjectiles=[];lightningFx=[];whipFx=[];dmgPopups=[];deadFx=[];fireZones=[];
   levelUpFlash=0;runLevelUps=0;playerMoving=false;playerDmgFlash=0;
-  resetFlash=0;bossVictoryT=0;equipPopups=[];
+  bossVictoryT=0;equipPopups=[];
   bossActive=null;bossesSpawned=[];deathEntity=null;deathWarnTimer=0;
   gameTime=0;dt2=0;lastTs=0;enemySpawnTimer=0;pendingLvl=0;
   levelUpChoices=[];selectedChoice=-1;
@@ -2401,9 +2401,16 @@ function pickChoices(){
     const ns=w.lv+1;
     ch.push({type:'weapon',weaponId:w.id,tag:`⭐ STAR UP → ★${ns}`,name:d.name,desc:d.desc(ns),color:d.color,icon:d.icon,sprite:d.sprite,star:ns,apply:()=>{w.lv++;}});
   }
-  // NEW SUB SKILL pool — only the 6 sub-skills enter the level-up trio
+  // NEW SUB SKILL pool — only the 6 sub-skills enter the level-up trio.
+  // Build owned set that also maps evolved ids back to their base
+  // (e.g., hellfire → molotov) so evolved skills don't re-appear.
   if(player.weapons.length<7){
-    const owned=new Set(player.weapons.map(w=>w.id));
+    const owned=new Set();
+    for(const w of player.weapons){
+      owned.add(w.id);
+      const d=WEAPON_DEFS[w.id];
+      if(d&&d.from)owned.add(d.from);
+    }
     const BATTLE_NEW_SKILL_POOL=['molotov','boomerang','garlic','bible','lightning','drone'];
     for(const id of BATTLE_NEW_SKILL_POOL){
       if(!owned.has(id)){const d=WEAPON_DEFS[id];
@@ -2430,6 +2437,12 @@ function pickChoices(){
   // Heal
   if(player.hp<player.maxHp*.9)ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
   ch.sort(()=>Math.random()-.5);
+  // Fallback: if pool is empty (everything maxed), ensure at least stat-ups
+  if(ch.length===0){
+    ch.push({type:'stat',tag:'STAT UP',name:'+20% MaxHP',desc:'Raise cap',color:'#f88',icon:'❤️',apply:()=>{const inc=Math.floor(player.maxHp*0.2);player.maxHp+=inc;player.hp=Math.min(player.maxHp,player.hp+inc);}});
+    ch.push({type:'stat',tag:'STAT UP',name:'+10% Speed',desc:'Move faster',color:'#8ff',icon:'👟',apply:()=>{player.baseSpeed*=1.1;player.speed*=1.1;}});
+    ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
+  }
   levelUpChoices=ch.slice(0,3);selectedChoice=-1;
 }
 
@@ -2675,11 +2688,6 @@ function updateBattle(){
         // Trigger boss-victory fanfare → result screen
         bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
       }
-      // Energy drink (manual skill-reset pickup): 0.2% normal kill, 4% elite.
-      // Bosses NEVER drop energy drinks — boss defeat must not lead to a
-      // skill reset (player.weapons / player.passives stay intact).
-      const edChance=e.isBoss?0:e.isElite?0.04:0.002;
-      if(Math.random()<edChance)energyDrinks.push({x:e.x,y:e.y,radius:11,bob:Math.random()*6});
       enemies.splice(i,1);continue;
     }
     if(dist2(e,player)<e.radius+player.radius&&player.invTimer<=0){
@@ -2713,21 +2721,6 @@ function updateBattle(){
     const c=chests2[i];c.bob+=dt2*2;
     if(dist2(c,player)<player.radius+c.radius+12){chests2.splice(i,1);openChest2();return;}
   }
-  // Energy drinks: pickup → reset all skills
-  for(let i=energyDrinks.length-1;i>=0;i--){
-    const d=energyDrinks[i];d.bob+=dt2*3;
-    if(dist2(d,player)<player.radius+d.radius+6){
-      energyDrinks.splice(i,1);
-      player.weapons=[];player.passives=[];weaponProjectiles=[];
-      player.cdReduction=player.baseCdReduction;player.might=player.baseMight;
-      player.maxHp=player.baseMaxHp;player.hp=Math.min(player.hp,player.maxHp);
-      player.xpMult=1+(getEquippedBonus('XP Gain'))/100;player.droneLock=false;player.forceField=false;
-      resetFlash=2.0;SFX.evolution();
-      pendingLvl++; // Trigger immediate level-up to repick
-      pickChoices();bState='levelup';return;
-    }
-  }
-  if(resetFlash>0)resetFlash-=dt2;
   for(let i=lightningFx.length-1;i>=0;i--){lightningFx[i].life-=dt2;if(lightningFx[i].life<=0)lightningFx.splice(i,1);}
   for(let i=whipFx.length-1;i>=0;i--){whipFx[i].life-=dt2;if(whipFx[i].life<=0)whipFx.splice(i,1);}
   for(let i=dmgPopups.length-1;i>=0;i--){dmgPopups[i].life-=dt2;dmgPopups[i].y-=45*dt2;if(dmgPopups[i].life<=0)dmgPopups.splice(i,1);}
@@ -3062,14 +3055,6 @@ function drawBattle(){
     ctx.beginPath();ctx.arc(z.x,z.y,z.radius,0,Math.PI*2);ctx.stroke();
   }
   for(const g of gems){const b=Math.sin(g.bob)*3;ctx.fillStyle='#0f6';ctx.shadowColor='#0f6';ctx.shadowBlur=5;ctx.beginPath();ctx.arc(g.x,g.y+b,g.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
-  for(const d of energyDrinks){
-    const b=Math.sin(d.bob)*3;
-    ctx.fillStyle='#f44';ctx.shadowColor='#f44';ctx.shadowBlur=12;
-    ctx.fillRect(d.x-6,d.y-9+b,12,18);
-    ctx.fillStyle='#fff';ctx.fillRect(d.x-4,d.y-7+b,8,3);
-    ctx.fillStyle='#ff0';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText('⚡',d.x,d.y+4+b);
-    ctx.shadowBlur=0;
-  }
   for(const c of coins2){const b=Math.sin(c.bob)*2;ctx.fillStyle='#ff0';ctx.shadowColor='#ff0';ctx.shadowBlur=4;ctx.beginPath();ctx.arc(c.x,c.y+b,c.radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
 
   // Bullets
@@ -3423,14 +3408,6 @@ function drawHUD(){
     ctx.fillText(`👑 ${bossActive.bossName} ${Math.ceil(bossActive.hp)}/${Math.ceil(bossActive.maxHp)}`,W/2,57);
   }
 
-  // Reset flash
-  if(resetFlash>0){
-    const a=Math.min(1,resetFlash);
-    ctx.fillStyle=`rgba(255,68,68,${a*0.18})`;ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#fff';ctx.font='bold 36px monospace';ctx.textAlign='center';
-    ctx.shadowColor='#f44';ctx.shadowBlur=20;
-    ctx.fillText('⚡ SKILL RESET! ⚡',W/2,H/2);ctx.shadowBlur=0;
-  }
   // Boss victory fanfare
   if(bossVictoryT>0){
     const t=1-bossVictoryT/2.0;
