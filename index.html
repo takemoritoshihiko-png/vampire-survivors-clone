@@ -696,7 +696,7 @@ window.claimAchievement=function(key){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Enhance','Gacha','Sortie'];
+const tabs=['Characters','Equipment','Gacha','Boss','Daily','Sortie'];
 
 const TALENT_DEFS={
   atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*0.8).toFixed(1)}% ATK`},
@@ -744,8 +744,10 @@ function renderHome(){
   const panel=document.getElementById('homePanel');
   switch(currentTab){
     case'Characters':renderChars(panel);break;
-    case'Enhance':renderEnhance(panel);break;
-    case'Gacha':renderGacha(panel);break;
+    case'Equipment':renderEquipTab(panel);break;
+    case'Gacha':renderGachaTab(panel);break;
+    case'Boss':renderBossTab(panel);break;
+    case'Daily':renderDailyTab(panel);break;
     case'Sortie':renderSortie(panel);break;
   }
 }
@@ -1635,10 +1637,57 @@ function renderCodexContent(){
 function renderBossBoxContent(){
   const _p={innerHTML:''};renderBossBox(_p);return _p.innerHTML;
 }
-/* ── Sortie (unified tab) ── */
+/* ── Equipment tab (equipment + memory) ── */
+function renderEquipTab(p){
+  let h=renderEquipContent();
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px">📖 Weapon Memory</div>';
+  h+=renderMemoryContent();
+  h+='</div>';
+  p.innerHTML=h;
+}
+
+/* ── Gacha tab (gacha + codex) ── */
+function renderGachaTab(p){
+  const _p={innerHTML:''};renderGacha(_p);
+  let h=_p.innerHTML;
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px;cursor:pointer" onclick="document.getElementById(\'codexSection\').style.display=document.getElementById(\'codexSection\').style.display===\'none\'?\'block\':\'none\'">📕 Fusion Codex ▼</div>';
+  h+='<div id="codexSection" style="display:none">'+renderCodexContent()+'</div>';
+  h+='</div>';
+  p.innerHTML=h;
+}
+
+/* ── Boss tab (boss box + pets) ── */
+function renderBossTab(p){
+  let h=renderBossBoxContent();
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px">🐾 Pets</div>';
+  const _p={innerHTML:''};renderPets(_p);
+  h+=_p.innerHTML;
+  h+='</div>';
+  p.innerHTML=h;
+}
+
+/* ── Daily tab (missions + achievements + records) ── */
+function renderDailyTab(p){
+  const _d={innerHTML:''};renderDaily(_d);
+  const _r={innerHTML:''};renderRecords(_r);
+  let h=_d.innerHTML;
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+=_r.innerHTML;
+  h+='</div>';
+  // Talents at bottom
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px">🌟 Talents</div>';
+  h+=renderTalentsContent();
+  h+='</div>';
+  p.innerHTML=h;
+}
+
+/* ── Sortie tab ── */
 function renderSortie(p){
   let h='';
-  // Chapter selection (large)
   h+='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:10px">🗺️ Chapter Select</div>';
   h+='<div class="home-row">';
   for(const[cid,ch]of Object.entries(CHAPTER_DEFS)){
@@ -1651,35 +1700,8 @@ function renderSortie(p){
     </div>`;
   }
   h+='</div>';
-  // Battle button
-  h+=`<div style="text-align:center;margin:18px 0"><button class="btn btn-orange" style="padding:16px 60px;font-size:22px;letter-spacing:2px;border-radius:14px" onclick="startBattle()">⚔ BATTLE ⚔</button></div>`;
-  // Daily missions (compact)
-  h+='<div style="max-width:560px;margin:14px auto">';
-  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;margin-bottom:6px">📅 Daily Missions</div>';
-  checkDaily();
-  for(const m of DAILY_MISSIONS){
-    const prog=save.daily.progress[m.key]||0;const claimed=save.daily.claimed[m.key];
-    const done=prog>=m.target;const pct=Math.min(100,(prog/m.target)*100);
-    h+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;${claimed?'opacity:.5':''}">
-      <span>${m.icon}</span><span style="flex:1">${m.name} (${Math.min(prog,m.target)}/${m.target})</span>
-      <div class="bar-bg" style="width:60px"><div class="bar-fill" style="width:${pct}%"></div></div>
-      ${claimed?'<span style="color:#0f0">✓</span>':done?`<button class="btn btn-green" style="padding:2px 8px;font-size:10px" onclick="claimDaily('${m.key}')">Claim</button>`:''}
-    </div>`;
-  }
-  h+='</div>';
-  // Achievements (compact)
-  h+='<div style="max-width:560px;margin:14px auto">';
-  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;margin-bottom:6px">🏆 Achievements</div>';
-  const r=save.records;
-  for(const a of ACHIEVEMENTS){
-    const got=!!r.achievements[a.key];const meets=a.cond(r);
-    h+=`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;${got?'opacity:.5':''}">
-      <span>${a.icon||'🏅'}</span><span style="flex:1;color:${got?'#0f0':meets?'#fa0':'#888'}">${a.name}</span>
-      <span style="color:#ff0;font-size:10px">${a.reward}G</span>
-      ${got?'<span style="color:#0f0">✓</span>':meets?`<button class="btn btn-green" style="padding:2px 8px;font-size:10px" onclick="claimAchievement('${a.key}')">Claim</button>`:'🔒'}
-    </div>`;
-  }
-  h+='</div>';
+  // Battle button (prominent)
+  h+=`<div style="text-align:center;margin:24px 0"><button class="btn btn-orange" style="padding:18px 70px;font-size:24px;letter-spacing:3px;border-radius:14px" onclick="startBattle()">⚔ BATTLE ⚔</button></div>`;
   p.innerHTML=h;
 }
 
