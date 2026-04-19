@@ -482,6 +482,7 @@ if(!save.bossBox)save.bossBox=[];
 if(!save.equippedBoss)save.equippedBoss=null;
 if(!save.bossKills)save.bossKills={};
 if(!save.petKills)save.petKills={hachiko:0,frog:0};
+if(save.petXP===undefined)save.petXP={frog:0};
 if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
 if(!save.selectedWeapon)save.selectedWeapon='kunai';
 // Drop legacy weapon equip slot from older saves
@@ -1724,11 +1725,14 @@ function renderPets(p){
   h+='<div style="max-width:780px;margin:14px auto 0">';
   for(const[id,pet]of Object.entries(PET_DEFS)){
     const sk=PET_SKILLS[id];if(!sk)continue;
-    const kills=save.petKills[id]||0;
+    // Frog uses cumulative XP; hachiko uses kill count
+    const progress=id==='frog'?(save.petXP?save.petXP.frog||0:0):(save.petKills[id]||0);
+    const unit=id==='frog'?'XP':'体';
     h+=`<div class="game-card" style="margin:8px 0;padding:10px;border-color:${pet.color}">
-      <div style="font-size:13px;color:${pet.color};font-weight:bold;margin-bottom:4px">${pet.icon} ${pet.name} — 撃破: ${kills}</div>`;
+      <div style="font-size:13px;color:${pet.color};font-weight:bold;margin-bottom:4px">${pet.icon} ${pet.name} — 累計${unit}: ${progress.toLocaleString()}${id==='frog'?'':'体'}</div>`;
+    if(id==='frog')h+=`<div style="font-size:10px;color:#0f0;margin-bottom:4px">⏱️ 巨大化: 常時（1分ごと・3秒間）</div>`;
     for(const s of sk){
-      const done=kills>=s.k;const pct=done?100:Math.min(100,Math.floor(kills/s.k*100));
+      const done=progress>=s.k;const pct=done?100:Math.min(100,Math.floor(progress/s.k*100));
       h+=`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px">
         <span>${done?'✅':'🔒'}</span>
         <span style="color:${done?'#0f0':'#888'};font-weight:bold">${s.n}</span>
@@ -2037,7 +2041,7 @@ const BOSS_SKILLS={
 };
 const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
-  frog:[{k:50,n:'高跳び',d:'XP range+30%'},{k:150,n:'毒舌',d:'Poison atk'},{k:400,n:'雨乞い',d:'10s poison rain'},{k:900,n:'変態',d:'Giant tackle'},{k:2000,n:'蛙神',d:'5× poison'}],
+  frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'毒皮膚',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'Speed+25%, 30dmg, 1min giant'}],
 };
 const FUSION_RECIPES=[
   {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',sprite:'fusion_slash_bullet',desc:'Slash fires bullets + explode',color:'#fa8'},
@@ -2145,11 +2149,15 @@ function initBattle(){
   const petId=save.selectedPet;
   const pk=save.petKills[petId]||0;
   const psk=PET_SKILLS[petId];
-  if(psk){
-    if(pk>=psk[0].k&&petId==='hachiko')player.hpRegen+=0.1;
-    if(pk>=psk[3].k&&petId==='hachiko')player.baseMight*=1.10;
-    if(pk>=psk[0].k&&petId==='frog')player.magnetRange*=1.3;
-    if(petId==='hachiko')player.might=player.baseMight;
+  if(psk&&petId==='hachiko'){
+    if(pk>=psk[0].k)player.hpRegen+=0.1;
+    if(pk>=psk[3].k){player.baseMight*=1.10;player.might=player.baseMight;}
+  }
+  // Frog buffs use petXP instead of kill count
+  if(petId==='frog'){
+    const fxp=save.petXP?save.petXP.frog||0:0;
+    if(fxp>=150)player.baseSpeed=Math.floor(player.baseSpeed*1.10);player.speed=player.baseSpeed;
+    if(fxp>=2000){player.baseSpeed=Math.floor(player.baseSpeed*1.15);player.speed=player.baseSpeed;}
   }
   // Apply weapon memory buffs
   if(mainW&&save.weaponMemory[mainW]){
@@ -2748,30 +2756,61 @@ function updatePet(){
       if(distXY(pet.x,pet.y,player.x,player.y)<60){pet.state='orbit';pet.timer=0;}
     }
   } else if(save.selectedPet==='frog'&&save.pets.frog.unlocked){
+    const fxp=save.petXP?save.petXP.frog||0:0;
+    const hasGreedy=fxp>=50,hasSpeed=fxp>=150,hasMagnet=fxp>=400,hasToxic=fxp>=900,hasSuper=fxp>=2000;
     pet.timer+=dt2;
     pet.hopT+=dt2*4;
-    // Find nearest gem
-    let near=null,nd=Infinity;
-    for(const g of gems){const d=distXY(pet.x,pet.y,g.x,g.y);if(d<nd){nd=d;near=g;}}
-    if(near&&nd>10){
-      const a=Math.atan2(near.y-pet.y,near.x-pet.x);
-      pet.x+=Math.cos(a)*250*dt2;pet.y+=Math.sin(a)*250*dt2;
-      // Hop animation
-      pet.vy=Math.abs(Math.sin(pet.hopT))*8;
-      // Collect on touch
-      if(distXY(pet.x,pet.y,near.x,near.y)<14){
-        player.xp+=near.value;
-        save.petKills.frog=(save.petKills.frog||0)+1;
-        gems.splice(gems.indexOf(near),1);
+    // Giant timer (always active, 1 min cycle)
+    pet.giantT=(pet.giantT||0)+dt2;
+    if(pet.giantT>=60){pet.giantT=0;pet.isGiant=true;pet.giantDur=3;
+      dmgPopups.push({x:pet.x,y:pet.y-30,text:'🐸 GIANT!',life:2,maxLife:2,color:'#4f4',size:22});}
+    if(pet.isGiant){
+      pet.giantDur-=dt2;
+      if(pet.giantDur<=0)pet.isGiant=false;
+    }
+    const petSz=pet.isGiant?60:20;
+    // Follow player
+    const tgtX=player.x-35,tgtY=player.y+20;
+    pet.x+=(tgtX-pet.x)*0.1;pet.y+=(tgtY-pet.y)*0.1;
+    pet.vy=Math.abs(Math.sin(pet.hopT))*6;
+    // Magnet: pull gems toward frog
+    const magR=hasMagnet?150:60;
+    for(const g of gems){
+      const gd=distXY(pet.x,pet.y,g.x,g.y);
+      if(gd<magR&&gd>2){const a=Math.atan2(pet.y-g.y,pet.x-g.x);g.x+=Math.cos(a)*200*dt2;g.y+=Math.sin(a)*200*dt2;}
+    }
+    // Collect gems on touch
+    for(let i=gems.length-1;i>=0;i--){
+      const g=gems[i];
+      if(distXY(pet.x,pet.y,g.x,g.y)<15){
+        const xpMul=hasGreedy?2:1;
+        player.xp+=g.value*xpMul;
+        if(!save.petXP)save.petXP={frog:0};
+        save.petXP.frog+=g.value;
+        gems.splice(i,1);
         while(player.xp>=player.xpToNext){player.xp-=player.xpToNext;player.level++;player.xpToNext=Math.floor(player.xpToNext*1.25)+8;pendingLvl++;}
       }
-    } else {
-      // follow player
-      const a=Math.atan2(player.y-pet.y,player.x-pet.x);
-      const d=distXY(pet.x,pet.y,player.x,player.y);
-      if(d>50){pet.x+=Math.cos(a)*150*dt2;pet.y+=Math.sin(a)*150*dt2;}
-      pet.vy=0;
     }
+    // Toxic skin: damage enemies touching frog
+    if(hasToxic){
+      const dmgPerSec=hasSuper?30:10;
+      for(const e of enemies){
+        if(distXY(pet.x,pet.y,e.x,e.y)<petSz+e.radius){
+          e.hp-=dmgPerSec*dt2;
+          if(Math.random()<0.15)spawnParticles2(e.x,e.y,'#4f4',1);
+        }
+      }
+    }
+    // Giant: smash enemies for 50 dmg
+    if(pet.isGiant){
+      for(const e of enemies){
+        if(distXY(pet.x,pet.y,e.x,e.y)<petSz+e.radius){
+          e.hp-=50*dt2;
+          if(Math.random()<0.2)spawnParticles2(e.x,e.y,'#0f0',2);
+        }
+      }
+    }
+    // Apply speed buffs once at start (handled in initBattle via petKills → petXP)
   }
 }
 
@@ -3815,12 +3854,16 @@ function drawBattle(){
     const pi=PET_DEFS[save.selectedPet];
     const sp=SPRITES['pet_'+save.selectedPet];
     const py2=pet.y-(pet.vy||0);
+    const isGiant=pet.isGiant&&save.selectedPet==='frog';
+    const sz=isGiant?64:32;
+    if(isGiant){
+      ctx.fillStyle='rgba(68,255,68,0.12)';ctx.beginPath();ctx.arc(pet.x,py2,sz*0.8,0,Math.PI*2);ctx.fill();
+    }
     if(sp){
-      const sz=32;
       ctx.drawImage(sp,pet.x-sz/2,py2-sz/2,sz,sz);
     } else {
-      ctx.font='24px serif';ctx.textAlign='center';
-      ctx.fillText(pi.icon,pet.x,py2+8);
+      ctx.font=(isGiant?'48':'24')+'px serif';ctx.textAlign='center';
+      ctx.fillText(pi.icon,pet.x,py2+(isGiant?16:8));
     }
   }
 
