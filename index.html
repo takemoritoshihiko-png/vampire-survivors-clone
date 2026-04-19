@@ -463,6 +463,10 @@ if(!save.talents)save.talents={atk:0,hp:0,speed:0,coin:0,xp:0,cd:0};
 if(!save.weaponMemory){save.weaponMemory={};for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer','lightChaserS','forceS','chaosBlade'])save.weaponMemory[id]={kills:0,unlocked:[]};}
 if(save.fusionStones===undefined)save.fusionStones=0;
 if(!save.fusionBook)save.fusionBook={};
+if(!save.bossBox)save.bossBox=[];
+if(!save.equippedBoss)save.equippedBoss=null;
+if(!save.bossKills)save.bossKills={};
+if(!save.petKills)save.petKills={hachiko:0,frog:0};
 if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
 if(!save.selectedWeapon)save.selectedWeapon='kunai';
 // Drop legacy weapon equip slot from older saves
@@ -678,7 +682,7 @@ window.claimAchievement=function(key){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Talents','Memory','Pets','Chapters','Daily','Records','Codex'];
+const tabs=['Characters','Equipment','Gacha','Talents','BossBox','Pets','Chapters','Daily','Records','Memory','Codex'];
 
 const TALENT_DEFS={
   atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*1.5).toFixed(1)}% ATK`},
@@ -729,6 +733,7 @@ function renderHome(){
     case'Equipment':renderEquip(panel);break;
     case'Gacha':renderGacha(panel);break;
     case'Talents':renderTalents(panel);break;
+    case'BossBox':renderBossBox(panel);break;
     case'Memory':renderMemory(panel);break;
     case'Pets':renderPets(panel);break;
     case'Chapters':renderChapters(panel);break;
@@ -1443,6 +1448,51 @@ window.upgradeTalent=function(id){
   save.coins-=cost;save.talents[id]=lv+1;saveSave();renderHome();SFX.coin();
 };
 
+/* ── Boss Box ── */
+function renderBossBox(p){
+  let h='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:12px">👾 BOSS BOX</div>';
+  if(save.bossBox.length===0){
+    h+='<div style="text-align:center;color:#888;padding:30px">No bosses captured yet.<br>Defeat bosses in battle — 10% capture chance!</div>';
+    p.innerHTML=h;return;
+  }
+  h+=`<div style="text-align:center;font-size:11px;color:#aaa;margin-bottom:10px">Equipped: <b style="color:#fc0">${save.equippedBoss?BOSS_DEFS[save.equippedBoss]?.name||save.equippedBoss:'None'}</b> | Boss OR Pet (not both)</div>`;
+  h+='<div style="max-width:780px;margin:0 auto">';
+  for(const bb of save.bossBox){
+    const bd=BOSS_DEFS[bb.key];if(!bd)continue;
+    const sk=BOSS_SKILLS[bb.key]||[];
+    const isEq=save.equippedBoss===bb.key;
+    h+=`<div class="game-card" style="margin:10px 0;padding:14px;border-color:${bd.outline||bd.color};${isEq?'border-width:2px;box-shadow:0 0 12px '+bd.color:''}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div style="width:48px;height:48px;border-radius:50%;background:${bd.color};display:flex;align-items:center;justify-content:center">
+          <span style="font-size:20px;color:#000">👾</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:15px;color:${bd.outline||'#fff'};font-weight:bold">${bd.name}</div>
+          <div style="font-size:11px;color:#aaa">撃破数: <span style="color:#ff0">${(bb.kills||0).toLocaleString()}</span>体</div>
+        </div>
+        <button class="btn ${isEq?'btn-red':'btn-blue'}" style="padding:5px 14px;font-size:12px" onclick="equipBoss('${bb.key}')">${isEq?'解除':'装備する'}</button>
+      </div>`;
+    for(let i=0;i<sk.length;i++){
+      const s=sk[i];const done=(bb.unlocked||[]).includes(s.k);
+      const pct=done?100:Math.min(100,Math.floor((bb.kills||0)/s.k*100));
+      h+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;${i<sk.length-1?'border-bottom:1px solid #222':''}">
+        <div style="width:20px;text-align:center">${done?'✅':'🔒'}</div>
+        <div style="flex:1"><span style="font-size:11px;color:${done?'#0f0':'#888'};font-weight:bold">${s.n}</span> <span style="font-size:10px;color:#666">(${s.k}体)</span>
+        <span style="font-size:10px;color:${done?'#4af':'#555'}">${s.d}</span></div>
+        ${done?'':'<div style="width:60px"><div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+(bd.outline||bd.color)+'"></div></div></div>'}
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  h+='</div>';
+  p.innerHTML=h;
+}
+window.equipBoss=function(key){
+  if(save.equippedBoss===key){save.equippedBoss=null;}
+  else{save.equippedBoss=key;save.selectedPet=null;}
+  saveSave();renderHome();
+};
+
 /* ── Memory ── */
 function renderMemory(p){
   let h='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:12px">📖 Weapon Memory</div>';
@@ -1518,9 +1568,30 @@ function renderPets(p){
     else h+=`<div style="color:#0f0;font-size:13px;margin-top:8px;font-weight:bold">${sel?'★ Selected ★':'Tap to select'}</div>`;
     h+=`</div>`;
   }
-  h+='</div>';p.innerHTML=h;
+  h+='</div>';
+  // Pet skill progress
+  h+='<div style="max-width:780px;margin:14px auto 0">';
+  for(const[id,pet]of Object.entries(PET_DEFS)){
+    const sk=PET_SKILLS[id];if(!sk)continue;
+    const kills=save.petKills[id]||0;
+    h+=`<div class="game-card" style="margin:8px 0;padding:10px;border-color:${pet.color}">
+      <div style="font-size:13px;color:${pet.color};font-weight:bold;margin-bottom:4px">${pet.icon} ${pet.name} — 撃破: ${kills}</div>`;
+    for(const s of sk){
+      const done=kills>=s.k;const pct=done?100:Math.min(100,Math.floor(kills/s.k*100));
+      h+=`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px">
+        <span>${done?'✅':'🔒'}</span>
+        <span style="color:${done?'#0f0':'#888'};font-weight:bold">${s.n}</span>
+        <span style="color:#666">(${s.k})</span>
+        <span style="color:${done?'#4af':'#555'}">${s.d}</span>
+        ${done?'':'<div style="width:50px;margin-left:auto"><div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'}
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+  h+='</div>';
+  p.innerHTML=h;
 }
-window.selectPet=function(id){if(!save.pets[id].unlocked)return;save.selectedPet=id;saveSave();renderHome();};
+window.selectPet=function(id){if(!save.pets[id].unlocked)return;save.selectedPet=id;save.equippedBoss=null;saveSave();renderHome();};
 window.unlockPet=function(id){const c=PET_DEFS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.pets[id].unlocked=true;saveSave();renderHome();};
 
 /* ── Chapters ── */
@@ -1654,6 +1725,7 @@ let enemySpawnTimer,pendingLvl,levelUpChoices,selectedChoice;
 let waveText,waveTimer,lastWaveMin;
 let runGold,runKills,runEquipsDropped,runStones;
 let pet={x:0,y:0,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
+let bossPet={x:0,y:0,angle:0,timer:0};
 
 /* DadaSurvivor-style: 8 normal + 3 S-rank attack skills + aux + evolved */
 const WEAPON_DEFS={
@@ -1807,6 +1879,17 @@ const WEAPON_MEMORY={
   chaosBlade:[{kills:100,name:'混沌の波動',desc:'Wave+20%'},{kills:300,name:'呪縛',desc:'Slow on hit'},{kills:700,name:'即死強化',desc:'Execute+10%'},{kills:1500,name:'混沌嵐',desc:'Omni chaos'},{kills:3000,name:'世界の混沌',desc:'Screen chaos'}],
 };
 
+const BOSS_SKILLS={
+  giantZombie:[{k:100,n:'腐敗オーラ',d:'AoE DoT'},{k:300,n:'突進',d:'3s charge'},{k:700,n:'毒液',d:'Poison atk'},{k:1500,n:'再生',d:'Kill→HP'},{k:3000,n:'腐敗爆発',d:'10s mega AoE'}],
+  skeletonKing:[{k:100,n:'骨投げ',d:'Ranged atk'},{k:300,n:'骨の盾',d:'DMG-10%'},{k:700,n:'骨召喚',d:'Summon 2'},{k:1500,n:'死の宣告',d:'Random execute'},{k:3000,n:'骨嵐',d:'Screen bones'}],
+  armorLord:[{k:100,n:'鉄壁',d:'Armor+5'},{k:300,n:'叩きつけ',d:'AoE slam'},{k:700,n:'鎧の輝き',d:'Stun nearby'},{k:1500,n:'無敵化',d:'5s invuln'},{k:3000,n:'鎧爆発',d:'30s shockwave'}],
+  demonKing:[{k:100,n:'炎翼',d:'Fire aura'},{k:300,n:'魔弾',d:'Rapid fire'},{k:700,n:'恐怖',d:'Slow-20%'},{k:1500,n:'魔力爆発',d:'5s blast'},{k:3000,n:'地獄門',d:'Fire pillars'}],
+  finalBoss:[{k:100,n:'全属性',d:'All types'},{k:300,n:'時間加速',d:'2× atk spd'},{k:700,n:'次元斬',d:'Huge pierce slash'},{k:1500,n:'世界の意志',d:'Halve all HP'},{k:3000,n:'創世',d:'Start at Lv2'}],
+};
+const PET_SKILLS={
+  hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
+  frog:[{k:50,n:'高跳び',d:'XP range+30%'},{k:150,n:'毒舌',d:'Poison atk'},{k:400,n:'雨乞い',d:'10s poison rain'},{k:900,n:'変態',d:'Giant tackle'},{k:2000,n:'蛙神',d:'5× poison'}],
+};
 const FUSION_RECIPES=[
   {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',desc:'Slash fires bullets + explode',color:'#fa8'},
   {a:'katana',b:'drill',id:'spiralBlade',name:'螺旋刀',desc:'Spinning slash, infinite pierce',color:'#caf'},
@@ -1908,6 +1991,17 @@ function initBattle(){
     player.might=player.baseMight;
   }
   player.mainWeaponId=mainW||null;
+  player.capturedThisRun=false;
+  // Pet skill buffs
+  const petId=save.selectedPet;
+  const pk=save.petKills[petId]||0;
+  const psk=PET_SKILLS[petId];
+  if(psk){
+    if(pk>=psk[0].k&&petId==='hachiko')player.hpRegen+=0.1;
+    if(pk>=psk[3].k&&petId==='hachiko')player.baseMight*=1.10;
+    if(pk>=psk[0].k&&petId==='frog')player.magnetRange*=1.3;
+    if(petId==='hachiko')player.might=player.baseMight;
+  }
   // Apply weapon memory buffs
   if(mainW&&save.weaponMemory[mainW]){
     const mem=save.weaponMemory[mainW];const tiers=WEAPON_MEMORY[mainW];
@@ -1951,6 +2045,7 @@ function initBattle(){
   waveText='';waveTimer=0;lastWaveMin=-1;
   runGold=0;runKills=0;runEquipsDropped=[];runStones=0;
   pet={x:player.x,y:player.y,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
+  bossPet={x:player.x,y:player.y,angle:0,timer:0};
   bState='playing';
 
   save.records.totalBattles++;
@@ -2433,6 +2528,42 @@ function updateForceField(){
   }
 }
 
+/* Equipped boss companion */
+function updateBossPet(){
+  if(!save.equippedBoss)return;
+  const bd=BOSS_DEFS[save.equippedBoss];if(!bd)return;
+  bossPet.angle+=0.8*dt2;
+  bossPet.x=player.x+Math.cos(bossPet.angle)*100;
+  bossPet.y=player.y+Math.sin(bossPet.angle)*100;
+  bossPet.timer+=dt2;
+  if(bossPet.timer>=2){
+    bossPet.timer=0;
+    let near=null,nd=Infinity;
+    for(const e of enemies){const d=distXY(bossPet.x,bossPet.y,e.x,e.y);if(d<nd&&d<300){nd=d;near=e;}}
+    if(near){
+      const dmg=20*player.might;
+      applyDmg(near,dmg,'bossPet');
+      spawnParticles2(near.x,near.y,bd.color||'#fff',6);
+      if(near.hp<=0){
+        save.bossKills[save.equippedBoss]=(save.bossKills[save.equippedBoss]||0)+1;
+        const bb=save.bossBox.find(b=>b.key===save.equippedBoss);
+        if(bb){bb.kills=(save.bossKills[save.equippedBoss]||0);
+          const sk=BOSS_SKILLS[save.equippedBoss];
+          if(sk)for(const s of sk)if(bb.kills>=s.k&&!bb.unlocked.includes(s.k)){bb.unlocked.push(s.k);
+            dmgPopups.push({x:player.x,y:player.y-60,text:'👾 '+s.n+'!',life:3,maxLife:3,color:'#fa0',size:18});}
+        }
+      }
+    }
+  }
+  // Tier 1 passive: AoE DoT every 3 seconds
+  const bb=save.bossBox.find(b=>b.key===save.equippedBoss);
+  if(bb&&bb.unlocked.includes(100)){
+    if((Math.floor(gameTime*10)%30)===0){
+      for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<80)applyDmg(e,5*player.might,'bossPet');
+    }
+  }
+}
+
 /* Pet logic */
 function updatePet(){
   if(save.selectedPet==='hachiko'&&save.pets.hachiko.unlocked){
@@ -2455,6 +2586,7 @@ function updatePet(){
       pet.x+=Math.cos(a)*450*dt2;pet.y+=Math.sin(a)*450*dt2;
       if(distXY(pet.x,pet.y,t.x,t.y)<t.radius+10){
         applyDmg(t,8*player.might,'hachiko');
+        if(t.hp<=0){save.petKills.hachiko=(save.petKills.hachiko||0)+1;}
         spawnParticles2(pet.x,pet.y,'#fa0',5);
         pet.state='return';
       }
@@ -2477,6 +2609,7 @@ function updatePet(){
       // Collect on touch
       if(distXY(pet.x,pet.y,near.x,near.y)<14){
         player.xp+=near.value;
+        save.petKills.frog=(save.petKills.frog||0)+1;
         gems.splice(gems.indexOf(near),1);
         while(player.xp>=player.xpToNext){player.xp-=player.xpToNext;player.level++;player.xpToNext=Math.floor(player.xpToNext*1.25)+8;pendingLvl++;}
       }
@@ -2673,7 +2806,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
-  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();
+  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();
 
   // Spawn
   const tf=Math.min(gameTime/clearTime,1);
@@ -2827,10 +2960,17 @@ function updateBattle(){
         if(bossActive===e)bossActive=null;
         save.records.bossesKilled=(save.records.bossesKilled||0)+1;
         bgmStopBoss();
+        bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
         save.fusionStones=(save.fusionStones||0)+(e.bossKey==='finalBoss'?3:1);
         runStones+=(e.bossKey==='finalBoss'?3:1);
-        // Trigger boss-victory fanfare → result screen
-        bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
+        // Boss capture: 10% chance, max 1 per run
+        if(!player.capturedThisRun&&e.bossKey&&Math.random()<0.10){
+          player.capturedThisRun=true;
+          if(!save.bossBox.find(b=>b.key===e.bossKey))save.bossBox.push({key:e.bossKey,kills:0,unlocked:[]});
+          dmgPopups.push({x:e.x,y:e.y-40,text:'⚡ BOSS CAPTURED!',life:3,maxLife:3,color:'#fc0',size:28});
+          levelUpFlash=0.4;
+          saveSave();
+        }
       }
       enemies.splice(i,1);continue;
     }
@@ -3475,6 +3615,25 @@ function drawBattle(){
     ctx.fillText('☠',d.x,d.y+10);
     ctx.fillStyle='#f00';ctx.font='bold 14px monospace';
     ctx.fillText('DEATH',d.x,d.y+d.radius+18);
+  }
+
+  // Equipped boss companion
+  if(save.equippedBoss){
+    const bd=BOSS_DEFS[save.equippedBoss];
+    if(bd){
+      const bsz=bd.radius*0.7;
+      ctx.fillStyle=bd.color||'#888';ctx.shadowColor=bd.outline||bd.color||'#fff';ctx.shadowBlur=14;
+      ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#000';const er=bsz*0.25;
+      ctx.beginPath();ctx.arc(bossPet.x-er,bossPet.y-er*0.4,er*0.35,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(bossPet.x+er,bossPet.y-er*0.4,er*0.35,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#f00';
+      ctx.beginPath();ctx.arc(bossPet.x-er,bossPet.y-er*0.4,er*0.15,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(bossPet.x+er,bossPet.y-er*0.4,er*0.15,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';
+      ctx.fillText(bd.name.slice(0,8),bossPet.x,bossPet.y+bsz+10);
+    }
   }
 
   // Pet
