@@ -3040,6 +3040,11 @@ function pickChoices(){
   ch.push({type:'stat',tag:'STAT UP',name:'+25% Magnet',desc:'Larger XP pickup',color:'#0ff',icon:'🧲',apply:()=>{player.magnetRange*=1.25;}});
   // Heal
   if(player.hp<player.maxHp*.9)ch.push({type:'heal',tag:'HEAL',name:'Heal',desc:'+30 HP',color:'#4f4',icon:'❤️',apply:()=>{player.hp=Math.min(player.hp+30,player.maxHp);}});
+  // Guarantee main weapon ★UP is always in the trio (if available)
+  const mwUp=ch.find(c=>c.type==='weapon'&&c.weaponId===player.mainWeaponId);
+  const others=ch.filter(c=>c!==mwUp).sort(()=>Math.random()-.5);
+  if(mwUp){ch=[mwUp,...others.slice(0,2)];}
+  else{ch=others.slice(0,3);}
   ch.sort(()=>Math.random()-.5);
   // Fallback: if pool is empty (everything maxed), ensure at least stat-ups
   if(ch.length===0){
