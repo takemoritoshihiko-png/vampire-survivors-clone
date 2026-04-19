@@ -926,7 +926,7 @@ function renderEquip(p){
   h+='</div>';
 
   // Sub-tab bar
-  const subTabs=['Inventory','Merge','Astral'];
+  const subTabs=['Inventory','Merge','Astral','Artifact'];
   h+='<div style="display:flex;gap:4px;justify-content:center;margin:12px 0 8px">';
   for(const t of subTabs)h+=`<button class="btn ${equipSubTab===t?'btn-orange':''}" style="padding:5px 14px;font-size:12px;background:${equipSubTab===t?'':'#333'}" onclick="setEquipTab('${t}')">${t}</button>`;
   h+='</div>';
@@ -934,6 +934,7 @@ function renderEquip(p){
   if(equipSubTab==='Inventory')h+=renderInventoryTab();
   else if(equipSubTab==='Merge')h+=renderMergeTab();
   else if(equipSubTab==='Astral')h+=renderAstralTab();
+  else if(equipSubTab==='Artifact')h+=renderArtifactsContent();
 
   p.innerHTML=h;
 }
