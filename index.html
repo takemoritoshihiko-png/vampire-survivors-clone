@@ -491,6 +491,9 @@ if(save.petXP===undefined)save.petXP={frog:0};
 if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
 if(!save.selectedWeapon)save.selectedWeapon='kunai';
 if(!save.weaponItems)save.weaponItems=[];
+if(!save.hiddenChars)save.hiddenChars=[];
+if(save.soulPoints===undefined)save.soulPoints=0;
+if(!save.unlockedStages)save.unlockedStages=[];
 // Drop legacy weapon equip slot from older saves
 if(save.equipped&&'weapon' in save.equipped)delete save.equipped.weapon;
 // Remove any legacy 'weapon' inventory items (slot system no longer includes weapon)
@@ -700,6 +703,12 @@ window.claimAchievement=function(key){
   if(!a.cond(save.records))return;
   save.records.achievements[a.key]=true;save.coins+=a.reward;saveSave();renderHome();
 };
+window.buySoulStage=function(sid){
+  const st=SOUL_STAGES[sid];if(!st)return;
+  if((save.soulPoints||0)<st.cost){flashMsg('Not enough SP');return;}
+  if(save.unlockedStages.includes(sid))return;
+  save.soulPoints-=st.cost;save.unlockedStages.push(sid);saveSave();renderHome();SFX.evolution();flashRankUp('purple');
+};
 
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
@@ -769,6 +778,30 @@ function renderChars(p){
     else if(d.lv<MAX_CHAR_LV)h+=`<button class="btn btn-blue" style="margin-top:8px;padding:6px 14px;font-size:12px" onclick="event.stopPropagation();upgradeChar('${id}')">Lv UP (${cost}G)</button>`;
     else h+=`<div style="color:#fa0;font-size:12px;margin-top:8px;font-weight:bold">★ MAX LEVEL ★</div>`;
     h+=`</div>`;
+  }
+  // Hidden characters
+  for(const[hid,hc]of Object.entries(HIDDEN_CHARS)){
+    const unlocked=save.hiddenChars.includes(hid);
+    const sel=save.selectedChar===hid;
+    const wKills=(save.weaponMemory&&save.weaponMemory[hc.unlockWeapon])?save.weaponMemory[hc.unlockWeapon].kills:0;
+    const pct=hc.kills>0?Math.min(100,Math.floor(wKills/hc.kills*100)):0;
+    if(unlocked){
+      h+=`<div class="home-card ${sel?'selected':''}" onclick="selectChar('${hid}')" style="border-color:${hc.color}">
+        <div class="big-icon" style="font-size:50px">${hc.icon}</div>
+        <h3 style="color:${hc.color}">${hc.name}</h3>
+        <div class="stats">⚔${hc.baseAtk} ❤${hc.baseHp}</div>
+        <p style="font-size:10px">${hc.desc}</p>
+      </div>`;
+    } else {
+      h+=`<div class="home-card" style="opacity:.5;border-color:#444">
+        <div class="big-icon" style="font-size:50px;filter:brightness(0)">🔒</div>
+        <h3 style="color:#666">???</h3>
+        ${hc.unlockWeapon?`<p style="font-size:10px;color:#888">${WEAPON_DEFS[hc.unlockWeapon]?WEAPON_DEFS[hc.unlockWeapon].name:'???'}で${hc.kills}体撃破</p>
+        <div class="bar-bg" style="margin:4px 10px"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div style="font-size:9px;color:#666">${wKills}/${hc.kills} (${pct}%)</div>`
+        :`<p style="font-size:10px;color:#888">???</p>`}
+      </div>`;
+    }
   }
   h+='</div>';
   // Main weapon slot
@@ -1735,6 +1768,25 @@ function renderDailyTab(p){
   h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
   h+=_r.innerHTML;
   h+='</div>';
+  // Soul Shop
+  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
+  h+=`<div style="color:#a0f;font-weight:bold;font-size:14px;text-align:center;margin-bottom:8px">✨ Soul Shop — <span style="color:#fc0">${save.soulPoints||0} SP</span></div>`;
+  for(const[sid,st]of Object.entries(SOUL_STAGES)){
+    const unlocked=save.unlockedStages.includes(sid);
+    const can=(save.soulPoints||0)>=st.cost;
+    h+=`<div class="game-card" style="margin:6px 0;padding:10px;${unlocked?'border-color:#0f0':''}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:28px">${st.name.split(' ')[0]}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:${unlocked?'#0f0':'#fff'};font-weight:bold">${st.name}</div>
+          <div style="font-size:10px;color:#aaa">${st.desc}</div>
+        </div>
+        ${unlocked?'<span style="color:#0f0;font-size:12px;font-weight:bold">✅ Unlocked</span>'
+        :`<button class="btn ${can?'btn-purple':''}" style="padding:4px 14px;font-size:12px;background:${can?'':'#444'}" ${can?'':'disabled'} onclick="buySoulStage('${sid}')">${st.cost} SP</button>`}
+      </div>
+    </div>`;
+  }
+  h+='</div>';
   p.innerHTML=h;
 }
 
@@ -1753,6 +1805,15 @@ function renderSortie(p){
     </div>`;
   }
   h+='</div>';
+  // Soul stages
+  for(const[sid,st]of Object.entries(SOUL_STAGES)){
+    if(!save.unlockedStages.includes(sid))continue;
+    const sel=save.selectedChapter===sid;
+    h+=`<div class="home-card chapter-card ${sel?'selected':''}" onclick="selectChapter('${sid}')" style="min-width:180px;border-color:${sel?'#a0f':'#444'}">
+      <h3>${st.name}</h3><p>${st.desc}</p>
+      <div class="stats">⚡ Diff x${st.diff} | 💰 x${st.coinMult}</div>
+    </div>`;
+  }
   // Battle button (prominent)
   h+=`<div style="text-align:center;margin:24px 0"><button class="btn btn-orange" style="padding:18px 70px;font-size:24px;letter-spacing:3px;border-radius:14px" onclick="startBattle()">⚔ BATTLE ⚔</button></div>`;
   p.innerHTML=h;
@@ -1818,7 +1879,7 @@ function renderChapters(p){
   }
   h+='</div>';p.innerHTML=h;
 }
-window.selectChapter=function(id){if(!save.chapters[id].unlocked)return;save.selectedChapter=id;saveSave();renderHome();};
+window.selectChapter=function(id){if(SOUL_STAGES[id]){save.selectedChapter=id;saveSave();renderHome();return;}if(!save.chapters[id]||!save.chapters[id].unlocked)return;save.selectedChapter=id;saveSave();renderHome();};
 window.unlockChapter=function(id){const c=CHAPTER_DEFS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chapters[id].unlocked=true;saveSave();renderHome();};
 
 /* ── Daily ── */
@@ -2095,6 +2156,24 @@ const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
   frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'接触',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'XP×3, Spd+25%, 50dmg, 250px mag, 10s giant'}],
 };
+const HIDDEN_CHARS={
+  kagerou:{name:'影狼',icon:'🥷',color:'#222',unlockWeapon:'katana',kills:3000,baseAtk:120,baseHp:90,desc:'Slash hits 2×',skill:'doubleHit',initWeapon:'katana'},
+  rex:{name:'レックス',icon:'🔫',color:'#c22',unlockWeapon:'shotgun',kills:3000,baseAtk:110,baseHp:100,desc:'All bullets pierce',skill:'allPierce',initWeapon:'shotgun'},
+  gaia:{name:'ガイア',icon:'⛏️',color:'#282',unlockWeapon:'drill',kills:3000,baseAtk:90,baseHp:130,desc:'Ground attack',skill:'groundAtk',initWeapon:'drill'},
+  voidChar:{name:'ヴォイド',icon:'🕳️',color:'#60a',unlockWeapon:'force',kills:3000,baseAtk:130,baseHp:80,desc:'2× blackholes',skill:'doubleHole',initWeapon:'force'},
+  chaosChar:{name:'カオス',icon:'🌀',color:'#1a0a2a',unlockWeapon:'chaosBlade',kills:3000,baseAtk:140,baseHp:70,desc:'All skills start ★2',skill:'star2Start',initWeapon:'chaosBlade'},
+  yato:{name:'八十',icon:'⚡',color:'#fc0',unlockWeapon:null,kills:0,baseAtk:150,baseHp:150,desc:'All stats ×1.5, weapons ★3',skill:'godMode',initWeapon:'kunai'},
+};
+const SOUL_STAGES={
+  snow:{name:'❄️ 雪山',cost:100,time:360,diff:2,coinMult:2,clearReward:400,desc:'Survive 6 min (Ice Zombies)',bgColor:'#e0f0ff'},
+  ocean:{name:'🌊 海底',cost:250,time:420,diff:3,coinMult:3,clearReward:800,desc:'Survive 7 min (Depth Sharks)',bgColor:'#001a33'},
+  space:{name:'🌌 宇宙',cost:500,time:480,diff:4,coinMult:4,clearReward:1500,desc:'Survive 8 min (Aliens)',bgColor:'#000011'},
+};
+const SOUL_ENEMIES={
+  iceZombie:{name:'Ice Zombie',color:'#88ccff',radius:22,hp:300,speed:40,damage:15,xp:8},
+  depthShark:{name:'Depth Shark',color:'#048',radius:28,hp:180,speed:130,damage:25,xp:10},
+  alien:{name:'Alien',color:'#0f8',radius:24,hp:220,speed:90,damage:20,xp:15},
+};
 const ARTIFACTS={
   axe:{name:'神器・斧',icon:'🪓',recipe:{red_weapon:3,red_gloves:1},desc:'Orbit axes + 10s giant axe throw'},
   necklace:{name:'神器・ネックレス',icon:'📿',recipe:{red_necklace:5},desc:'HP+300, 150dmg taken → 10s invincible'},
@@ -2168,6 +2247,14 @@ function wDmg(w){const def=WEAPON_DEFS[w.id];const base=_BASE_DMG[w.id]||10;
 }
 
 function initBattle(){
+  // Hidden character override
+  const isHidden=HIDDEN_CHARS[save.selectedChar];
+  if(isHidden&&!CHARS[save.selectedChar]){
+    CHARS[save.selectedChar]={name:isHidden.name,icon:isHidden.icon,desc:isHidden.desc,
+      initWeapon:isHidden.initWeapon,baseAtk:isHidden.baseAtk,baseHp:isHidden.baseHp,
+      skill:isHidden.desc,color:isHidden.color,outline:isHidden.color,letter:isHidden.name[0]};
+    if(!save.chars[save.selectedChar])save.chars[save.selectedChar]={unlocked:true,lv:1};
+  }
   const ch=CHARS[save.selectedChar];
   const cd=save.chars[save.selectedChar];
   const atkBonus=getEquippedBonus('ATK'),hpBonus=getEquippedBonus('MaxHP'),spdBonus=getEquippedBonus('Speed'),
@@ -2366,7 +2453,7 @@ function spawnEnemy2(typeId,opts){
   if(enemies.length>=60&&!(opts&&opts.elite))return;
   opts=opts||{};
   const def=ENEMY_TYPES[typeId];if(!def)return;
-  const chap=CHAPTER_DEFS[save.selectedChapter];
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
   const a=Math.random()*Math.PI*2,d=500+Math.random()*200;
   const tf=Math.min(gameTime/(chap.time||600),1);
   const mins=gameTime/60;
@@ -2387,7 +2474,7 @@ function spawnBossByKey(key,isFinal){
   const def=BOSS_DEFS[key];if(!def)return;
   // Clear normal enemies for final boss to guarantee visibility
   if(isFinal)enemies=enemies.filter(e=>e.isBoss||e.isElite);
-  const chap=CHAPTER_DEFS[save.selectedChapter];
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
   const a=Math.random()*Math.PI*2;
   const b={x:player.x+Math.cos(a)*700,y:player.y+Math.sin(a)*700,
     radius:def.radius,hp:def.hp*chap.diff*getEnemyPowerMult(),maxHp:def.hp*chap.diff*getEnemyPowerMult(),
@@ -3071,7 +3158,7 @@ function openChest2(){
 /* Update */
 function updateBattle(){
   if(bState!=='playing')return;
-  const chap=CHAPTER_DEFS[save.selectedChapter];
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
   const clearTime=chap.time;
 
   let dx=0,dy=0;
@@ -4449,6 +4536,11 @@ function battleLoop(ts){
 function endBattle(cleared,bossWin){
   if(player.captureRewardPenalty)runGold=Math.floor(runGold*0.5);
   save.coins+=runGold;
+  // Soul points
+  let spEarned=0;
+  if(cleared){spEarned+=10;if(!save.chapters[save.selectedChapter]||!save.chapters[save.selectedChapter].cleared)spEarned+=50;}
+  if(save.records.bossesKilled>0)spEarned+=5;
+  save.soulPoints=(save.soulPoints||0)+spEarned;
   // Check weapon memory unlocks
   if(player.mainWeaponId&&save.weaponMemory[player.mainWeaponId]){
     const mem=save.weaponMemory[player.mainWeaponId];
@@ -4456,6 +4548,13 @@ function endBattle(cleared,bossWin){
     if(tiers){for(const t of tiers){if(mem.kills>=t.kills&&!mem.unlocked.includes(t.kills))mem.unlocked.push(t.kills);}}
   }
   save.records.totalKills+=runKills;
+  // Check hidden character unlocks via weapon memory kills
+  for(const[hid,hc]of Object.entries(HIDDEN_CHARS)){
+    if(hc.unlockWeapon&&save.weaponMemory&&save.weaponMemory[hc.unlockWeapon]&&
+      save.weaponMemory[hc.unlockWeapon].kills>=hc.kills&&!save.hiddenChars.includes(hid)){
+      save.hiddenChars.push(hid);flashMsg('🔓 '+hc.name+' 解放！');
+    }
+  }
   if(player.level>save.records.highestLevel)save.records.highestLevel=player.level;
   if(gameTime>save.records.longestSurvival)save.records.longestSurvival=gameTime;
   dailyProgress('kills',runKills);
@@ -4466,8 +4565,9 @@ function endBattle(cleared,bossWin){
 
   let bonusGold=0;
   if(cleared){
-    const chap=CHAPTER_DEFS[save.selectedChapter];
-    if(!save.chapters[save.selectedChapter].cleared){
+    const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
+    const chapSave=save.chapters[save.selectedChapter];
+    if(!chapSave||!chapSave.cleared){
       bonusGold=chap.clearReward||0;
       save.coins+=bonusGold;
       // Unlock next chapter for free? No, costs coins
@@ -4475,7 +4575,7 @@ function endBattle(cleared,bossWin){
       bonusGold=Math.floor((chap.clearReward||0)*0.3);
       save.coins+=bonusGold;
     }
-    save.chapters[save.selectedChapter].cleared=true;
+    if(chapSave)chapSave.cleared=true;
     if(!save.records.chaptersCleared)save.records.chaptersCleared={};
     save.records.chaptersCleared[save.selectedChapter]=true;
     // 30 min clear: golden equipment
@@ -4580,6 +4680,21 @@ preloadSprites=function(cb){
     img.src=src;
   }
 };
+// Secret code: type YATO on home screen
+let _secretBuf='';
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('home').classList.contains('active')){
+    _secretBuf+=e.key.toUpperCase();
+    if(_secretBuf.length>4)_secretBuf=_secretBuf.slice(-4);
+    if(_secretBuf==='YATO'&&!save.hiddenChars.includes('yato')){
+      save.hiddenChars.push('yato');saveSave();
+      flashRankUp('gold');SFX.evolution();
+      dmgPopups=[];// clear any stale popups
+      setTimeout(()=>{flashMsg('⚡ 八十 解放！伝説の戦士が現れた！');renderHome();},500);
+      _secretBuf='';
+    }
+  }
+});
 preloadSprites(()=>{showHome();});
 </script>
 </body>
