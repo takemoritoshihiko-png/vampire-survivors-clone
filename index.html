@@ -482,11 +482,11 @@ const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
 const RANK_PERCENT={
-  armor:{gray:6,green:12,blue:20,purple:32,gold:50,red:75},
-  boots:{gray:3,green:7,blue:12,purple:20,gold:32,red:48},
-  belt:{gray:4,green:9,blue:16,purple:26,gold:40,red:60},
-  gloves:{gray:2,green:5,blue:8,purple:14,gold:22,red:33},
-  necklace:{gray:2,green:5,blue:8,purple:14,gold:22,red:33},
+  armor:{gray:3,green:6,blue:10,purple:16,gold:25,red:40},
+  boots:{gray:2,green:4,blue:7,purple:12,gold:18,red:30},
+  belt:{gray:2,green:5,blue:9,purple:14,gold:22,red:35},
+  gloves:{gray:1,green:3,blue:5,purple:9,gold:14,red:22},
+  necklace:{gray:1,green:3,blue:5,purple:9,gold:14,red:22},
 };
 const RANK_LEVEL_MAX={gray:10,green:15,blue:20,purple:25,gold:30,red:40};
 const SUB_MAX={gray:0,green:0,blue:0,purple:2,gold:3,red:0};
@@ -583,7 +583,7 @@ function eqMaxSub(rank){return SUB_MAX[rank]||0;}
 // Final percent bonus: base × (1 + level/max × 0.5) × (1 + sub × 0.15)
 function eqBonusPct(eq){
   const base=RANK_PERCENT[eq.slot][eq.rank];
-  const lvMul=1+((eq.level||1)-1)/(eqMaxLv(eq.rank)-1||1)*0.5;
+  const lvMul=1+((eq.level||1)-1)/(eqMaxLv(eq.rank)-1||1)*0.2;
   const subMul=1+(eq.sub||0)*0.15;
   return base*lvMul*subMul;
 }
@@ -638,7 +638,7 @@ function calcPower(){
   if(mw&&save.weaponsOwned[mw]){
     const mwR=save.weaponsOwned[mw];
     const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
-    const rankAtk={gray:0.06,green:0.12,blue:0.20,purple:0.32,gold:0.50,red:0.75}[mwR]||0;
+    const rankAtk={gray:0.03,green:0.06,blue:0.10,purple:0.16,gold:0.25,red:0.40}[mwR]||0;
     atk*=(1+rankAtk)*(1+(mwLv-1)*0.02);
     const flat={gray:50,green:150,blue:300,purple:600,gold:1200,red:2500}[mwR]||0;
     bonus+=flat+mwLv*20;
@@ -685,12 +685,12 @@ window.claimAchievement=function(key){
 const tabs=['Characters','Equipment','Gacha','Talents','BossBox','Pets','Chapters','Daily','Records','Memory','Codex'];
 
 const TALENT_DEFS={
-  atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*1.5).toFixed(1)}% ATK`},
-  hp:{name:'MaxHP',icon:'❤️',color:'#f88',desc:l=>`+${(l*1.5).toFixed(1)}% MaxHP`},
-  speed:{name:'Speed',icon:'👟',color:'#8ff',desc:l=>`+${(l*0.8).toFixed(1)}% Speed`},
-  coin:{name:'Coin Drop',icon:'💰',color:'#fc0',desc:l=>`+${l*5}% drop rate`},
-  xp:{name:'XP Gain',icon:'⭐',color:'#0af',desc:l=>`+${l*3}% XP`},
-  cd:{name:'Cooldown',icon:'⏱️',color:'#0ff',desc:l=>`-${(l*1.5).toFixed(1)}% all CD`},
+  atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*0.8).toFixed(1)}% ATK`},
+  hp:{name:'MaxHP',icon:'❤️',color:'#f88',desc:l=>`+${(l*0.8).toFixed(1)}% MaxHP`},
+  speed:{name:'Speed',icon:'👟',color:'#8ff',desc:l=>`+${(l*0.5).toFixed(1)}% Speed`},
+  coin:{name:'Coin Drop',icon:'💰',color:'#fc0',desc:l=>`+${l*3}% drop rate`},
+  xp:{name:'XP Gain',icon:'⭐',color:'#0af',desc:l=>`+${l*2}% XP`},
+  cd:{name:'Cooldown',icon:'⏱️',color:'#0ff',desc:l=>`-${(l*0.8).toFixed(1)}% all CD`},
 };
 const TALENT_MAX_LV=10;
 function talentCost(lv){return Math.floor(50*Math.pow(2,lv));}
@@ -773,7 +773,7 @@ function renderChars(p){
   const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
   const mwIsS=wd&&wd.tier==='S';
   const mwSrc=wd&&wd.sprite?`assets/${wd.sprite}.png`:null;
-  const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[mwRank]||0;
+  const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[mwRank]||0;
   const finalAtk=Math.round(rankAtk*(1+(mwLv-1)*0.02));
   if(wd&&isOwned){
     h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
@@ -848,7 +848,7 @@ window.openWeaponPicker=function(){
     const isS=d.tier==='S';
     const sel=save.selectedWeapon===id;
     const src=d.sprite?`assets/${d.sprite}.png`:null;
-    const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[r]||0;
+    const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[r]||0;
     const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
     const evo=EVOLUTIONS.find(e=>e.weapon===id);
     inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -972,7 +972,7 @@ function renderInventoryTab(){
         const isS=d.tier==='S';
         const sel=save.selectedWeapon===id;
         const src=d.sprite?`assets/${d.sprite}.png`:null;
-        const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[r]||0;
+        const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[r]||0;
         const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
         const evo=EVOLUTIONS.find(e=>e.weapon===id);
         h+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.6)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -1879,7 +1879,7 @@ const PASSIVE_DEFS={
   forceField:{name:'フォースフィールド',icon:'🛡️',color:'#88f',evolveTarget:null,maxLv:1,
     desc:()=>'Damage barrier',apply:p=>{p.forceField=true;}},
   fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',evolveTarget:null,maxLv:1,
-    desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.2);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.2),p.maxHp);}},
+    desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.08);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.08),p.maxHp);}},
 };
 
 const ENEMY_TYPES={
@@ -1966,14 +1966,14 @@ function rnd(a,b){return a+Math.random()*(b-a);}
 function getW(id){return player.weapons.find(w=>w.id===id);}
 function getP(id){return player.passives.find(p=>p.id===id);}
 const _BASE_DMG={
-  kunai:8,katana:14,bat:14,shotgun:10,lightchaser:14,force:25,drill:18,soccer:12,
-  lightChaserS:22,forceS:35,chaosBlade:24,
-  spiritBlade:18,yotou:24,lucille:22,hyperShot:14,swordArray:22,
-  forceMastery:38,vibrationDrill:30,quantumBall:22,
-  sLightArray:32,voidLord:50,chaosJudge:36,
+  kunai:6,katana:10,bat:10,shotgun:7,lightchaser:10,force:18,drill:13,soccer:8,
+  lightChaserS:18,forceS:28,chaosBlade:19,
+  spiritBlade:13,yotou:17,lucille:15,hyperShot:10,swordArray:15,
+  forceMastery:27,vibrationDrill:21,quantumBall:15,
+  sLightArray:22,voidLord:35,chaosJudge:25,
   // Sub-skills
-  molotov:6,boomerang:14,garlic:5,bible:12,lightning:25,drone:9,
-  hellfire:14,quantumBoomerang:24,soulEater:14,unholyBible:30,thunderWrath:40,destroyer:30};
+  molotov:4,boomerang:10,garlic:4,bible:8,lightning:18,drone:6,
+  hellfire:10,quantumBoomerang:17,soulEater:10,unholyBible:21,thunderWrath:28,destroyer:21};
 function wDmg(w){const def=WEAPON_DEFS[w.id];const base=_BASE_DMG[w.id]||10;
   const mul=(def.dmgMul&&def.dmgMul[w.lv-1])||1;
   return base*mul*player.might;
@@ -1986,8 +1986,8 @@ function initBattle(){
         cdBonus=getEquippedBonus('CD Reduce'),critBonus=getEquippedBonus('Crit%'),xpBonus=getEquippedBonus('XP Gain');
 
   const tal=save.talents||{};
-  const tAtk=(tal.atk||0)*0.015,tHp=(tal.hp||0)*0.015,tSpd=(tal.speed||0)*0.008,
-        tCoin=(tal.coin||0)*0.05,tXp=(tal.xp||0)*0.03,tCd=(tal.cd||0)*0.015;
+  const tAtk=(tal.atk||0)*0.008,tHp=(tal.hp||0)*0.008,tSpd=(tal.speed||0)*0.005,
+        tCoin=(tal.coin||0)*0.03,tXp=(tal.xp||0)*0.02,tCd=(tal.cd||0)*0.008;
   const baseHp=Math.floor(ch.baseHp*(1+(cd.lv-1)*0.05)*(1+hpBonus/100)*(1+tHp));
   const baseSpd=Math.floor(200*(1+spdBonus/100)*(1+tSpd));
   const charAtkMult=ch.baseAtk/100; // common=1.0, archer=1.3, knight=0.8
@@ -1999,7 +1999,7 @@ function initBattle(){
     level:1,xp:0,xpToNext:8,
     baseMight,might:baseMight,
     armor:0,baseCdReduction:cdBonus/100+tCd,cdReduction:cdBonus/100+tCd,
-    magnetRange:100,hpRegen:0.05,
+    magnetRange:100,hpRegen:0.02,
     invTimer:0,
     weapons:[],passives:[],
     charId:save.selectedChar,
@@ -2019,7 +2019,7 @@ function initBattle(){
   if(mainW){
     const mwRank=save.weaponsOwned[mainW]||'gray';
     const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
-    const mwRankBonus={gray:0.06,green:0.12,blue:0.20,purple:0.32,gold:0.50,red:0.75}[mwRank]||0;
+    const mwRankBonus={gray:0.03,green:0.06,blue:0.10,purple:0.16,gold:0.25,red:0.40}[mwRank]||0;
     const mwLvBonus=(mwLv-1)*0.02;
     player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
     player.might=player.baseMight;
@@ -2250,7 +2250,7 @@ function updateWeapons(){
         let da=ea-ang;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
         if(Math.abs(da)<Math.PI/3&&dist2(e,player)<reach+e.radius){
           applyDmg(e,dmg,w.id);
-          if(isEv)player.hp=Math.min(player.maxHp,player.hp+2);
+          if(isEv)player.hp=Math.min(player.maxHp,player.hp+0.5);
         }
       }
       // Every 5 hits at ★3+: 4-way wave
@@ -2419,7 +2419,7 @@ function updateWeapons(){
         }
       }
       if(isEv){
-        player.hp=Math.min(player.maxHp,player.hp+2*0.4);
+        player.hp=Math.min(player.maxHp,player.hp+0.2*0.4);
         for(const g of gems){if(dist2(g,player)<r){g.x=player.x;g.y=player.y;}}
       }
     }
