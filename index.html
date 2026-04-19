@@ -491,6 +491,7 @@ if(!save.petKills)save.petKills={hachiko:0,frog:0};
 if(save.petXP===undefined)save.petXP={frog:0};
 if(!save.weaponsOwned)save.weaponsOwned={kunai:'gray'};
 if(!save.selectedWeapon)save.selectedWeapon='kunai';
+if(!save.weaponItems)save.weaponItems=[];
 // Drop legacy weapon equip slot from older saves
 if(save.equipped&&'weapon' in save.equipped)delete save.equipped.weapon;
 // Remove any legacy 'weapon' inventory items (slot system no longer includes weapon)
@@ -970,7 +971,8 @@ function renderInventoryTab(){
     h+='</div>';
   } else {
     // Weapons
-    h+=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">WEAPON INVENTORY</div>`;
+    const wItems=save.weaponItems||[];
+    h+=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">WEAPON INVENTORY (${wItems.length} items / ${ownedWeapons.length} types)</div>`;
     if(ownedWeapons.length===0){
       h+='<div style="text-align:center;color:#888;padding:30px">No weapons yet. Pull gacha to obtain weapons.</div>';
     } else {
@@ -986,6 +988,7 @@ function renderInventoryTab(){
         const lv=(save.weaponLevels&&save.weaponLevels[id])||1;
         const isS=d.tier==='S';
         const sel=save.selectedWeapon===id;
+        const wCount=wItems.filter(w=>w.weaponId===id).length;
         const src=d.sprite?`assets/${d.sprite}.png`:null;
         const rankAtk={gray:2,green:4,blue:7,purple:11,gold:17,red:28}[r]||0;
         const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
@@ -996,7 +999,7 @@ function renderInventoryTab(){
           ${src?`<img src="${src}" width="64" height="64" style="object-fit:contain;image-rendering:pixelated;display:block;margin:6px auto 4px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
             <div style="font-size:42px;display:none">${d.icon}</div>`:`<div style="font-size:42px">${d.icon}</div>`}
           <div style="font-size:13px;color:${d.color};font-weight:bold">${d.name}</div>
-          <div style="font-size:10px;color:${RANK_COLORS[r]}">${RANK_NAMES[r]} · Lv.${lv}</div>
+          <div style="font-size:10px;color:${RANK_COLORS[r]}">${RANK_NAMES[r]} · Lv.${lv} · ×${wCount}</div>
           <div style="font-size:11px;color:#0f0;margin-top:4px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
           ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ ${WEAPON_DEFS[evo.evolved].name}</div>`:''}
           <div style="display:flex;gap:4px;justify-content:center;margin-top:6px">
@@ -1303,7 +1306,11 @@ const S_WEAPONS=['lightChaserS','forceS','chaosBlade'];
 function _grantWeapon(id,rank){
   const cur=save.weaponsOwned[id];
   if(!cur||RANKS.indexOf(rank)>RANKS.indexOf(cur))save.weaponsOwned[id]=rank;
-  return {kind:'weapon',id,rank};
+  // Also add as individual item to weaponItems inventory
+  if(!save.weaponItems)save.weaponItems=[];
+  const wid=++save.eqIdCounter;
+  save.weaponItems.push({id:wid,weaponId:id,rank,level:1});
+  return {kind:'weapon',id,rank,itemId:wid};
 }
 function _gachaResult(rank,gachaType){
   // 30% chance to get a weapon (if pool non-empty for the rank), else equipment
@@ -1664,9 +1671,11 @@ window.createArtifact=function(id){
   for(const[mk,need]of Object.entries(a.recipe)){
     if(mk==='boss_any')continue; // don't consume bosses
     if(mk==='red_weapon'){
-      // Remove N red weapons from weaponsOwned
-      let rem=need;const wids=Object.keys(save.weaponsOwned).filter(k=>save.weaponsOwned[k]==='red');
-      for(const w of wids){if(rem<=0)break;delete save.weaponsOwned[w];rem--;}
+      // Remove N red weapon items from weaponItems
+      let rem=need;
+      for(let i=save.weaponItems.length-1;i>=0&&rem>0;i--){
+        if(save.weaponItems[i].rank==='red'){save.weaponItems.splice(i,1);rem--;}
+      }
     } else {
       const slot=mk.replace('red_','');
       let rem=need;
@@ -2098,8 +2107,8 @@ const ARTIFACTS={
   ultimate:{name:'神器・究極',icon:'⚡',recipe:{red_weapon:5,red_armor:5,red_boots:5,red_belt:5,red_gloves:5,red_necklace:5},desc:'120r aura 20dmg/s + 10s ATK stack'},
 };
 function countArtifactMats(){
-  const ownedW=Object.values(save.weaponsOwned||{}).filter(r=>r==='red').length;
-  const c={red_weapon:ownedW};
+  const redWpnItems=(save.weaponItems||[]).filter(w=>w.rank==='red').length;
+  const c={red_weapon:redWpnItems};
   for(const sl of['armor','boots','belt','gloves','necklace'])c['red_'+sl]=save.equipment.filter(e=>e.slot===sl&&e.rank==='red').length;
   c.boss_any=(save.bossBox||[]).length;
   return c;
