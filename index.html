@@ -696,7 +696,7 @@ window.claimAchievement=function(key){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Talents','BossBox','Pets','Chapters','Daily','Records','Memory','Codex'];
+const tabs=['Characters','Enhance','Gacha','Sortie'];
 
 const TALENT_DEFS={
   atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*0.8).toFixed(1)}% ATK`},
@@ -744,16 +744,9 @@ function renderHome(){
   const panel=document.getElementById('homePanel');
   switch(currentTab){
     case'Characters':renderChars(panel);break;
-    case'Equipment':renderEquip(panel);break;
+    case'Enhance':renderEnhance(panel);break;
     case'Gacha':renderGacha(panel);break;
-    case'Talents':renderTalents(panel);break;
-    case'BossBox':renderBossBox(panel);break;
-    case'Memory':renderMemory(panel);break;
-    case'Pets':renderPets(panel);break;
-    case'Chapters':renderChapters(panel);break;
-    case'Daily':renderDaily(panel);break;
-    case'Records':renderRecords(panel);break;
-    case'Codex':renderCodex(panel);break;
+    case'Sortie':renderSortie(panel);break;
   }
 }
 
@@ -812,7 +805,14 @@ function renderChars(p){
     </div>`;
   }
   // Boss / Pet companion slot
-  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">👾 ボス / 🐾 ペット（どちらか1つ）</div>`;
+  // Compact pet selector
+  h+='<div style="display:flex;gap:6px;justify-content:center;margin:10px 0 4px">';
+  for(const[id,pet]of Object.entries(PET_DEFS)){
+    const d=save.pets[id];const sel=save.selectedPet===id&&!save.equippedBoss;
+    h+=`<button class="btn ${sel?'btn-green':''}" style="padding:4px 12px;font-size:11px;background:${sel?'':'#333'};${!d.unlocked?'opacity:.4':''}" onclick="selectPet('${id}')" ${!d.unlocked?'disabled':''}>${pet.icon} ${pet.name}${!d.unlocked?' 🔒':sel?' ✓':''}</button>`;
+  }
+  h+='</div>';
+  h+=`<div style="text-align:center;margin:8px 0 6px;color:#fa0;font-weight:bold;font-size:14px">👾 ボス / 🐾 ペット（どちらか1つ）</div>`;
   if(save.equippedBoss){
     const ebd=BOSS_DEFS[save.equippedBoss];
     const ebb=save.bossBox.find(b=>b.key===save.equippedBoss);
@@ -1605,6 +1605,84 @@ function renderCodex(p){
   p.innerHTML=h;
 }
 
+/* ── Enhance (unified tab) ── */
+let enhanceSub='Equipment';
+window.setEnhanceSub=function(s){enhanceSub=s;renderHome();};
+function renderEnhance(p){
+  const subs=['Equipment','Talents','Memory','Codex','BossBox'];
+  let h='<div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">';
+  for(const s of subs)h+=`<button class="btn ${enhanceSub===s?'btn-orange':''}" style="padding:5px 12px;font-size:11px;background:${enhanceSub===s?'':'#333'}" onclick="setEnhanceSub('${s}')">${s}</button>`;
+  h+='</div>';
+  if(enhanceSub==='Equipment'){h+=renderEquipContent();}
+  else if(enhanceSub==='Talents'){h+=renderTalentsContent();}
+  else if(enhanceSub==='Memory'){h+=renderMemoryContent();}
+  else if(enhanceSub==='Codex'){h+=renderCodexContent();}
+  else if(enhanceSub==='BossBox'){h+=renderBossBoxContent();}
+  p.innerHTML=h;
+}
+function renderEquipContent(){
+  const _p={innerHTML:''};renderEquip(_p);return _p.innerHTML;
+}
+function renderTalentsContent(){
+  const _p={innerHTML:''};renderTalents(_p);return _p.innerHTML;
+}
+function renderMemoryContent(){
+  const _p={innerHTML:''};renderMemory(_p);return _p.innerHTML;
+}
+function renderCodexContent(){
+  const _p={innerHTML:''};renderCodex(_p);return _p.innerHTML;
+}
+function renderBossBoxContent(){
+  const _p={innerHTML:''};renderBossBox(_p);return _p.innerHTML;
+}
+/* ── Sortie (unified tab) ── */
+function renderSortie(p){
+  let h='';
+  // Chapter selection (large)
+  h+='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:10px">🗺️ Chapter Select</div>';
+  h+='<div class="home-row">';
+  for(const[cid,ch]of Object.entries(CHAPTER_DEFS)){
+    const d=save.chapters[cid];const sel=save.selectedChapter==cid;const locked=!d.unlocked;
+    h+=`<div class="home-card chapter-card ${sel?'selected':''} ${locked?'locked':''}" onclick="selectChapter(${cid})" style="min-width:180px">
+      <h3>${ch.name}</h3><p>${ch.desc}</p>
+      <div class="stats">⚡ Diff x${ch.diff} | 💰 x${ch.coinMult}</div>
+      ${d.cleared?'<div style="color:#0f0;font-weight:bold">✓ CLEARED</div>':''}
+      ${locked?`<button class="btn btn-orange" style="margin-top:6px;padding:4px 12px;font-size:12px" onclick="event.stopPropagation();unlockChapter(${cid})">Unlock ${ch.cost}G</button>`:''}
+    </div>`;
+  }
+  h+='</div>';
+  // Battle button
+  h+=`<div style="text-align:center;margin:18px 0"><button class="btn btn-orange" style="padding:16px 60px;font-size:22px;letter-spacing:2px;border-radius:14px" onclick="startBattle()">⚔ BATTLE ⚔</button></div>`;
+  // Daily missions (compact)
+  h+='<div style="max-width:560px;margin:14px auto">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;margin-bottom:6px">📅 Daily Missions</div>';
+  checkDaily();
+  for(const m of DAILY_MISSIONS){
+    const prog=save.daily.progress[m.key]||0;const claimed=save.daily.claimed[m.key];
+    const done=prog>=m.target;const pct=Math.min(100,(prog/m.target)*100);
+    h+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;${claimed?'opacity:.5':''}">
+      <span>${m.icon}</span><span style="flex:1">${m.name} (${Math.min(prog,m.target)}/${m.target})</span>
+      <div class="bar-bg" style="width:60px"><div class="bar-fill" style="width:${pct}%"></div></div>
+      ${claimed?'<span style="color:#0f0">✓</span>':done?`<button class="btn btn-green" style="padding:2px 8px;font-size:10px" onclick="claimDaily('${m.key}')">Claim</button>`:''}
+    </div>`;
+  }
+  h+='</div>';
+  // Achievements (compact)
+  h+='<div style="max-width:560px;margin:14px auto">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;margin-bottom:6px">🏆 Achievements</div>';
+  const r=save.records;
+  for(const a of ACHIEVEMENTS){
+    const got=!!r.achievements[a.key];const meets=a.cond(r);
+    h+=`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;${got?'opacity:.5':''}">
+      <span>${a.icon||'🏅'}</span><span style="flex:1;color:${got?'#0f0':meets?'#fa0':'#888'}">${a.name}</span>
+      <span style="color:#ff0;font-size:10px">${a.reward}G</span>
+      ${got?'<span style="color:#0f0">✓</span>':meets?`<button class="btn btn-green" style="padding:2px 8px;font-size:10px" onclick="claimAchievement('${a.key}')">Claim</button>`:'🔒'}
+    </div>`;
+  }
+  h+='</div>';
+  p.innerHTML=h;
+}
+
 /* ── Pets ── */
 function renderPets(p){
   let h='<div class="home-row">';
@@ -1774,7 +1852,7 @@ let levelUpFlash=0,runLevelUps=0,playerMoving=false,playerDmgFlash=0;
 let bossVictoryT=0,bossVictoryX=0,bossVictoryY=0,equipPopups,fireZones;
 let enemySpawnTimer,pendingLvl,levelUpChoices,selectedChoice;
 let waveText,waveTimer,lastWaveMin;
-let runGold,runKills,runEquipsDropped,runStones;
+let runGold,runKills,runEquipsDropped,runStones,killStreak,lastKillTime;
 let pet={x:0,y:0,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
 let bossPet={x:0,y:0,angle:0,timer:0};
 
@@ -2092,7 +2170,7 @@ function initBattle(){
   gameTime=0;dt2=0;lastTs=0;enemySpawnTimer=0;pendingLvl=0;
   levelUpChoices=[];selectedChoice=-1;
   waveText='';waveTimer=0;lastWaveMin=-1;
-  runGold=0;runKills=0;runEquipsDropped=[];runStones=0;
+  runGold=0;runKills=0;runEquipsDropped=[];runStones=0;killStreak=0;lastKillTime=0;
   pet={x:player.x,y:player.y,state:'orbit',angle:0,target:null,timer:0,vy:0,hopT:0};
   bossPet={x:player.x,y:player.y,angle:0,timer:0};
   bState='playing';
@@ -2982,11 +3060,16 @@ function updateBattle(){
 
     if(e.hp<=0){
       spawnParticles2(e.x,e.y,'#fa0',e.isBoss?6:4);runKills++;
+      if(gameTime-lastKillTime<1.5){killStreak++;}else{killStreak=1;}
+      lastKillTime=gameTime;
+      if(killStreak===10)dmgPopups.push({x:player.x,y:player.y-80,text:'10 KILL STREAK! 🔥',life:2.5,maxLife:2.5,color:'#fa0',size:20});
+      else if(killStreak===50)dmgPopups.push({x:player.x,y:player.y-80,text:'50 COMBO! 💥',life:3,maxLife:3,color:'#f44',size:24});
+      else if(killStreak===100)dmgPopups.push({x:player.x,y:player.y-80,text:'100 COMBO!!! ⚡',life:3.5,maxLife:3.5,color:'#fc0',size:28});
       if(player.mainWeaponId&&save.weaponMemory[player.mainWeaponId])save.weaponMemory[player.mainWeaponId].kills++;
       deadFx.push({x:e.x,y:e.y,life:0.3,maxLife:0.3,sprite:e.isBoss?'boss_zombie':'enemy_'+e.typeId,radius:e.radius,color:e.color});
       // Armor-gold: +1 HP per kill
       if(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=4)player.hp=Math.min(player.maxHp,player.hp+1);
-      gems.push({x:e.x,y:e.y,radius:e.isBoss?8:5,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
+      gems.push({x:e.x,y:e.y,radius:e.isBoss?12:7,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
       // Coins: 3% normal, elite always, boss always
       const COIN_BY_TYPE={zombie:[0.15,1,3],skeleton:[0.2,2,4],armorZombie:[0.25,3,6],ghost:[0.2,2,5],demon:[0.3,5,10]};
       const ct=COIN_BY_TYPE[e.typeId];
@@ -3205,6 +3288,9 @@ function drawPlayer(){
   const ch=CHARS[player.charId];
   const sp=SPRITES['char_'+player.charId];
   const bob=playerMoving?Math.sin(gameTime*9)*3:0;
+  // Faint white glow around player
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  ctx.beginPath();ctx.arc(player.x,player.y+bob,player.radius+12,0,Math.PI*2);ctx.fill();
   if(sp){
     const sz=52;
     ctx.strokeStyle=ch.outline;ctx.lineWidth=2;ctx.globalAlpha=0.5;
@@ -3236,12 +3322,12 @@ function tileHash(tx,ty,salt){let h=(tx*73856093)^(ty*19349663)^((salt||0)*83492
 const MAP_RENDERERS={
   1:function(){
     const TS=120;
-    ctx.fillStyle='#2d5a27';ctx.fillRect(camera.x,camera.y,W,H);
+    ctx.fillStyle='#3a6a30';ctx.fillRect(camera.x,camera.y,W,H);
     const sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
     const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
     for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
       const h=tileHash(tx,ty,1);const wx=tx*TS,wy=ty*TS;
-      ctx.fillStyle=h<0.35?'#2d5a27':'#3a7a30';ctx.fillRect(wx,wy,TS,TS);
+      ctx.fillStyle=h<0.35?'#3a6a30':'#4a8a40';ctx.fillRect(wx,wy,TS,TS);
       // Grass tufts
       if(h>0.4&&h<0.55){ctx.fillStyle='#1f4a1c';ctx.fillRect(wx+12,wy+30,3,6);ctx.fillRect(wx+18,wy+34,3,5);ctx.fillRect(wx+50,wy+12,3,6);}
       // Tree
@@ -3260,12 +3346,12 @@ const MAP_RENDERERS={
   },
   2:function(){
     const TS=120;
-    ctx.fillStyle='#1a1a2e';ctx.fillRect(camera.x,camera.y,W,H);
+    ctx.fillStyle='#222240';ctx.fillRect(camera.x,camera.y,W,H);
     const sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
     const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
     for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
       const h=tileHash(tx,ty,2);const wx=tx*TS,wy=ty*TS;
-      ctx.fillStyle='#2a2a3e';ctx.fillRect(wx,wy,TS,TS);
+      ctx.fillStyle='#333350';ctx.fillRect(wx,wy,TS,TS);
       ctx.strokeStyle='#333355';ctx.lineWidth=1;ctx.strokeRect(wx+0.5,wy+0.5,TS-1,TS-1);
       // Cracks
       if(h>0.55&&h<0.7){ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.moveTo(wx+15,wy+20);ctx.lineTo(wx+45,wy+55);ctx.lineTo(wx+60,wy+40);ctx.stroke();}
@@ -3288,12 +3374,12 @@ const MAP_RENDERERS={
   },
   3:function(){
     const TS=120;
-    ctx.fillStyle='#3d0000';ctx.fillRect(camera.x,camera.y,W,H);
+    ctx.fillStyle='#4a1000';ctx.fillRect(camera.x,camera.y,W,H);
     const sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
     const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
     for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
       const h=tileHash(tx,ty,3);const wx=tx*TS,wy=ty*TS;
-      ctx.fillStyle='#5a1a00';ctx.fillRect(wx,wy,TS,TS);
+      ctx.fillStyle='#6a2a10';ctx.fillRect(wx,wy,TS,TS);
       ctx.fillStyle=h<0.4?'rgba(0,0,0,0.18)':'rgba(0,0,0,0)';ctx.fillRect(wx,wy,TS,TS);
       // Lava pool (animated)
       if(h>0.6&&h<0.78){const cx=wx+TS/2,cy=wy+TS/2;
@@ -3742,13 +3828,13 @@ function drawBattle(){
 function drawHUD(){
   const SL=94;
   // HP
-  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(SL+5,10,210,22);
-  ctx.fillStyle='#222';ctx.fillRect(SL+7,12,206,18);
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(SL+5,8,210,26);
+  ctx.fillStyle='#222';ctx.fillRect(SL+7,10,206,22);
   const hpR=player.hp/player.maxHp;
   ctx.fillStyle=hpR>.5?'#4f4':hpR>.25?'#fa0':'#f44';
-  ctx.fillRect(SL+7,12,206*hpR,18);
+  ctx.fillRect(SL+7,10,206*hpR,22);
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
-  ctx.fillText(`❤ ${Math.ceil(player.hp)}/${player.maxHp}`,SL+110,26);
+  ctx.fillText(`❤ ${Math.ceil(player.hp)}/${player.maxHp}`,SL+110,27);
   if(player.hp<player.maxHp*0.3){
     const da=Math.sin(Date.now()/150)>.3?1:0;
     if(da){ctx.fillStyle='rgba(255,0,0,0.15)';ctx.fillRect(0,0,W,H);}
