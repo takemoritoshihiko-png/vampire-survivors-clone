@@ -482,6 +482,7 @@ delete save.shopDaily;
 delete save.talents;
 if(!save.weaponMemory){save.weaponMemory={};for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer','lightChaserS','forceS','chaosBlade'])save.weaponMemory[id]={kills:0,unlocked:[]};}
 if(save.fusionStones===undefined)save.fusionStones=0;
+if(!save.artifacts)save.artifacts={created:[],equipped:null};
 if(!save.fusionBook)save.fusionBook={};
 if(!save.bossBox)save.bossBox=[];
 if(!save.equippedBoss)save.equippedBoss=null;
@@ -1580,11 +1581,12 @@ function renderCodex(p){
 let enhanceSub='Equipment';
 window.setEnhanceSub=function(s){enhanceSub=s;renderHome();};
 function renderEnhance(p){
-  const subs=['Equipment','Memory','Codex','BossBox'];
+  const subs=['Equipment','Artifacts','Memory','Codex','BossBox'];
   let h='<div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">';
   for(const s of subs)h+=`<button class="btn ${enhanceSub===s?'btn-orange':''}" style="padding:5px 12px;font-size:11px;background:${enhanceSub===s?'':'#333'}" onclick="setEnhanceSub('${s}')">${s}</button>`;
   h+='</div>';
   if(enhanceSub==='Equipment'){h+=renderEquipContent();}
+  else if(enhanceSub==='Artifacts'){h+=renderArtifactsContent();}
   else if(enhanceSub==='Memory'){h+=renderMemoryContent();}
   else if(enhanceSub==='Codex'){h+=renderCodexContent();}
   else if(enhanceSub==='BossBox'){h+=renderBossBoxContent();}
@@ -1593,6 +1595,64 @@ function renderEnhance(p){
 function renderEquipContent(){
   const _p={innerHTML:''};renderEquip(_p);return _p.innerHTML;
 }
+function renderArtifactsContent(){
+  let h='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:8px">⚡ Artifacts</div>';
+  const eq=save.artifacts.equipped;
+  h+=`<div style="text-align:center;font-size:12px;color:#aaa;margin-bottom:12px">Equipped: <b style="color:#fc0">${eq?ARTIFACTS[eq].icon+' '+ARTIFACTS[eq].name:'None'}</b> (1 slot)</div>`;
+  const mats=countArtifactMats();
+  h+='<div style="max-width:780px;margin:0 auto">';
+  for(const[id,a]of Object.entries(ARTIFACTS)){
+    const created=save.artifacts.created.includes(id);
+    const isEq=eq===id;
+    let canCreate=!created;
+    let matHtml='';
+    for(const[mk,need]of Object.entries(a.recipe)){
+      const have=mats[mk]||0;
+      if(have<need)canCreate=false;
+      const label=mk.replace('red_','Red ').replace('boss_any','Boss captures');
+      matHtml+=`<span style="color:${have>=need?'#0f0':'#f44'};font-size:10px">${label}: ${have}/${need}</span> `;
+    }
+    h+=`<div class="game-card" style="margin:8px 0;padding:12px;${isEq?'border-color:#fc0;box-shadow:0 0 14px rgba(255,200,0,.4)':''}${id==='ultimate'?';border-color:#a0f':''}">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:36px">${a.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;color:${id==='ultimate'?'#a0f':'#fc0'};font-weight:bold">${a.name}</div>
+          <div style="font-size:10px;color:#aaa;margin:2px 0">${a.desc}</div>
+          <div>${matHtml}</div>
+        </div>
+        <div style="text-align:right">
+          ${created?(isEq?`<button class="btn btn-red" style="padding:4px 12px;font-size:11px" onclick="equipArtifact(null)">解除</button>`:`<button class="btn btn-blue" style="padding:4px 12px;font-size:11px" onclick="equipArtifact('${id}')">装備</button>`)
+          :`<button class="btn ${canCreate?'btn-green':''}" style="padding:4px 12px;font-size:11px;background:${canCreate?'':'#444'}" ${canCreate?'':`disabled`} onclick="createArtifact('${id}')">作成</button>`}
+        </div>
+      </div>
+    </div>`;
+  }
+  h+='</div>';
+  return h;
+}
+window.equipArtifact=function(id){save.artifacts.equipped=id;saveSave();renderHome();};
+window.createArtifact=function(id){
+  const a=ARTIFACTS[id];if(!a||save.artifacts.created.includes(id))return;
+  const mats=countArtifactMats();
+  for(const[mk,need]of Object.entries(a.recipe)){if((mats[mk]||0)<need){flashMsg('Not enough materials');return;}}
+  // Consume materials
+  for(const[mk,need]of Object.entries(a.recipe)){
+    if(mk==='boss_any')continue; // don't consume bosses
+    if(mk==='red_weapon'){
+      // Remove N red weapons from weaponsOwned
+      let rem=need;const wids=Object.keys(save.weaponsOwned).filter(k=>save.weaponsOwned[k]==='red');
+      for(const w of wids){if(rem<=0)break;delete save.weaponsOwned[w];rem--;}
+    } else {
+      const slot=mk.replace('red_','');
+      let rem=need;
+      for(let i=save.equipment.length-1;i>=0&&rem>0;i--){
+        if(save.equipment[i].slot===slot&&save.equipment[i].rank==='red'){save.equipment.splice(i,1);rem--;}
+      }
+    }
+  }
+  save.artifacts.created.push(id);
+  saveSave();renderHome();SFX.evolution();flashRankUp('red');
+};
 function renderMemoryContent(){
   const _p={innerHTML:''};renderMemory(_p);return _p.innerHTML;
 }
@@ -2002,6 +2062,23 @@ const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
   frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'接触',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'XP×3, Spd+25%, 50dmg, 250px mag, 10s giant'}],
 };
+const ARTIFACTS={
+  axe:{name:'神器・斧',icon:'🪓',recipe:{red_weapon:3,red_gloves:1},desc:'Orbit axes + 10s giant axe throw'},
+  necklace:{name:'神器・ネックレス',icon:'📿',recipe:{red_necklace:5},desc:'HP+300, 150dmg taken → 10s invincible'},
+  gloves:{name:'神器・グローブ',icon:'🥊',recipe:{red_weapon:2,red_gloves:2},desc:'2min: 30s weapon 1.5× size'},
+  armor:{name:'神器・アーマー',icon:'🛡️',recipe:{red_armor:1,red_boots:1,red_belt:2},desc:'Touch enemies = 10dmg/s'},
+  boots:{name:'神器・靴',icon:'👟',recipe:{red_boots:6},desc:'Speed+30%, fire trail 5dmg/s'},
+  belt:{name:'神器・ベルト',icon:'🎗️',recipe:{red_belt:4},desc:'HP≤30 → heal 100 (2×/battle)'},
+  boss:{name:'神器・ボス',icon:'👾',recipe:{boss_any:10},desc:'Auto-attack 30dmg + 80r AoE 15dmg/s'},
+  ultimate:{name:'神器・究極',icon:'⚡',recipe:{red_weapon:5,red_armor:5,red_boots:5,red_belt:5,red_gloves:5,red_necklace:5},desc:'120r aura 20dmg/s + 10s ATK stack'},
+};
+function countArtifactMats(){
+  const ownedW=Object.values(save.weaponsOwned||{}).filter(r=>r==='red').length;
+  const c={red_weapon:ownedW};
+  for(const sl of['armor','boots','belt','gloves','necklace'])c['red_'+sl]=save.equipment.filter(e=>e.slot===sl&&e.rank==='red').length;
+  c.boss_any=(save.bossBox||[]).length;
+  return c;
+}
 const FUSION_RECIPES=[
   {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',sprite:'fusion_slash_bullet',desc:'Slash fires bullets + explode',color:'#fa8'},
   {a:'katana',b:'drill',id:'spiralBlade',name:'螺旋刀',sprite:'fusion_spiral_blade',desc:'Spinning slash, infinite pierce',color:'#caf'},
@@ -2100,6 +2177,10 @@ function initBattle(){
     player.might=player.baseMight;
   }
   player.mainWeaponId=mainW||null;
+  // Artifact buffs at battle start
+  const artId=save.artifacts?save.artifacts.equipped:null;
+  if(artId==='necklace'){player.maxHp+=300;player.hp+=300;}
+  if(artId==='boots'){player.baseSpeed=Math.floor(player.baseSpeed*1.3);player.speed=player.baseSpeed;}
   player.capturedThisRun=false;player.captureRewardPenalty=false;
   // Pet skill buffs
   const petId=save.selectedPet;
@@ -2680,6 +2761,66 @@ function updateBossPet(){
   }
 }
 
+/* Artifact effects */
+function updateArtifact(){
+  const aid=save.artifacts?save.artifacts.equipped:null;
+  if(!aid)return;
+  switch(aid){
+    case'axe':{
+      player._axeAng=(player._axeAng||0)+dt2*2;
+      for(let i=0;i<3;i++){const ang=player._axeAng+i*Math.PI*2/3;
+        const ax=player.x+Math.cos(ang)*70,ay=player.y+Math.sin(ang)*70;
+        for(const e of enemies)if(distXY(ax,ay,e.x,e.y)<22)e.hp-=40*dt2;
+      }
+      player._axeThrow=(player._axeThrow||0)+dt2;
+      if(player._axeThrow>=10){player._axeThrow=0;
+        const tgt=nearestEnemy();if(tgt){const ang=Math.atan2(tgt.y-player.y,tgt.x-player.x);
+          fireBullet({x:player.x,y:player.y,radius:14,vx:Math.cos(ang)*300,vy:Math.sin(ang)*300,damage:80*player.might,pierce:10,life:2,color:'#a63',wid:'artifact',kind:'pellet',angle:ang});}}
+      break;}
+    case'necklace':{
+      if(!player._nkDmgAccum)player._nkDmgAccum=0;
+      if(player._nkInvT>0){player._nkInvT-=dt2;player.invTimer=Math.max(player.invTimer,0.1);}
+      break;}
+    case'gloves':{
+      player._glvT=(player._glvT||0)+dt2;
+      if(player._glvT>=120){player._glvT=0;player._glvEnlarge=30;}
+      if(player._glvEnlarge>0){player._glvEnlarge-=dt2;player.weaponScale=1.5;}
+      else player.weaponScale=1.0;
+      break;}
+    case'armor':{
+      for(const e of enemies)if(dist2(e,player)<player.radius+e.radius+12)e.hp-=10*dt2;
+      break;}
+    case'boots':{
+      if(!player._fireTrails)player._fireTrails=[];
+      player._fireTrails.push({x:player.x,y:player.y,life:2});
+      for(let i=player._fireTrails.length-1;i>=0;i--){
+        const f=player._fireTrails[i];f.life-=dt2;
+        if(f.life<=0){player._fireTrails.splice(i,1);continue;}
+        for(const e of enemies)if(distXY(f.x,f.y,e.x,e.y)<25)e.hp-=5*dt2;
+      }
+      if(player._fireTrails.length>200)player._fireTrails.splice(0,player._fireTrails.length-200);
+      break;}
+    case'belt':{
+      if(player._beltCharges===undefined)player._beltCharges=2;
+      if(player.hp<=30&&player._beltCharges>0){player.hp=Math.min(player.maxHp,player.hp+100);player._beltCharges--;
+        dmgPopups.push({x:player.x,y:player.y-40,text:'💊 緊急回復!',life:2,maxLife:2,color:'#4f4',size:20});levelUpFlash=0.3;}
+      break;}
+    case'boss':{
+      player._bossAtkT=(player._bossAtkT||0)+dt2;
+      if(player._bossAtkT>=1.5){player._bossAtkT=0;const tgt=nearestEnemy();if(tgt){applyDmg(tgt,30,'artifact');}}
+      for(const e of enemies)if(dist2(e,player)<80+e.radius)e.hp-=15*dt2;
+      break;}
+    case'ultimate':{
+      for(const e of enemies)if(dist2(e,player)<120+e.radius)e.hp-=20*dt2;
+      player._ultAtkT=(player._ultAtkT||0)+dt2;
+      if(player._ultAtkT>=10){player._ultAtkT=0;
+        player._ultStacks=Math.min((player._ultStacks||0)+1,10);
+        player.might=player.baseMight*(1+player._ultStacks*0.10);
+        dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ ATK×'+(1+player._ultStacks*0.1).toFixed(1),life:2,maxLife:2,color:'#fc0',size:18});}
+      break;}
+  }
+}
+
 /* Pet logic */
 function updatePet(){
   if(save.selectedPet==='hachiko'&&save.pets.hachiko.unlocked){
@@ -2954,7 +3095,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
-  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();
+  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
 
   // Spawn
   const tf=Math.min(gameTime/clearTime,1);
@@ -3139,6 +3280,7 @@ function updateBattle(){
     if(dist2(e,player)<e.radius+player.radius&&player.invTimer<=0){
       let dmg=e.damage-player.armor;dmg*=(1-player.knightReduction);if(dmg<1)dmg=1;
       player.hp-=dmg;
+      if(save.artifacts&&save.artifacts.equipped==='necklace'){player._nkDmgAccum=(player._nkDmgAccum||0)+dmg;if(player._nkDmgAccum>=150){player._nkDmgAccum=0;player._nkInvT=10;dmgPopups.push({x:player.x,y:player.y-50,text:'📿 INVINCIBLE!',life:2,maxLife:2,color:'#0ff',size:20});}}
       // Armor-blue: 2s i-frames
       player.invTimer=(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=2)?2:.5;
       spawnParticles2(player.x,player.y,'#f44',4);
@@ -3820,6 +3962,31 @@ function drawBattle(){
       ctx.font=(isGiant?'48':'24')+'px serif';ctx.textAlign='center';
       ctx.fillText(pi.icon,pet.x,py2+(isGiant?16:8));
     }
+  }
+
+  // Artifact visual effects
+  const artEq=save.artifacts?save.artifacts.equipped:null;
+  if(artEq==='axe'){
+    const aa=player._axeAng||0;
+    for(let i=0;i<3;i++){const ang=aa+i*Math.PI*2/3;
+      const ax=player.x+Math.cos(ang)*70,ay=player.y+Math.sin(ang)*70;
+      ctx.save();ctx.translate(ax,ay);ctx.rotate(ang*2);
+      ctx.fillStyle='#a63';ctx.fillRect(-8,-12,16,24);ctx.fillRect(-12,-14,24,6);
+      ctx.restore();
+    }
+  }
+  if(artEq==='boots'&&player._fireTrails){
+    for(const f of player._fireTrails){
+      const a=Math.min(1,f.life);
+      ctx.fillStyle=`rgba(255,100,0,${a*0.3})`;ctx.beginPath();ctx.arc(f.x,f.y,12,0,Math.PI*2);ctx.fill();
+    }
+  }
+  if(artEq==='ultimate'){
+    ctx.fillStyle='rgba(255,200,0,0.06)';ctx.beginPath();ctx.arc(player.x,player.y,120,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,200,0,0.2)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(player.x,player.y,120+Math.sin(gameTime*3)*5,0,Math.PI*2);ctx.stroke();
+  }
+  if(artEq==='armor'){
+    ctx.strokeStyle='rgba(100,180,255,0.15)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(player.x,player.y,player.radius+14,0,Math.PI*2);ctx.stroke();
   }
 
   drawPlayer();
