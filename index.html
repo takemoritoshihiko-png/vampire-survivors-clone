@@ -797,6 +797,42 @@ function renderChars(p){
       </div>
     </div>`;
   }
+  // Boss / Pet companion slot
+  h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">👾 ボス / 🐾 ペット（どちらか1つ）</div>`;
+  if(save.equippedBoss){
+    const ebd=BOSS_DEFS[save.equippedBoss];
+    const ebb=save.bossBox.find(b=>b.key===save.equippedBoss);
+    const bsk=BOSS_SKILLS[save.equippedBoss]||[];
+    const starN=bsk.filter(s=>(ebb&&ebb.unlocked||[]).includes(s.k)).length;
+    h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="game-card" style="width:280px;text-align:center;padding:14px;margin:0;border-color:${ebd?ebd.outline||ebd.color:'#888'}">
+        <div style="font-size:36px">👾</div>
+        <div style="font-size:14px;color:${ebd?ebd.outline:'#fff'};font-weight:bold;margin-top:4px">${ebd?ebd.name:'???'}</div>
+        <div style="font-size:12px;color:#fc0;margin-top:2px">${'★'.repeat(starN)}${'☆'.repeat(5-starN)}</div>
+        <button class="btn btn-blue" style="margin-top:8px;padding:5px 16px;font-size:12px" onclick="currentTab='BossBox';renderHome()">変更する</button>
+      </div>
+    </div>`;
+  } else if(save.selectedPet){
+    const pd=PET_DEFS[save.selectedPet];
+    h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="game-card" style="width:280px;text-align:center;padding:14px;margin:0;border-color:${pd?pd.color:'#888'}">
+        <div style="font-size:36px">${pd?pd.icon:'🐾'}</div>
+        <div style="font-size:14px;color:${pd?pd.color:'#fff'};font-weight:bold;margin-top:4px">${pd?pd.name:'ペット'}</div>
+        <button class="btn btn-blue" style="margin-top:8px;padding:5px 16px;font-size:12px" onclick="currentTab='Pets';renderHome()">変更する</button>
+      </div>
+    </div>`;
+  } else {
+    h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="game-card" style="width:280px;text-align:center;padding:14px;margin:0;border-color:#444;opacity:.6">
+        <div style="font-size:36px;opacity:.4">👾 / 🐾</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">ボスかペットを装備</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+          <button class="btn btn-purple" style="padding:5px 14px;font-size:11px" onclick="currentTab='BossBox';renderHome()">👾 ボス</button>
+          <button class="btn btn-green" style="padding:5px 14px;font-size:11px" onclick="currentTab='Pets';renderHome()">🐾 ペット</button>
+        </div>
+      </div>
+    </div>`;
+  }
   p.innerHTML=h;
 }
 
@@ -1882,9 +1918,7 @@ const WEAPON_MEMORY={
 const BOSS_SKILLS={
   giantZombie:[{k:100,n:'腐敗オーラ',d:'AoE DoT'},{k:300,n:'突進',d:'3s charge'},{k:700,n:'毒液',d:'Poison atk'},{k:1500,n:'再生',d:'Kill→HP'},{k:3000,n:'腐敗爆発',d:'10s mega AoE'}],
   skeletonKing:[{k:100,n:'骨投げ',d:'Ranged atk'},{k:300,n:'骨の盾',d:'DMG-10%'},{k:700,n:'骨召喚',d:'Summon 2'},{k:1500,n:'死の宣告',d:'Random execute'},{k:3000,n:'骨嵐',d:'Screen bones'}],
-  armorLord:[{k:100,n:'鉄壁',d:'Armor+5'},{k:300,n:'叩きつけ',d:'AoE slam'},{k:700,n:'鎧の輝き',d:'Stun nearby'},{k:1500,n:'無敵化',d:'5s invuln'},{k:3000,n:'鎧爆発',d:'30s shockwave'}],
   demonKing:[{k:100,n:'炎翼',d:'Fire aura'},{k:300,n:'魔弾',d:'Rapid fire'},{k:700,n:'恐怖',d:'Slow-20%'},{k:1500,n:'魔力爆発',d:'5s blast'},{k:3000,n:'地獄門',d:'Fire pillars'}],
-  finalBoss:[{k:100,n:'全属性',d:'All types'},{k:300,n:'時間加速',d:'2× atk spd'},{k:700,n:'次元斬',d:'Huge pierce slash'},{k:1500,n:'世界の意志',d:'Halve all HP'},{k:3000,n:'創世',d:'Start at Lv2'}],
 };
 const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
@@ -1991,7 +2025,7 @@ function initBattle(){
     player.might=player.baseMight;
   }
   player.mainWeaponId=mainW||null;
-  player.capturedThisRun=false;
+  player.capturedThisRun=false;player.captureRewardPenalty=false;
   // Pet skill buffs
   const petId=save.selectedPet;
   const pk=save.petKills[petId]||0;
@@ -2963,11 +2997,15 @@ function updateBattle(){
         bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
         save.fusionStones=(save.fusionStones||0)+(e.bossKey==='finalBoss'?3:1);
         runStones+=(e.bossKey==='finalBoss'?3:1);
-        // Boss capture: 10% chance, max 1 per run
-        if(!player.capturedThisRun&&e.bossKey&&Math.random()<0.10){
+        // Boss capture: final bosses only, 10% chance, max 1 per run
+        const CAPTURABLE_BOSSES={1:'giantZombie',2:'skeletonKing',3:'demonKing'};
+        const chapterFinal=CAPTURABLE_BOSSES[save.selectedChapter];
+        if(!player.capturedThisRun&&e.bossKey===chapterFinal&&Math.random()<0.10){
           player.capturedThisRun=true;
           if(!save.bossBox.find(b=>b.key===e.bossKey))save.bossBox.push({key:e.bossKey,kills:0,unlocked:[]});
           dmgPopups.push({x:e.x,y:e.y-40,text:'⚡ BOSS CAPTURED!',life:3,maxLife:3,color:'#fc0',size:28});
+          dmgPopups.push({x:e.x,y:e.y-10,text:'報酬 -50%',life:2.5,maxLife:2.5,color:'#f44',size:16});
+          player.captureRewardPenalty=true;
           levelUpFlash=0.4;
           saveSave();
         }
@@ -4041,6 +4079,7 @@ function battleLoop(ts){
 }
 
 function endBattle(cleared,bossWin){
+  if(player.captureRewardPenalty)runGold=Math.floor(runGold*0.5);
   save.coins+=runGold;
   // Check weapon memory unlocks
   if(player.mainWeaponId&&save.weaponMemory[player.mainWeaponId]){
