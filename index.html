@@ -2041,7 +2041,7 @@ const BOSS_SKILLS={
 };
 const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
-  frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'毒皮膚',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'Speed+25%, 30dmg, 1min giant'}],
+  frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'接触',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'Speed+25%, 30dmg, 1min giant'}],
 };
 const FUSION_RECIPES=[
   {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',sprite:'fusion_slash_bullet',desc:'Slash fires bullets + explode',color:'#fa8'},
@@ -2791,13 +2791,12 @@ function updatePet(){
         while(player.xp>=player.xpToNext){player.xp-=player.xpToNext;player.level++;player.xpToNext=Math.floor(player.xpToNext*1.25)+8;pendingLvl++;}
       }
     }
-    // Toxic skin: damage enemies touching frog
+    // Contact damage: simple touch damage (no poison)
     if(hasToxic){
       const dmgPerSec=hasSuper?30:10;
       for(const e of enemies){
         if(distXY(pet.x,pet.y,e.x,e.y)<petSz+e.radius){
           e.hp-=dmgPerSec*dt2;
-          if(Math.random()<0.15)spawnParticles2(e.x,e.y,'#4f4',1);
         }
       }
     }
