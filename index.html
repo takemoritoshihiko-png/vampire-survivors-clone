@@ -556,10 +556,11 @@ const CHAPTER_DEFS={
 
 /* Boss schedule (game time → boss key) */
 /* Per-chapter boss schedule (times in seconds, gameTime is in seconds) */
+/* Boss schedule: one final boss per chapter, no mini-bosses (gameTime is seconds) */
 const BOSS_SCHEDULE={
-  1:[{time:150,key:'armorLord'},{time:270,key:'giantZombie',final:true}],
-  2:[{time:180,key:'armorLord'},{time:330,key:'demonKing'},{time:450,key:'skeletonKing',final:true}],
-  3:[{time:180,key:'armorLord'},{time:360,key:'skeletonKing'},{time:570,key:'demonKing',final:true}],
+  1:[{time:270,key:'giantZombie',final:true}],
+  2:[{time:450,key:'skeletonKing',final:true}],
+  3:[{time:570,key:'demonKing',final:true}],
 };
 const BOSS_DEFS={
   giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:5000,speed:30,damage:30,xp:160,outline:'#0f0'},
