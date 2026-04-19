@@ -215,10 +215,9 @@ const SPRITE_FILES={
   fusion_collapse_sword:'assets/fusion_collapse_sword.png',fusion_chaos_slash:'assets/fusion_chaos_slash.png',
   fusion_drill_bullet:'assets/fusion_drill_bullet.png',fusion_bomb:'assets/fusion_bomb.png',
   fusion_gravity_shot:'assets/fusion_gravity_shot.png',fusion_light_drill:'assets/fusion_light_drill.png',
-  fusion_photon_collapse:'assets/fusion_photon_collapse.png',fusion_light_chaos:'assets/fusion_light_chaos.png',
   fusion_universe_will:'assets/fusion_universe_will.png',fusion_final_chaos:'assets/fusion_final_chaos.png',
   fusion_rotating_ball:'assets/fusion_rotating_ball.png',fusion_gravity_ball:'assets/fusion_gravity_ball.png',
-  fusion_collapse_drill:'assets/fusion_collapse_drill.png',fusion_chaos_spiral:'assets/fusion_chaos_spiral.png',
+  fusion_chaos_spiral:'assets/fusion_chaos_spiral.png',
   fusion_cursed_ball:'assets/fusion_cursed_ball.png',fusion_hellfire:'assets/fusion_hellfire.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
@@ -2995,7 +2994,7 @@ function pickChoices(){
       }}];
     selectedChoice=-1;return;
   }
-  const ch=[];
+  let ch=[];
   // Skill ★UP (sub-skills + main weapon)
   for(const w of player.weapons){
     const d=WEAPON_DEFS[w.id];
