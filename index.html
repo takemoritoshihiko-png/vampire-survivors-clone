@@ -475,11 +475,11 @@ const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
 const RANK_PERCENT={
-  armor:{gray:8,green:18,blue:32,purple:52,gold:80,red:120},
-  boots:{gray:4,green:10,blue:18,purple:28,gold:42,red:60},
-  belt:{gray:6,green:14,blue:24,purple:38,gold:56,red:85},
-  gloves:{gray:3,green:7,blue:12,purple:20,gold:30,red:45},
-  necklace:{gray:3,green:7,blue:12,purple:20,gold:30,red:45},
+  armor:{gray:6,green:12,blue:20,purple:32,gold:50,red:75},
+  boots:{gray:3,green:7,blue:12,purple:20,gold:32,red:48},
+  belt:{gray:4,green:9,blue:16,purple:26,gold:40,red:60},
+  gloves:{gray:2,green:5,blue:8,purple:14,gold:22,red:33},
+  necklace:{gray:2,green:5,blue:8,purple:14,gold:22,red:33},
 };
 const RANK_LEVEL_MAX={gray:10,green:15,blue:20,purple:25,gold:30,red:40};
 const SUB_MAX={gray:0,green:0,blue:0,purple:2,gold:3,red:0};
@@ -507,11 +507,11 @@ const SLOT_ICONS={armor:'🛡️',boots:'👟',belt:'🎗️',gloves:'🧤',neck
 const SLOT_EFFECTS={armor:'MaxHP',boots:'Speed',belt:'XP Gain',gloves:'Crit%',necklace:'CD Reduce'};
 
 const CHARS={
-  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:70,baseHp:80,
+  common:{name:'Common',icon:'🧑',desc:'Balanced fighter',initWeapon:'kunai',baseAtk:50,baseHp:60,
     skill:'5% double coin drop',color:'#4af',outline:'#f80',letter:'C'},
-  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:90,baseHp:65,
+  archer:{name:'Archer',icon:'🏹',desc:'Long range expert',initWeapon:'bow',baseAtk:65,baseHp:50,
     skill:'Bow range +30%',cost:500,color:'#0a0',outline:'#0f0',letter:'A'},
-  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:55,baseHp:120,
+  knight:{name:'Knight',icon:'🛡️',desc:'Tanky melee',initWeapon:'sword',baseAtk:40,baseHp:90,
     skill:'Damage taken -15%',cost:1000,color:'#c22',outline:'#f44',letter:'K'},
 };
 
@@ -631,7 +631,7 @@ function calcPower(){
   if(mw&&save.weaponsOwned[mw]){
     const mwR=save.weaponsOwned[mw];
     const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
-    const rankAtk={gray:0.08,green:0.18,blue:0.32,purple:0.52,gold:0.80,red:1.20}[mwR]||0;
+    const rankAtk={gray:0.06,green:0.12,blue:0.20,purple:0.32,gold:0.50,red:0.75}[mwR]||0;
     atk*=(1+rankAtk)*(1+(mwLv-1)*0.02);
     const flat={gray:50,green:150,blue:300,purple:600,gold:1200,red:2500}[mwR]||0;
     bonus+=flat+mwLv*20;
@@ -678,12 +678,12 @@ window.claimAchievement=function(key){
 const tabs=['Characters','Equipment','Gacha','Talents','Pets','Chapters','Daily','Records'];
 
 const TALENT_DEFS={
-  atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${l*4}% ATK`},
-  hp:{name:'MaxHP',icon:'❤️',color:'#f88',desc:l=>`+${l*4}% MaxHP`},
-  speed:{name:'Speed',icon:'👟',color:'#8ff',desc:l=>`+${l*2}% Speed`},
-  coin:{name:'Coin Drop',icon:'💰',color:'#fc0',desc:l=>`+${l*10}% drop rate`},
-  xp:{name:'XP Gain',icon:'⭐',color:'#0af',desc:l=>`+${l*6}% XP`},
-  cd:{name:'Cooldown',icon:'⏱️',color:'#0ff',desc:l=>`-${l*4}% all CD`},
+  atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*1.5).toFixed(1)}% ATK`},
+  hp:{name:'MaxHP',icon:'❤️',color:'#f88',desc:l=>`+${(l*1.5).toFixed(1)}% MaxHP`},
+  speed:{name:'Speed',icon:'👟',color:'#8ff',desc:l=>`+${(l*0.8).toFixed(1)}% Speed`},
+  coin:{name:'Coin Drop',icon:'💰',color:'#fc0',desc:l=>`+${l*5}% drop rate`},
+  xp:{name:'XP Gain',icon:'⭐',color:'#0af',desc:l=>`+${l*3}% XP`},
+  cd:{name:'Cooldown',icon:'⏱️',color:'#0ff',desc:l=>`-${(l*1.5).toFixed(1)}% all CD`},
 };
 const TALENT_MAX_LV=10;
 function talentCost(lv){return Math.floor(50*Math.pow(2,lv));}
@@ -763,7 +763,7 @@ function renderChars(p){
   const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
   const mwIsS=wd&&wd.tier==='S';
   const mwSrc=wd&&wd.sprite?`assets/${wd.sprite}.png`:null;
-  const rankAtk={gray:8,green:18,blue:32,purple:52,gold:80,red:120}[mwRank]||0;
+  const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[mwRank]||0;
   const finalAtk=Math.round(rankAtk*(1+(mwLv-1)*0.02));
   if(wd&&isOwned){
     h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
@@ -802,7 +802,7 @@ window.openWeaponPicker=function(){
     const isS=d.tier==='S';
     const sel=save.selectedWeapon===id;
     const src=d.sprite?`assets/${d.sprite}.png`:null;
-    const rankAtk={gray:8,green:18,blue:32,purple:52,gold:80,red:120}[r]||0;
+    const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[r]||0;
     const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
     const evo=EVOLUTIONS.find(e=>e.weapon===id);
     inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -926,7 +926,7 @@ function renderInventoryTab(){
         const isS=d.tier==='S';
         const sel=save.selectedWeapon===id;
         const src=d.sprite?`assets/${d.sprite}.png`:null;
-        const rankAtk={gray:8,green:18,blue:32,purple:52,gold:80,red:120}[r]||0;
+        const rankAtk={gray:6,green:12,blue:20,purple:32,gold:50,red:75}[r]||0;
         const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
         const evo=EVOLUTIONS.find(e=>e.weapon===id);
         h+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.6)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -1167,15 +1167,15 @@ function renderGacha(p){
   };
   let h=`<div style="text-align:center">
     <h3 style="color:#4af">📦 Normal Gacha</h3>
-    <p style="font-size:11px;color:#aaa;margin:6px 0">Gray 50% | Green 30% | Blue 15% | Purple 4% | Gold 1%</p>
-    <button class="btn btn-blue" onclick="doGacha('normal',1)" style="margin:6px">1× Pull (100💰)</button>
-    <button class="btn btn-blue" onclick="doGacha('normal',10)" style="margin:6px">10× Pull (500💰)</button>
+    <p style="font-size:11px;color:#aaa;margin:6px 0">Gray 60% | Green 25% | Blue 10% | Purple 4% | Gold 0.8% | Red 0.2%</p>
+    <button class="btn btn-blue" onclick="doGacha('normal',1)" style="margin:6px">1× Pull (150💰)</button>
+    <button class="btn btn-blue" onclick="doGacha('normal',10)" style="margin:6px">10× Pull (1200💰)</button>
     <h3 style="color:#c6f;margin-top:18px">✨ S-Rank Gacha</h3>
-    <p style="font-size:11px;color:#aaa;margin:6px 0">Purple 40% | Gold 40% | Red 20%</p>
-    <p style="font-size:13px;color:#fa0;margin:8px 0">🎯 Pity: <b style="color:#f44">${save.sgachaPity}/50</b> → Red Guaranteed</p>
-    <div class="bar-bg" style="max-width:300px;margin:0 auto"><div class="bar-fill" style="width:${(save.sgachaPity/50)*100}%;background:linear-gradient(90deg,#a0f,#f44)"></div></div>
-    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:10px">1× Pull (300💰)</button>
-    <button class="btn btn-purple" onclick="doGacha('s',10)" style="margin:6px">10× Pull (2680💰)</button>
+    <p style="font-size:11px;color:#aaa;margin:6px 0">Purple 50% | Gold 35% | Red 15%</p>
+    <p style="font-size:13px;color:#fa0;margin:8px 0">🎯 Pity: <b style="color:#f44">${save.sgachaPity}/100</b> → Red Guaranteed</p>
+    <div class="bar-bg" style="max-width:300px;margin:0 auto"><div class="bar-fill" style="width:${(save.sgachaPity/100)*100}%;background:linear-gradient(90deg,#a0f,#f44)"></div></div>
+    <button class="btn btn-purple" onclick="doGacha('s',1)" style="margin:10px">1× Pull (500💰)</button>
+    <button class="btn btn-purple" onclick="doGacha('s',10)" style="margin:6px">10× Pull (4500💰)</button>
     <p style="font-size:11px;color:#888;margin-top:14px">Total pulls: ${save.gachaTotal}</p>
 
     <div style="margin-top:14px">
@@ -1252,7 +1252,7 @@ function _gachaResult(rank,gachaType){
   else pool=NORMAL_WEAPONS;
   if(rank==='red'&&gachaType==='s'){
     // 70% normal red weapon, 30% S-weapon
-    if(Math.random()<0.30){
+    if(Math.random()<0.20){
       const sw=S_WEAPONS[Math.floor(Math.random()*S_WEAPONS.length)];
       // S-rank prob: 40% lcS, 40% forceS, 20% chaos — roll again
       const r=Math.random();
@@ -1260,7 +1260,7 @@ function _gachaResult(rank,gachaType){
       return _grantWeapon(swPick,'red');
     }
   }
-  if(pool&&Math.random()<0.30){
+  if(pool&&Math.random()<0.20){
     const wid=pool[Math.floor(Math.random()*pool.length)];
     return _grantWeapon(wid,rank);
   }
@@ -1272,7 +1272,7 @@ function _gachaResult(rank,gachaType){
   return {kind:'equip',eq,rank};
 }
 window.doGacha=function(type,count){
-  const cost=type==='normal'?(count===1?80:400):(count===1?250:2200);
+  const cost=type==='normal'?(count===1?150:1200):(count===1?500:4500);
   if(save.coins<cost){flashMsg('Not enough coins!');return;}
   if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
   save.coins-=cost;
@@ -1282,11 +1282,11 @@ window.doGacha=function(type,count){
     let rank;
     if(type==='normal'){
       const r=Math.random();
-      rank=r<0.50?'gray':r<0.80?'green':r<0.95?'blue':r<0.99?'purple':'gold';
+      rank=r<0.60?'gray':r<0.85?'green':r<0.95?'blue':r<0.99?'purple':r<0.998?'gold':'red';
     }else{
       save.sgachaPity++;
-      if(save.sgachaPity>=50){rank='red';save.sgachaPity=0;}
-      else{const r=Math.random();rank=r<0.40?'purple':r<0.80?'gold':'red';if(rank==='red')save.sgachaPity=0;}
+      if(save.sgachaPity>=100){rank='red';save.sgachaPity=0;}
+      else{const r=Math.random();rank=r<0.50?'purple':r<0.85?'gold':'red';if(rank==='red')save.sgachaPity=0;}
     }
     const res=_gachaResult(rank,type);
     results.push(res);
@@ -1768,8 +1768,8 @@ function initBattle(){
         cdBonus=getEquippedBonus('CD Reduce'),critBonus=getEquippedBonus('Crit%'),xpBonus=getEquippedBonus('XP Gain');
 
   const tal=save.talents||{};
-  const tAtk=(tal.atk||0)*0.04,tHp=(tal.hp||0)*0.04,tSpd=(tal.speed||0)*0.02,
-        tCoin=(tal.coin||0)*0.10,tXp=(tal.xp||0)*0.06,tCd=(tal.cd||0)*0.04;
+  const tAtk=(tal.atk||0)*0.015,tHp=(tal.hp||0)*0.015,tSpd=(tal.speed||0)*0.008,
+        tCoin=(tal.coin||0)*0.05,tXp=(tal.xp||0)*0.03,tCd=(tal.cd||0)*0.015;
   const baseHp=Math.floor(ch.baseHp*(1+(cd.lv-1)*0.05)*(1+hpBonus/100)*(1+tHp));
   const baseSpd=Math.floor(200*(1+spdBonus/100)*(1+tSpd));
   const charAtkMult=ch.baseAtk/100; // common=1.0, archer=1.3, knight=0.8
@@ -1781,7 +1781,7 @@ function initBattle(){
     level:1,xp:0,xpToNext:8,
     baseMight,might:baseMight,
     armor:0,baseCdReduction:cdBonus/100+tCd,cdReduction:cdBonus/100+tCd,
-    magnetRange:100,hpRegen:0.1,
+    magnetRange:100,hpRegen:0.05,
     invTimer:0,
     weapons:[],passives:[],
     charId:save.selectedChar,
@@ -1801,7 +1801,7 @@ function initBattle(){
   if(mainW){
     const mwRank=save.weaponsOwned[mainW]||'gray';
     const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
-    const mwRankBonus={gray:0.08,green:0.18,blue:0.32,purple:0.52,gold:0.80,red:1.20}[mwRank]||0;
+    const mwRankBonus={gray:0.06,green:0.12,blue:0.20,purple:0.32,gold:0.50,red:0.75}[mwRank]||0;
     const mwLvBonus=(mwLv-1)*0.02;
     player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
     player.might=player.baseMight;
