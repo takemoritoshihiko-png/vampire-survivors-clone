@@ -2179,8 +2179,17 @@ function initBattle(){
   player.mainWeaponId=mainW||null;
   // Artifact buffs at battle start
   const artId=save.artifacts?save.artifacts.equipped:null;
-  if(artId==='necklace'){player.maxHp+=300;player.hp+=300;}
-  if(artId==='boots'){player.baseSpeed=Math.floor(player.baseSpeed*1.3);player.speed=player.baseSpeed;}
+  if(artId){
+    // All artifacts: +30% to primary stat + special effect
+    if(artId==='axe'){player.baseMight*=1.3;player.might=player.baseMight;}
+    if(artId==='necklace'){player.maxHp=Math.floor(player.maxHp*1.3)+300;player.hp=player.maxHp;}
+    if(artId==='gloves'){player.baseMight*=1.3;player.might=player.baseMight;}
+    if(artId==='armor'){player.maxHp=Math.floor(player.maxHp*1.3);player.hp=player.maxHp;}
+    if(artId==='boots'){player.baseSpeed=Math.floor(player.baseSpeed*1.3);player.speed=player.baseSpeed;}
+    if(artId==='belt'){player.maxHp=Math.floor(player.maxHp*1.3);player.hp=player.maxHp;}
+    if(artId==='boss'){player.baseMight*=1.3;player.might=player.baseMight;}
+    if(artId==='ultimate'){player.baseMight*=1.3;player.might=player.baseMight;player.maxHp=Math.floor(player.maxHp*1.3);player.hp=player.maxHp;}
+  }
   player.capturedThisRun=false;player.captureRewardPenalty=false;
   // Pet skill buffs
   const petId=save.selectedPet;
