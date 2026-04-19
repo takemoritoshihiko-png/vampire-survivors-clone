@@ -959,19 +959,80 @@ function renderEquip(p){
   h+='</div>';
 
   // Sub-tab bar
-  const subTabs=['Inventory','Merge','Astral','Artifact'];
-  h+='<div style="display:flex;gap:4px;justify-content:center;margin:12px 0 8px">';
-  for(const t of subTabs)h+=`<button class="btn ${equipSubTab===t?'btn-orange':''}" style="padding:5px 14px;font-size:12px;background:${equipSubTab===t?'':'#333'}" onclick="setEquipTab('${t}')">${t}</button>`;
+  const subTabs=['Inventory','Merge','Astral','Artifact','Fusion'];
+  h+='<div style="display:flex;gap:4px;justify-content:center;margin:12px 0 8px;flex-wrap:wrap">';
+  for(const t of subTabs)h+=`<button class="btn ${equipSubTab===t?'btn-orange':''}" style="padding:5px 12px;font-size:11px;background:${equipSubTab===t?'':'#333'}" onclick="setEquipTab('${t}')">${t}</button>`;
   h+='</div>';
 
   if(equipSubTab==='Inventory')h+=renderInventoryTab();
   else if(equipSubTab==='Merge')h+=renderMergeTab();
   else if(equipSubTab==='Astral')h+=renderAstralTab();
   else if(equipSubTab==='Artifact')h+=renderArtifactsContent();
+  else if(equipSubTab==='Fusion')h+=renderFusionTab();
 
   p.innerHTML=h;
 }
 window.setEquipTab=function(t){equipSubTab=t;renderHome();};
+
+function renderFusionTab(){
+  let h=`<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:6px">⚗️ Weapon Fusion</div>`;
+  h+=`<div style="text-align:center;font-size:12px;color:#aaa;margin-bottom:12px">⚗️ 融合石: <b style="color:#fc0">${save.fusionStones||0}</b> | 発見: <b style="color:#0f0">${Object.keys(save.fusionBook||{}).length}</b>/${FUSION_RECIPES.length}</div>`;
+  h+='<div style="max-width:780px;margin:0 auto">';
+  const wItems=save.weaponItems||[];
+  for(const r of FUSION_RECIPES){
+    const da=WEAPON_DEFS[r.a],db=WEAPON_DEFS[r.b];
+    const discovered=save.fusionBook&&save.fusionBook[r.id];
+    // Check materials: need at least 1 weaponItem of each type
+    const hasA=wItems.some(w=>w.weaponId===r.a);
+    const hasB=wItems.some(w=>w.weaponId===r.b);
+    const hasStone=(save.fusionStones||0)>=1;
+    const canFuse=hasA&&hasB&&hasStone;
+    const src=r.sprite?`assets/${r.sprite}.png`:null;
+    h+=`<div class="game-card" style="margin:8px 0;padding:12px;${r.legendary?'border-color:#fc0;border-width:2px':''}">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="min-width:56px;text-align:center">
+          ${discovered&&src?`<img src="${src}" width="56" height="56" style="object-fit:contain;image-rendering:pixelated" onerror="this.outerHTML='<div style=font-size:36px>⚗️</div>'">`:'<div style="font-size:36px">⚗️</div>'}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;color:${r.color||'#fa0'};font-weight:bold">${r.legendary?'⚡ ':''}${discovered?r.name:'???'}</div>
+          <div style="font-size:11px;color:#aaa;margin:2px 0">${r.desc}</div>
+          <div style="display:flex;gap:8px;font-size:11px;margin-top:4px">
+            <span style="color:${hasA?'#0f0':'#f44'}">${da?da.icon+' '+da.name:'?'} ${hasA?'✓':'✗'}</span>
+            <span style="color:#888">+</span>
+            <span style="color:${hasB?'#0f0':'#f44'}">${db?db.icon+' '+db.name:'?'} ${hasB?'✓':'✗'}</span>
+            <span style="color:#888">+</span>
+            <span style="color:${hasStone?'#0f0':'#f44'}">⚗️×1 ${hasStone?'✓':'✗'}</span>
+          </div>
+        </div>
+        <div>
+          ${discovered?'<span style="color:#0f0;font-size:11px;font-weight:bold">✅ 発見済み</span>'
+          :`<button class="btn ${canFuse?'btn-green':''}" style="padding:6px 14px;font-size:12px;${canFuse?'animation:gold-shine 2s infinite':'background:#444'}" ${canFuse?'':'disabled'} onclick="doFusion('${r.id}')">⚗️ 融合</button>`}
+        </div>
+      </div>
+    </div>`;
+  }
+  h+='</div>';
+  return h;
+}
+
+window.doFusion=function(recipeId){
+  const r=FUSION_RECIPES.find(x=>x.id===recipeId);if(!r)return;
+  const wItems=save.weaponItems||[];
+  const idxA=wItems.findIndex(w=>w.weaponId===r.a);
+  const idxB=wItems.findIndex(w=>w.weaponId===r.b);
+  if(idxA<0||idxB<0||(save.fusionStones||0)<1){flashMsg('素材不足');return;}
+  // Consume (remove B first if idxB>idxA to keep indices stable)
+  if(idxB>idxA){wItems.splice(idxB,1);wItems.splice(idxA,1);}
+  else{wItems.splice(idxA,1);wItems.splice(idxB,1);}
+  save.fusionStones--;
+  if(!save.fusionBook)save.fusionBook={};
+  save.fusionBook[recipeId]=true;
+  // Add fusion weapon to weaponItems
+  wItems.push({id:++save.eqIdCounter,weaponId:recipeId,rank:'red',level:1,fusion:true});
+  save.weaponsOwned[recipeId]='red';
+  saveSave();renderHome();SFX.evolution();flashRankUp('red');
+  flashMsg('⚗️ '+r.name+' 融合完成！');
+};
 
 let invFilter='armor';
 window.setInvFilter=function(f){invFilter=f;renderHome();};
