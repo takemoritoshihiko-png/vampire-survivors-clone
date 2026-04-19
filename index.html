@@ -1688,7 +1688,7 @@ function renderPets(p){
     const unit=id==='frog'?'XP':'体';
     h+=`<div class="game-card" style="margin:8px 0;padding:10px;border-color:${pet.color}">
       <div style="font-size:13px;color:${pet.color};font-weight:bold;margin-bottom:4px">${pet.icon} ${pet.name} — 累計${unit}: ${progress.toLocaleString()}${id==='frog'?'':'体'}</div>`;
-    if(id==='frog')h+=`<div style="font-size:10px;color:#0f0;margin-bottom:4px">⏱️ 巨大化: 常時（1分ごと・3秒間）</div>`;
+    if(id==='frog')h+=`<div style="font-size:10px;color:#0f0;margin-bottom:4px">⏱️ 巨大化: 常時（1分ごと・10秒間）</div>`;
     for(const s of sk){
       const done=progress>=s.k;const pct=done?100:Math.min(100,Math.floor(progress/s.k*100));
       h+=`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px">
@@ -1999,7 +1999,7 @@ const BOSS_SKILLS={
 };
 const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
-  frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'接触',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'Speed+25%, 30dmg, 1min giant'}],
+  frog:[{k:50,n:'貪欲',d:'XP×2 per orb'},{k:150,n:'跳躍',d:'Speed+10%'},{k:400,n:'磁力',d:'150px magnet'},{k:900,n:'接触',d:'Touch=10dmg/s'},{k:2000,n:'超進化',d:'XP×3, Spd+25%, 50dmg, 250px mag, 10s giant'}],
 };
 const FUSION_RECIPES=[
   {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',sprite:'fusion_slash_bullet',desc:'Slash fires bullets + explode',color:'#fa8'},
@@ -2111,8 +2111,8 @@ function initBattle(){
   // Frog buffs use petXP instead of kill count
   if(petId==='frog'){
     const fxp=save.petXP?save.petXP.frog||0:0;
-    if(fxp>=150)player.baseSpeed=Math.floor(player.baseSpeed*1.10);player.speed=player.baseSpeed;
-    if(fxp>=2000){player.baseSpeed=Math.floor(player.baseSpeed*1.15);player.speed=player.baseSpeed;}
+    if(fxp>=150){player.baseSpeed=Math.floor(player.baseSpeed*1.10);player.speed=player.baseSpeed;}
+    if(fxp>=2000){player.baseSpeed=Math.floor(player.baseSpeed*1.25);player.speed=player.baseSpeed;}
   }
   // Apply weapon memory buffs
   if(mainW&&save.weaponMemory[mainW]){
@@ -2714,10 +2714,10 @@ function updatePet(){
     const fxp=save.petXP?save.petXP.frog||0:0;
     const hasGreedy=fxp>=50,hasMagnet=fxp>=400,hasToxic=fxp>=900,hasSuper=fxp>=2000;
     pet.hopT=(pet.hopT||0)+dt2*4;
-    // Giant timer (1 min cycle, 3s duration)
+    // Giant timer (1 min cycle, 10s duration)
     pet.giantT=(pet.giantT||0)+dt2;
-    if(pet.giantT>=60){pet.giantT=0;pet.isGiant=true;pet.giantDur=3;
-      dmgPopups.push({x:pet.x,y:pet.y-30,text:'🐸 GIANT!',life:2,maxLife:2,color:'#4f4',size:22});}
+    if(pet.giantT>=60){pet.giantT=0;pet.isGiant=true;pet.giantDur=10;
+      dmgPopups.push({x:pet.x,y:pet.y-30,text:'🐸 GIANT FROG!',life:2.5,maxLife:2.5,color:'#4f4',size:24});}
     if(pet.isGiant){pet.giantDur-=dt2;if(pet.giantDur<=0)pet.isGiant=false;}
     const petSz=pet.isGiant?60:20;
     // Find nearest XP orb and chase it
@@ -2738,16 +2738,17 @@ function updatePet(){
     }
     // Teleport back if too far from player
     if(distXY(pet.x,pet.y,player.x,player.y)>400){pet.x=player.x;pet.y=player.y;}
-    // Magnet: pull gems toward frog
+    // Magnet: pull gems toward frog (250px with super evo, 150px base)
     if(hasMagnet){
+      const magR=hasSuper?250:150;
       for(const g of gems){const gd=distXY(pet.x,pet.y,g.x,g.y);
-        if(gd<150&&gd>2){const a=Math.atan2(pet.y-g.y,pet.x-g.x);g.x+=Math.cos(a)*150*dt2;g.y+=Math.sin(a)*150*dt2;}}
+        if(gd<magR&&gd>2){const a=Math.atan2(pet.y-g.y,pet.x-g.x);g.x+=Math.cos(a)*180*dt2;g.y+=Math.sin(a)*180*dt2;}}
     }
     // Collect gems on touch
     for(let i=gems.length-1;i>=0;i--){
       const g=gems[i];
       if(distXY(pet.x,pet.y,g.x,g.y)<20){
-        const xpMul=hasGreedy?2:1;
+        const xpMul=hasSuper?3:hasGreedy?2:1;
         player.xp+=g.value*xpMul;
         if(!save.petXP)save.petXP={frog:0};
         save.petXP.frog+=g.value;
@@ -2757,7 +2758,7 @@ function updatePet(){
     }
     // Contact damage (900XP+)
     if(hasToxic){
-      const dmgPerSec=hasSuper?30:10;
+      const dmgPerSec=hasSuper?50:10;
       for(const e of enemies){if(distXY(pet.x,pet.y,e.x,e.y)<petSz+e.radius)e.hp-=dmgPerSec*dt2;}
     }
     // Giant: smash enemies for 50 dmg/s
