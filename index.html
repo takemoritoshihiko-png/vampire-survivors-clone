@@ -205,6 +205,15 @@ const SPRITE_FILES={
   passive_energyCube:'assets/passive_energy_cube.png',passive_hollowPoint:'assets/passive_bullet.png',
   passive_forceField:'assets/passive_force_field.png',passive_fitnessGuide:'assets/passive_fitness.png',
   boss_skeleton_king:'assets/boss_skeleton_king.png',boss_demon_lord:'assets/boss_demon_lord.png',
+  fusion_slash_bullet:'assets/fusion_slash_bullet.png',fusion_spiral_blade:'assets/fusion_spiral_blade.png',
+  fusion_collapse_sword:'assets/fusion_collapse_sword.png',fusion_chaos_slash:'assets/fusion_chaos_slash.png',
+  fusion_drill_bullet:'assets/fusion_drill_bullet.png',fusion_bomb:'assets/fusion_bomb.png',
+  fusion_gravity_shot:'assets/fusion_gravity_shot.png',fusion_light_drill:'assets/fusion_light_drill.png',
+  fusion_photon_collapse:'assets/fusion_photon_collapse.png',fusion_light_chaos:'assets/fusion_light_chaos.png',
+  fusion_universe_will:'assets/fusion_universe_will.png',fusion_final_chaos:'assets/fusion_final_chaos.png',
+  fusion_rotating_ball:'assets/fusion_rotating_ball.png',fusion_gravity_ball:'assets/fusion_gravity_ball.png',
+  fusion_collapse_drill:'assets/fusion_collapse_drill.png',fusion_chaos_spiral:'assets/fusion_chaos_spiral.png',
+  fusion_cursed_ball:'assets/fusion_cursed_ball.png',fusion_hellfire:'assets/fusion_hellfire.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
 function preloadSprites(cb){
@@ -1580,8 +1589,9 @@ function renderCodex(p){
     const da=WEAPON_DEFS[r.a],db=WEAPON_DEFS[r.b];
     if(found){
       h+=`<div class="game-card" style="text-align:center;padding:10px 6px;margin:0;border-color:${r.color};${r.legendary?'border-width:3px;box-shadow:0 0 16px rgba(255,200,0,.6);animation:gold-shine 2s infinite':''}">
-        <div style="font-size:11px;color:#aaa">${da?da.icon:'?'} + ${db?db.icon:'?'}</div>
-        <div style="font-size:13px;color:${r.color};font-weight:bold;margin:4px 0">${r.legendary?'⚡ ':''}${r.name}</div>
+        <div style="font-size:10px;color:#aaa">${da?da.icon:'?'} + ${db?db.icon:'?'}</div>
+        ${r.sprite&&SPRITES[r.sprite]?`<img src="assets/${r.sprite}.png" width="56" height="56" style="object-fit:contain;image-rendering:pixelated;display:block;margin:4px auto" onerror="this.style.display='none'">`:''}
+        <div style="font-size:12px;color:${r.color};font-weight:bold;margin:4px 0">${r.legendary?'⚡ ':''}${r.name}</div>
         <div style="font-size:9px;color:#888">${r.desc}</div>
       </div>`;
     } else {
@@ -1931,24 +1941,24 @@ const PET_SKILLS={
   frog:[{k:50,n:'高跳び',d:'XP range+30%'},{k:150,n:'毒舌',d:'Poison atk'},{k:400,n:'雨乞い',d:'10s poison rain'},{k:900,n:'変態',d:'Giant tackle'},{k:2000,n:'蛙神',d:'5× poison'}],
 };
 const FUSION_RECIPES=[
-  {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',desc:'Slash fires bullets + explode',color:'#fa8'},
-  {a:'katana',b:'drill',id:'spiralBlade',name:'螺旋刀',desc:'Spinning slash, infinite pierce',color:'#caf'},
-  {a:'katana',b:'force',id:'collapseBlade',name:'崩壊の剣',desc:'Slash spawns blackholes',color:'#a0f'},
-  {a:'katana',b:'chaosBlade',id:'chaosSlash',name:'混沌斬り',desc:'Omni-slash + chaos wave + execute',color:'#606'},
-  {a:'shotgun',b:'drill',id:'drillShot',name:'ドリル弾',desc:'Piercing spinning bullets',color:'#ccc'},
-  {a:'shotgun',b:'soccer',id:'explodeBall',name:'爆発弾',desc:'Bouncing explosive shots',color:'#f80'},
-  {a:'shotgun',b:'force',id:'gravityShot',name:'重力散弾',desc:'Each pellet spawns mini-hole',color:'#a0f'},
-  {a:'lightchaser',b:'drill',id:'lightDrill',name:'光速ドリル',desc:'Homing light drill',color:'#0ff'},
-  {a:'lightchaser',b:'force',id:'photonCollapse',name:'光子崩壊',desc:'Rays drag blackholes',color:'#8af'},
-  {a:'lightchaser',b:'chaosBlade',id:'lightChaos',name:'光と混沌',desc:'Light rays + chaos waves',color:'#a8f'},
-  {a:'lightChaserS',b:'forceS',id:'cosmicWill',name:'宇宙の意志',desc:'Full-screen light + chain holes',color:'#fc0',legendary:true},
-  {a:'forceS',b:'chaosBlade',id:'endChaos',name:'終焉の混沌',desc:'Chaos blackhole covers screen',color:'#606',legendary:true},
+  {a:'katana',b:'shotgun',id:'slashShot',name:'斬撃弾',sprite:'fusion_slash_bullet',desc:'Slash fires bullets + explode',color:'#fa8'},
+  {a:'katana',b:'drill',id:'spiralBlade',name:'螺旋刀',sprite:'fusion_spiral_blade',desc:'Spinning slash, infinite pierce',color:'#caf'},
+  {a:'katana',b:'force',id:'collapseBlade',name:'崩壊の剣',sprite:'fusion_collapse_sword',desc:'Slash spawns blackholes',color:'#a0f'},
+  {a:'katana',b:'chaosBlade',id:'chaosSlash',name:'混沌斬り',sprite:'fusion_chaos_slash',desc:'Omni-slash + chaos wave + execute',color:'#606'},
+  {a:'shotgun',b:'drill',id:'drillShot',name:'ドリル弾',sprite:'fusion_drill_bullet',desc:'Piercing spinning bullets',color:'#ccc'},
+  {a:'shotgun',b:'soccer',id:'explodeBall',name:'爆発弾',sprite:'fusion_bomb',desc:'Bouncing explosive shots',color:'#f80'},
+  {a:'shotgun',b:'force',id:'gravityShot',name:'重力散弾',sprite:'fusion_gravity_shot',desc:'Each pellet spawns mini-hole',color:'#a0f'},
+  {a:'lightchaser',b:'drill',id:'lightDrill',name:'光速ドリル',sprite:'fusion_light_drill',desc:'Homing light drill',color:'#0ff'},
+  {a:'lightchaser',b:'force',id:'photonCollapse',name:'光子崩壊',sprite:'fusion_photon_collapse',desc:'Rays drag blackholes',color:'#8af'},
+  {a:'lightchaser',b:'chaosBlade',id:'lightChaos',name:'光と混沌',sprite:'fusion_light_chaos',desc:'Light rays + chaos waves',color:'#a8f'},
+  {a:'lightChaserS',b:'forceS',id:'cosmicWill',name:'宇宙の意志',sprite:'fusion_universe_will',desc:'Full-screen light + chain holes',color:'#fc0',legendary:true},
+  {a:'forceS',b:'chaosBlade',id:'endChaos',name:'終焉の混沌',sprite:'fusion_final_chaos',desc:'Chaos blackhole covers screen',color:'#606',legendary:true},
   {a:'lightChaserS',b:'chaosBlade',id:'godChaos',name:'神と混沌',desc:'Divine strike + chaos wave',color:'#fa0',legendary:true},
-  {a:'drill',b:'soccer',id:'spinBall',name:'回転弾',desc:'Bouncing drill ball',color:'#ccc'},
-  {a:'soccer',b:'force',id:'gravityBall',name:'重力ボール',desc:'Bounce spawns blackholes',color:'#a0f'},
-  {a:'drill',b:'force',id:'collapseDrill',name:'崩壊ドリル',desc:'Drill fires blackholes',color:'#a8f'},
-  {a:'drill',b:'chaosBlade',id:'chaosSpiral',name:'混沌螺旋',desc:'Pierce + chaos scatter',color:'#808'},
-  {a:'soccer',b:'chaosBlade',id:'curseBall',name:'呪いのボール',desc:'Bounce curse: slow+DoT',color:'#404'},
+  {a:'drill',b:'soccer',id:'spinBall',name:'回転弾',sprite:'fusion_rotating_ball',desc:'Bouncing drill ball',color:'#ccc'},
+  {a:'soccer',b:'force',id:'gravityBall',name:'重力ボール',sprite:'fusion_gravity_ball',desc:'Bounce spawns blackholes',color:'#a0f'},
+  {a:'drill',b:'force',id:'collapseDrill',name:'崩壊ドリル',sprite:'fusion_collapse_drill',desc:'Drill fires blackholes',color:'#a8f'},
+  {a:'drill',b:'chaosBlade',id:'chaosSpiral',name:'混沌螺旋',sprite:'fusion_chaos_spiral',desc:'Pierce + chaos scatter',color:'#808'},
+  {a:'soccer',b:'chaosBlade',id:'curseBall',name:'呪いのボール',sprite:'fusion_cursed_ball',desc:'Bounce curse: slow+DoT',color:'#404'},
 ];
 
 const MAIN_WEAPON_EVOLVE={
