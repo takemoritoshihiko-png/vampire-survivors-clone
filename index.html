@@ -549,13 +549,12 @@ const CHAPTER_DEFS={
 };
 
 /* Boss schedule (game time → boss key) */
-const BOSS_SCHEDULE=[
-  {time:300,key:'giantZombie'},
-  {time:600,key:'skeletonKing'},
-  {time:900,key:'armorLord'},
-  {time:1200,key:'demonKing'},
-  {time:1800,key:'finalBoss'},
-];
+/* Per-chapter boss schedule: mini-bosses + final boss before clear time */
+const BOSS_SCHEDULE={
+  1:[{time:60,key:'armorLord'},{time:150,key:'armorLord'},{time:270,key:'giantZombie',final:true}],
+  2:[{time:90,key:'armorLord'},{time:210,key:'demonKing'},{time:330,key:'armorLord'},{time:450,key:'skeletonKing',final:true}],
+  3:[{time:120,key:'armorLord'},{time:240,key:'skeletonKing'},{time:420,key:'demonKing'},{time:570,key:'demonKing',final:true}],
+};
 const BOSS_DEFS={
   giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:5000,speed:30,damage:30,xp:160,outline:'#0f0'},
   skeletonKing:{name:'Skeleton King',color:'#eee',sprite:'boss_skeleton_king',radius:45,hp:10000,speed:32,damage:40,xp:240,outline:'#fff'},
@@ -2823,18 +2822,23 @@ function updateBattle(){
   }
   if(waveTimer>0)waveTimer-=dt2;
 
-  // Bosses
-  for(let i=0;i<BOSS_SCHEDULE.length;i++){
-    const sc=BOSS_SCHEDULE[i];
+  // Bosses (chapter-specific schedule — checked BEFORE clear so final boss can spawn)
+  const chapSchedule=BOSS_SCHEDULE[save.selectedChapter]||BOSS_SCHEDULE[1];
+  for(let i=0;i<chapSchedule.length;i++){
+    const sc=chapSchedule[i];
     if(gameTime>=sc.time&&!bossesSpawned.includes(i)){
       bossesSpawned.push(i);
       spawnBossByKey(sc.key);SFX.bossSpawn();
       bgmStartBoss(save.selectedChapter);for(let f=0;f<3;f++)setTimeout(()=>{levelUpFlash=0.15;},f*300);
+      if(sc.final)waveText='👑 FINAL BOSS!';waveTimer=3;
     }
   }
 
-  // Death warning starts 30 sec before death
-  const deathSpawnTime=Math.max(clearTime+10,1800);
+  // Clear check (only when no active boss — final boss must be killed first)
+  if(gameTime>=clearTime&&!bossActive){bState='done';endBattle(true);return;}
+
+  // Death warning starts 30 sec after clear time if boss still alive
+  const deathSpawnTime=Math.max(clearTime+60,1800);
   if(gameTime>=deathSpawnTime-30&&!deathEntity)deathWarnTimer=Math.max(deathWarnTimer,deathSpawnTime-gameTime);
   if(gameTime>=deathSpawnTime&&!deathEntity){
     const a=Math.random()*Math.PI*2;
@@ -2845,9 +2849,6 @@ function updateBattle(){
     deathEntity.x+=Math.cos(a)*deathEntity.speed*dt2;deathEntity.y+=Math.sin(a)*deathEntity.speed*dt2;
     if(distXY(deathEntity.x,deathEntity.y,player.x,player.y)<deathEntity.radius+player.radius){player.hp=0;bState='done';endBattle(false);return;}
   }
-
-  // Clear check
-  if(gameTime>=clearTime&&!bossActive){bState='done';endBattle(true);return;}
 
   // Boss victory fanfare: 2s of celebration particles + on-screen text only.
   // The battle KEEPS RUNNING — do not call endBattle here. Skills, stars,
