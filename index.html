@@ -504,11 +504,11 @@ const RANKS=['gray','green','blue','purple','gold','red'];
 const RANK_NAMES={gray:'Common',green:'Uncommon',blue:'Rare',purple:'Epic',gold:'Legend',red:'Mythic'};
 const RANK_COLORS={gray:'#aaa',green:'#0f0',blue:'#4af',purple:'#c6f',gold:'#fa0',red:'#f44'};
 const RANK_PERCENT={
-  armor:{gray:3,green:6,blue:10,purple:16,gold:25,red:40},
-  boots:{gray:2,green:4,blue:7,purple:12,gold:18,red:30},
-  belt:{gray:2,green:5,blue:9,purple:14,gold:22,red:35},
-  gloves:{gray:1,green:3,blue:5,purple:9,gold:14,red:22},
-  necklace:{gray:1,green:3,blue:5,purple:9,gold:14,red:22},
+  armor:{gray:2,green:4,blue:7,purple:11,gold:17,red:28},
+  boots:{gray:1,green:3,blue:5,purple:8,gold:12,red:20},
+  belt:{gray:1,green:3,blue:6,purple:10,gold:15,red:24},
+  gloves:{gray:1,green:2,blue:4,purple:6,gold:10,red:15},
+  necklace:{gray:1,green:2,blue:4,purple:6,gold:10,red:15},
 };
 const RANK_LEVEL_MAX={gray:10,green:15,blue:20,purple:25,gold:30,red:40};
 const SUB_MAX={gray:0,green:0,blue:0,purple:2,gold:3,red:0};
@@ -660,7 +660,7 @@ function calcPower(){
   if(mw&&save.weaponsOwned[mw]){
     const mwR=save.weaponsOwned[mw];
     const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
-    const rankAtk={gray:0.03,green:0.06,blue:0.10,purple:0.16,gold:0.25,red:0.40}[mwR]||0;
+    const rankAtk={gray:0.02,green:0.04,blue:0.07,purple:0.11,gold:0.17,red:0.28}[mwR]||0;
     atk*=(1+rankAtk)*(1+(mwLv-1)*0.02);
     const flat={gray:50,green:150,blue:300,purple:600,gold:1200,red:2500}[mwR]||0;
     bonus+=flat+mwLv*20;
@@ -780,7 +780,7 @@ function renderChars(p){
   const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
   const mwIsS=wd&&wd.tier==='S';
   const mwSrc=wd&&wd.sprite?`assets/${wd.sprite}.png`:null;
-  const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[mwRank]||0;
+  const rankAtk={gray:2,green:4,blue:7,purple:11,gold:17,red:28}[mwRank]||0;
   const finalAtk=Math.round(rankAtk*(1+(mwLv-1)*0.02));
   if(wd&&isOwned){
     h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
@@ -862,7 +862,7 @@ window.openWeaponPicker=function(){
     const isS=d.tier==='S';
     const sel=save.selectedWeapon===id;
     const src=d.sprite?`assets/${d.sprite}.png`:null;
-    const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[r]||0;
+    const rankAtk={gray:2,green:4,blue:7,purple:11,gold:17,red:28}[r]||0;
     const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
     const evo=EVOLUTIONS.find(e=>e.weapon===id);
     inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -986,7 +986,7 @@ function renderInventoryTab(){
         const isS=d.tier==='S';
         const sel=save.selectedWeapon===id;
         const src=d.sprite?`assets/${d.sprite}.png`:null;
-        const rankAtk={gray:3,green:6,blue:10,purple:16,gold:25,red:40}[r]||0;
+        const rankAtk={gray:2,green:4,blue:7,purple:11,gold:17,red:28}[r]||0;
         const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
         const evo=EVOLUTIONS.find(e=>e.weapon===id);
         h+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.6)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
@@ -2171,7 +2171,7 @@ function initBattle(){
   if(mainW){
     const mwRank=save.weaponsOwned[mainW]||'gray';
     const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
-    const mwRankBonus={gray:0.03,green:0.06,blue:0.10,purple:0.16,gold:0.25,red:0.40}[mwRank]||0;
+    const mwRankBonus={gray:0.02,green:0.04,blue:0.07,purple:0.11,gold:0.17,red:0.28}[mwRank]||0;
     const mwLvBonus=(mwLv-1)*0.02;
     player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
     player.might=player.baseMight;
