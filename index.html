@@ -450,7 +450,6 @@ function defaultSave(){
     gachaPity:0,gachaTotal:0,sgachaPity:0,
     eqIdCounter:0,
     basetech:0,cores:0,
-    talents:{atk:0,hp:0,speed:0,coin:0,xp:0,cd:0},
     weaponsOwned:{kunai:'gray'},
     selectedWeapon:'kunai',
     daily:{date:'',progress:{battle:0,kills:0,gacha:0,survive3:0,levelup5:0},claimed:{battle:false,kills:false,gacha:false,survive3:false,levelup5:false}},
@@ -474,7 +473,7 @@ save=loadSave();
 if(save.basetech===undefined)save.basetech=0;
 if(save.cores===undefined)save.cores=0;
 delete save.shopDaily;
-if(!save.talents)save.talents={atk:0,hp:0,speed:0,coin:0,xp:0,cd:0};
+delete save.talents;
 if(!save.weaponMemory){save.weaponMemory={};for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer','lightChaserS','forceS','chaosBlade'])save.weaponMemory[id]={kills:0,unlocked:[]};}
 if(save.fusionStones===undefined)save.fusionStones=0;
 if(!save.fusionBook)save.fusionBook={};
@@ -699,16 +698,6 @@ window.claimAchievement=function(key){
    ═══════════════════════════════════════════════════════ */
 const tabs=['Characters','Equipment','Gacha','Boss','Daily','Sortie'];
 
-const TALENT_DEFS={
-  atk:{name:'ATK',icon:'⚔️',color:'#f44',desc:l=>`+${(l*0.8).toFixed(1)}% ATK`},
-  hp:{name:'MaxHP',icon:'❤️',color:'#f88',desc:l=>`+${(l*0.8).toFixed(1)}% MaxHP`},
-  speed:{name:'Speed',icon:'👟',color:'#8ff',desc:l=>`+${(l*0.5).toFixed(1)}% Speed`},
-  coin:{name:'Coin Drop',icon:'💰',color:'#fc0',desc:l=>`+${l*3}% drop rate`},
-  xp:{name:'XP Gain',icon:'⭐',color:'#0af',desc:l=>`+${l*2}% XP`},
-  cd:{name:'Cooldown',icon:'⏱️',color:'#0ff',desc:l=>`-${(l*0.8).toFixed(1)}% all CD`},
-};
-const TALENT_MAX_LV=10;
-function talentCost(lv){return Math.floor(50*Math.pow(2,lv));}
 let currentTab='Characters';
 
 function showHome(){
@@ -1473,34 +1462,6 @@ function flashAstralForge(star){
 }
 
 /* ── Talents ── */
-function renderTalents(p){
-  let h=`<div style="text-align:center;color:#fa0;font-weight:bold;margin-bottom:10px">🌟 TALENTS — permanent buffs across all characters</div>`;
-  h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:780px;margin:0 auto">';
-  for(const[id,def]of Object.entries(TALENT_DEFS)){
-    const lv=save.talents[id]||0;
-    const cost=talentCost(lv);
-    const max=lv>=TALENT_MAX_LV;
-    const can=!max&&save.coins>=cost;
-    h+=`<div class="game-card" style="border-color:${def.color};text-align:center;padding:14px 8px;margin:0">
-      <div style="font-size:36px">${def.icon}</div>
-      <div style="font-size:14px;color:${def.color};font-weight:bold;margin-top:4px">${def.name}</div>
-      <div style="font-size:11px;color:#aaa;margin-top:2px">${def.desc(lv||1)}</div>
-      <div style="font-size:11px;color:#fc0;margin:6px 0">Lv ${lv}/${TALENT_MAX_LV}</div>
-      <div class="bar-bg" style="margin:4px 14px"><div class="bar-fill" style="width:${(lv/TALENT_MAX_LV)*100}%;background:${def.color}"></div></div>
-      ${max?'<div style="color:#fa0;font-weight:bold;font-size:12px;margin-top:6px">★ MAX ★</div>'
-            :`<button class="btn ${can?'btn-green':''}" style="margin-top:6px;padding:6px 16px;font-size:12px;background:${can?'':'#444'}" ${can?'':'disabled'} onclick="upgradeTalent('${id}')">${cost}💰 → Lv${lv+1}</button>`}
-    </div>`;
-  }
-  h+='</div>';
-  p.innerHTML=h;
-}
-window.upgradeTalent=function(id){
-  const lv=save.talents[id]||0;if(lv>=TALENT_MAX_LV)return;
-  const cost=talentCost(lv);
-  if(save.coins<cost){flashMsg('Not enough coins');return;}
-  save.coins-=cost;save.talents[id]=lv+1;saveSave();renderHome();SFX.coin();
-};
-
 /* ── Boss Box ── */
 function renderBossBox(p){
   let h='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:12px">👾 BOSS BOX</div>';
@@ -1612,12 +1573,11 @@ function renderCodex(p){
 let enhanceSub='Equipment';
 window.setEnhanceSub=function(s){enhanceSub=s;renderHome();};
 function renderEnhance(p){
-  const subs=['Equipment','Talents','Memory','Codex','BossBox'];
+  const subs=['Equipment','Memory','Codex','BossBox'];
   let h='<div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">';
   for(const s of subs)h+=`<button class="btn ${enhanceSub===s?'btn-orange':''}" style="padding:5px 12px;font-size:11px;background:${enhanceSub===s?'':'#333'}" onclick="setEnhanceSub('${s}')">${s}</button>`;
   h+='</div>';
   if(enhanceSub==='Equipment'){h+=renderEquipContent();}
-  else if(enhanceSub==='Talents'){h+=renderTalentsContent();}
   else if(enhanceSub==='Memory'){h+=renderMemoryContent();}
   else if(enhanceSub==='Codex'){h+=renderCodexContent();}
   else if(enhanceSub==='BossBox'){h+=renderBossBoxContent();}
@@ -1625,9 +1585,6 @@ function renderEnhance(p){
 }
 function renderEquipContent(){
   const _p={innerHTML:''};renderEquip(_p);return _p.innerHTML;
-}
-function renderTalentsContent(){
-  const _p={innerHTML:''};renderTalents(_p);return _p.innerHTML;
 }
 function renderMemoryContent(){
   const _p={innerHTML:''};renderMemory(_p);return _p.innerHTML;
@@ -1677,11 +1634,6 @@ function renderDailyTab(p){
   let h=_d.innerHTML;
   h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
   h+=_r.innerHTML;
-  h+='</div>';
-  // Talents at bottom
-  h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
-  h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px">🌟 Talents</div>';
-  h+=renderTalentsContent();
   h+='</div>';
   p.innerHTML=h;
 }
@@ -2104,27 +2056,24 @@ function initBattle(){
   const atkBonus=getEquippedBonus('ATK'),hpBonus=getEquippedBonus('MaxHP'),spdBonus=getEquippedBonus('Speed'),
         cdBonus=getEquippedBonus('CD Reduce'),critBonus=getEquippedBonus('Crit%'),xpBonus=getEquippedBonus('XP Gain');
 
-  const tal=save.talents||{};
-  const tAtk=(tal.atk||0)*0.008,tHp=(tal.hp||0)*0.008,tSpd=(tal.speed||0)*0.005,
-        tCoin=(tal.coin||0)*0.03,tXp=(tal.xp||0)*0.02,tCd=(tal.cd||0)*0.008;
-  const baseHp=Math.floor(ch.baseHp*(1+(cd.lv-1)*0.05)*(1+hpBonus/100)*(1+tHp));
-  const baseSpd=Math.floor(200*(1+spdBonus/100)*(1+tSpd));
-  const charAtkMult=ch.baseAtk/100; // common=1.0, archer=1.3, knight=0.8
-  const baseMight=charAtkMult*(1+(cd.lv-1)*0.08+atkBonus/100)*(1+tAtk);
+  const baseHp=Math.floor(ch.baseHp*(1+(cd.lv-1)*0.05)*(1+hpBonus/100));
+  const baseSpd=Math.floor(200*(1+spdBonus/100));
+  const charAtkMult=ch.baseAtk/100;
+  const baseMight=charAtkMult*(1+(cd.lv-1)*0.08+atkBonus/100);
   player={
     x:0,y:0,radius:18,
     baseSpeed:baseSpd,speed:baseSpd,
     baseMaxHp:baseHp,maxHp:baseHp,hp:baseHp,
     level:1,xp:0,xpToNext:8,
     baseMight,might:baseMight,
-    armor:0,baseCdReduction:cdBonus/100+tCd,cdReduction:cdBonus/100+tCd,
+    armor:0,baseCdReduction:cdBonus/100,cdReduction:cdBonus/100,
     magnetRange:100,hpRegen:0.02,
     invTimer:0,
     weapons:[],passives:[],
     charId:save.selectedChar,
     critRate:critBonus,
-    xpMult:(1+xpBonus/100)*(1+tXp),
-    coinBonus:tCoin,
+    xpMult:1+xpBonus/100,
+    coinBonus:0,
     facing:1,lastDx:1,lastDy:0,
     knightReduction:save.selectedChar==='knight'?0.15:0,
     archerRangeBonus:save.selectedChar==='archer'?0.3:0,
