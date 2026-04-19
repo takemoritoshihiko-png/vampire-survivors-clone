@@ -199,6 +199,12 @@ const SPRITE_FILES={
   weapon_chaos:'assets/weapon_chaos.png',weapon_lightchaser_s:'assets/weapon_lightchaser_s.png',weapon_force_s:'assets/weapon_force_s.png',
   skill_molotov:'assets/skill_molotov.png',skill_boomerang:'assets/skill_boomerang.png',skill_garlic:'assets/skill_garlic.png',
   skill_bible:'assets/skill_bible.png',skill_lightning:'assets/skill_lightning.png',skill_drone:'assets/skill_drone.png',
+  passive_gauntlet:'assets/passive_gauntlet.png',passive_explosive:'assets/passive_explosive.png',
+  passive_attractorb:'assets/passive_ninja_scroll.png',passive_emptyTome:'assets/passive_energy_cube.png',
+  passive_thunderGen:'assets/passive_thunder.png',passive_precision:'assets/passive_guidance.png',
+  passive_energyCube:'assets/passive_energy_cube.png',passive_hollowPoint:'assets/passive_bullet.png',
+  passive_forceField:'assets/passive_force_field.png',passive_fitnessGuide:'assets/passive_fitness.png',
+  boss_skeleton_king:'assets/boss_skeleton_king.png',boss_demon_lord:'assets/boss_demon_lord.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
 function preloadSprites(cb){
@@ -543,9 +549,9 @@ const BOSS_SCHEDULE=[
 ];
 const BOSS_DEFS={
   giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:5000,speed:30,damage:30,xp:160,outline:'#0f0'},
-  skeletonKing:{name:'Skeleton King',color:'#eee',radius:45,hp:10000,speed:32,damage:40,xp:240,outline:'#fff'},
+  skeletonKing:{name:'Skeleton King',color:'#eee',sprite:'boss_skeleton_king',radius:45,hp:10000,speed:32,damage:40,xp:240,outline:'#fff'},
   armorLord:{name:'Armor Lord',color:'#888',radius:50,hp:20000,speed:28,damage:55,xp:360,outline:'#fa0'},
-  demonKing:{name:'Demon King',color:'#e22',radius:55,hp:40000,speed:35,damage:70,xp:560,outline:'#f00',hasWings:true},
+  demonKing:{name:'Demon King',color:'#e22',sprite:'boss_demon_lord',radius:55,hp:40000,speed:35,damage:70,xp:560,outline:'#f00',hasWings:true},
   finalBoss:{name:'Final Boss',color:'#000',radius:60,hp:100000,speed:30,damage:100,xp:1000,rainbow:true},
 };
 
@@ -806,7 +812,7 @@ function renderChars(p){
     const starN=bsk.filter(s=>(ebb&&ebb.unlocked||[]).includes(s.k)).length;
     h+=`<div style="display:flex;justify-content:center;margin-bottom:8px">
       <div class="game-card" style="width:280px;text-align:center;padding:14px;margin:0;border-color:${ebd?ebd.outline||ebd.color:'#888'}">
-        <div style="font-size:36px">👾</div>
+        ${ebd&&ebd.sprite?`<img src="assets/${ebd.sprite}.png" width="48" height="48" style="object-fit:contain;image-rendering:pixelated" onerror="this.outerHTML='<div style=font-size:36px>👾</div>'">`:'<div style="font-size:36px">👾</div>'}
         <div style="font-size:14px;color:${ebd?ebd.outline:'#fff'};font-weight:bold;margin-top:4px">${ebd?ebd.name:'???'}</div>
         <div style="font-size:12px;color:#fc0;margin-top:2px">${'★'.repeat(starN)}${'☆'.repeat(5-starN)}</div>
         <button class="btn btn-blue" style="margin-top:8px;padding:5px 16px;font-size:12px" onclick="currentTab='BossBox';renderHome()">変更する</button>
@@ -1499,8 +1505,8 @@ function renderBossBox(p){
     const isEq=save.equippedBoss===bb.key;
     h+=`<div class="game-card" style="margin:10px 0;padding:14px;border-color:${bd.outline||bd.color};${isEq?'border-width:2px;box-shadow:0 0 12px '+bd.color:''}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <div style="width:48px;height:48px;border-radius:50%;background:${bd.color};display:flex;align-items:center;justify-content:center">
-          <span style="font-size:20px;color:#000">👾</span>
+        <div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center">
+          ${bd.sprite&&SPRITES[bd.sprite]?`<img src="assets/${bd.sprite}.png" width="56" height="56" style="object-fit:contain;image-rendering:pixelated" onerror="this.outerHTML='<span style=font-size:32px>👾</span>'">`:`<span style="font-size:32px">👾</span>`}
         </div>
         <div style="flex:1">
           <div style="font-size:15px;color:${bd.outline||'#fff'};font-weight:bold">${bd.name}</div>
@@ -1860,25 +1866,25 @@ const WEAPON_DEFS={
 };
 
 const PASSIVE_DEFS={
-  gauntlet:{name:'外付け籠手',icon:'🥊',color:'#a0f',evolveTarget:'molotov',maxLv:1,
+  gauntlet:{name:'外付け籠手',icon:'🥊',color:'#a0f',sprite:'passive_gauntlet',evolveTarget:'molotov',maxLv:1,
     desc:()=>'Duration +30%',apply:p=>{p.subDur=(p.subDur||1)+0.3;}},
-  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',evolveTarget:'boomerang',maxLv:1,
+  highExplosive:{name:'高性能爆薬',icon:'💣',color:'#f80',sprite:'passive_explosive',evolveTarget:'boomerang',maxLv:1,
     desc:()=>'Area +15%',apply:p=>{p.areaMult=(p.areaMult||1)*1.15;}},
-  attractorb:{name:'Attractorb',icon:'🧲',color:'#0ff',evolveTarget:'garlic',maxLv:1,
+  attractorb:{name:'Attractorb',icon:'🧲',color:'#0ff',sprite:'passive_attractorb',evolveTarget:'garlic',maxLv:1,
     desc:()=>'XP magnet +30%',apply:p=>{p.magnetRange*=1.3;}},
-  emptyTome:{name:'EmptyTome',icon:'📚',color:'#fa0',evolveTarget:'bible',maxLv:1,
+  emptyTome:{name:'EmptyTome',icon:'📚',color:'#fa0',sprite:'passive_emptyTome',evolveTarget:'bible',maxLv:1,
     desc:()=>'CD -8%',apply:p=>{p.cdReduction+=0.08;}},
-  thunderGen:{name:'雷発生器',icon:'🔌',color:'#ff0',evolveTarget:'lightning',maxLv:1,
+  thunderGen:{name:'雷発生器',icon:'🔌',color:'#ff0',sprite:'passive_thunderGen',evolveTarget:'lightning',maxLv:1,
     desc:()=>'CD -10%',apply:p=>{p.cdReduction+=0.10;}},
-  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',evolveTarget:'drone',maxLv:1,
+  precision:{name:'精密誘導装置',icon:'🎯',color:'#0af',sprite:'passive_precision',evolveTarget:'drone',maxLv:1,
     desc:()=>'Drone auto-lock nearest',apply:p=>{p.droneLock=true;}},
-  energyCube:{name:'エナジーキューブ',icon:'⚡',color:'#0ff',evolveTarget:null,maxLv:1,
+  energyCube:{name:'エナジーキューブ',icon:'⚡',color:'#0ff',sprite:'passive_energyCube',evolveTarget:null,maxLv:1,
     desc:()=>'All CD -15%',apply:p=>{p.cdReduction+=0.15;}},
-  hollowPoint:{name:'強力銃弾',icon:'💥',color:'#f44',evolveTarget:null,maxLv:1,
+  hollowPoint:{name:'強力銃弾',icon:'💥',color:'#f44',sprite:'passive_hollowPoint',evolveTarget:null,maxLv:1,
     desc:()=>'ATK +15%',apply:p=>{p.might*=1.15;}},
-  forceField:{name:'フォースフィールド',icon:'🛡️',color:'#88f',evolveTarget:null,maxLv:1,
+  forceField:{name:'フォースフィールド',icon:'🛡️',color:'#88f',sprite:'passive_forceField',evolveTarget:null,maxLv:1,
     desc:()=>'Damage barrier',apply:p=>{p.forceField=true;}},
-  fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',evolveTarget:null,maxLv:1,
+  fitnessGuide:{name:'フィットネスガイド',icon:'💪',color:'#f44',sprite:'passive_fitnessGuide',evolveTarget:null,maxLv:1,
     desc:()=>'MaxHP +20%',apply:p=>{p.maxHp=Math.floor(p.maxHp*1.08);p.hp=Math.min(p.hp+Math.floor(p.maxHp*0.08),p.maxHp);}},
 };
 
@@ -2734,7 +2740,7 @@ function pickChoices(){
     for(const id of Object.keys(PASSIVE_DEFS)){
       if(!owned.has(id)){const d=PASSIVE_DEFS[id];
         const evolveTag=d.evolveTarget&&WEAPON_DEFS[d.evolveTarget]?` [EVO: ${WEAPON_DEFS[d.evolveTarget].icon} ${WEAPON_DEFS[d.evolveTarget].name}]`:'';
-        ch.push({type:'passive',tag:'PASSIVE',name:d.name,desc:d.desc()+evolveTag,color:d.color,icon:d.icon,evolveTarget:d.evolveTarget,apply:()=>{player.passives.push({id,lv:1});d.apply(player);}});
+        ch.push({type:'passive',tag:'PASSIVE',name:d.name,desc:d.desc()+evolveTag,color:d.color,icon:d.icon,sprite:d.sprite,evolveTarget:d.evolveTarget,apply:()=>{player.passives.push({id,lv:1});d.apply(player);}});
       }
     }
   }
@@ -3093,7 +3099,7 @@ function drawEnemy(e){
 
   // Boss with sprite
   if(e.isBoss){
-    const sp=SPRITES['boss_zombie'];
+    const sp=SPRITES[e.bossKey&&BOSS_DEFS[e.bossKey]&&BOSS_DEFS[e.bossKey].sprite?BOSS_DEFS[e.bossKey].sprite:'boss_zombie'];
     if(sp){
       const sz=e.radius*2.4;
       const wobble=Math.sin(gameTime*3+e.st)*4;
@@ -3663,8 +3669,9 @@ function drawBattle(){
     const bd=BOSS_DEFS[save.equippedBoss];
     if(bd){
       const bsz=bd.radius*0.7;
-      ctx.fillStyle=bd.color||'#888';ctx.shadowColor=bd.outline||bd.color||'#fff';ctx.shadowBlur=0;
-      ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();
+      const bsp=bd.sprite&&SPRITES[bd.sprite];
+      if(bsp){ctx.drawImage(bsp,bossPet.x-bsz,bossPet.y-bsz,bsz*2,bsz*2);}
+      else{ctx.fillStyle=bd.color||'#888';ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();}
       ctx.shadowBlur=0;
       ctx.fillStyle='#000';const er=bsz*0.25;
       ctx.beginPath();ctx.arc(bossPet.x-er,bossPet.y-er*0.4,er*0.35,0,Math.PI*2);ctx.fill();
@@ -3880,7 +3887,9 @@ function drawHUD(){
     if(p){const d=PASSIVE_DEFS[p.id];if(!d){ctx.strokeStyle='#333';ctx.strokeRect(px2+3,y,slW-6,slH-3);continue;}
       ctx.fillStyle=d.color;ctx.globalAlpha=.22;ctx.fillRect(px2+3,y,slW-6,slH-3);ctx.globalAlpha=1;
       ctx.strokeStyle=d.color;ctx.lineWidth=1;ctx.strokeRect(px2+3,y,slW-6,slH-3);
-      ctx.font='16px serif';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText(d.icon,px2+6,y+18);
+      const psp=d.sprite&&SPRITES[d.sprite];
+if(psp){ctx.drawImage(psp,px2+4,y+1,28,28);}
+else{ctx.font='16px serif';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText(d.icon,px2+6,y+18);}
       ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.fillText(d.name.slice(0,10),px2+25,y+12);
       if(d.evolveTarget){const td=WEAPON_DEFS[d.evolveTarget];const tw=getW(d.evolveTarget);
         ctx.fillStyle=tw&&tw.lv>=5?'#fa0':'#aaa';ctx.font='8px monospace';
