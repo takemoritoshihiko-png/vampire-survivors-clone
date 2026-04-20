@@ -625,6 +625,10 @@ const ACHIEVEMENTS=[
 ];
 
 /* Equipment helpers */
+const WPN_LV_MAX={gray:5,green:10,blue:15,purple:20,gold:25,red:30};
+const WPN_LV_COST={gray:50,green:120,blue:280,purple:600,gold:1200,red:2500};
+function wpnLvCost(rank){return WPN_LV_COST[rank]||100;}
+function wpnMaxLv(rank){return WPN_LV_MAX[rank]||10;}
 function eqLvCost(curLv){return Math.floor(10*Math.pow(1.3,curLv-1));}
 function eqMaxLv(rank){return RANK_LEVEL_MAX[rank]||10;}
 function eqMaxSub(rank){return SUB_MAX[rank]||0;}
@@ -1126,11 +1130,12 @@ function renderInventoryTab(){
           ${src?`<img src="${src}" width="64" height="64" style="object-fit:contain;image-rendering:pixelated;display:block;margin:6px auto 4px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
             <div style="font-size:42px;display:none">${d.icon}</div>`:`<div style="font-size:42px">${d.icon}</div>`}
           <div style="font-size:13px;color:${d.color};font-weight:bold">${d.name}</div>
-          <div style="font-size:10px;color:${RANK_COLORS[r]}">${RANK_NAMES[r]} · Lv.${lv} · ×${wCount}</div>
+          <div style="font-size:10px;color:${RANK_COLORS[r]}">${RANK_NAMES[r]} · Lv.${lv}/${wpnMaxLv(r)} · ×${wCount}</div>
           <div style="font-size:11px;color:#0f0;margin-top:4px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
           ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ ${WEAPON_DEFS[evo.evolved].name}</div>`:''}
           <div style="display:flex;gap:4px;justify-content:center;margin-top:6px">
             ${sel?'':`<button class="btn btn-blue" style="padding:4px 10px;font-size:11px" onclick="setMainWeapon('${id}')">セット</button>`}
+            ${lv<wpnMaxLv(r)?`<button class="btn btn-blue" style="padding:4px 8px;font-size:10px" onclick="lvUpWeapon(${wItems.find(w=>w.weaponId===id)?.id||0})">Lv↑ ${wpnLvCost(r)}G</button>`:''}
             <button class="btn" style="padding:4px 10px;font-size:11px;background:#922" onclick="dismantleWeapon('${id}')" title="Decompose">解体</button>
           </div>
         </div>`;
@@ -1159,6 +1164,28 @@ window.dismantleWeapon=function(id){
   if(save.weaponLevels)delete save.weaponLevels[id];
   saveSave();renderHome();flashMsg(`+${v.bt} BT${v.core?` +${v.core} Core`:''}`);
 };
+window.mergeWeapons=function(weaponId,rank){
+  const wi=save.weaponItems||[];
+  const targets=wi.filter(w=>w.weaponId===weaponId&&w.rank===rank);
+  if(targets.length<3){flashMsg('Need 3 of same weapon+rank');return;}
+  // Remove 3
+  for(let r=0;r<3;r++){const idx=wi.findIndex(w=>w.weaponId===weaponId&&w.rank===rank);if(idx>=0)wi.splice(idx,1);}
+  // Add 1 at next rank
+  const ri=RANKS.indexOf(rank);const nextRank=RANKS[Math.min(ri+1,RANKS.length-1)];
+  wi.push({id:++save.eqIdCounter,weaponId,rank:nextRank,level:1});
+  // Update best owned rank
+  const cur=save.weaponsOwned[weaponId];
+  if(!cur||RANKS.indexOf(nextRank)>RANKS.indexOf(cur))save.weaponsOwned[weaponId]=nextRank;
+  saveSave();renderHome();SFX.levelUp();flashRankUp(nextRank);
+};
+window.lvUpWeapon=function(itemId){
+  const wi=save.weaponItems||[];
+  const w=wi.find(x=>x.id===itemId);if(!w)return;
+  const max=wpnMaxLv(w.rank);if(w.level>=max){flashMsg('Max level');return;}
+  const cost=wpnLvCost(w.rank);
+  if(save.coins<cost){flashMsg('Need '+cost+'G');return;}
+  save.coins-=cost;w.level++;saveSave();renderHome();SFX.coin();
+};
 
 function renderMergeTab(){
   let h='<div style="max-width:800px;margin:0 auto">';
@@ -1183,6 +1210,33 @@ function renderMergeTab(){
       </div>`;
     }
     h+='</div></div>';
+  }
+  h+='</div>';
+  // Weapon merge section
+  h+='<div style="margin-top:16px;border-top:1px solid #333;padding-top:10px">';
+  h+='<div style="color:#fa0;font-weight:bold;font-size:14px;text-align:center;margin-bottom:8px">⚔️ Weapon Merge (3 same → rank up)</div>';
+  const wItems=save.weaponItems||[];
+  // Group by weaponId+rank
+  const wGroups={};
+  for(const w of wItems){const k=w.weaponId+'_'+w.rank;if(!wGroups[k])wGroups[k]={weaponId:w.weaponId,rank:w.rank,items:[]};wGroups[k].items.push(w);}
+  const gKeys=Object.keys(wGroups).sort((a,b)=>RANKS.indexOf(wGroups[b].rank)-RANKS.indexOf(wGroups[a].rank));
+  if(gKeys.length===0)h+='<div style="text-align:center;color:#888;padding:20px">No weapons to merge.</div>';
+  else{
+    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:760px;margin:0 auto">';
+    for(const k of gKeys){
+      const g=wGroups[k];const d=WEAPON_DEFS[g.weaponId];
+      const cnt=g.items.length;const can=cnt>=3&&RANKS.indexOf(g.rank)<RANKS.length-1;
+      const nextR=RANKS[Math.min(RANKS.indexOf(g.rank)+1,RANKS.length-1)];
+      h+=`<div class="game-card rank-${g.rank}" style="text-align:center;padding:10px 6px;margin:0;${can?'box-shadow:0 0 10px rgba(0,255,0,.3)':''}">
+        <div style="font-size:24px">${d?d.icon:'⚔️'}</div>
+        <div style="font-size:11px;color:${RANK_COLORS[g.rank]||'#aaa'};font-weight:bold">${d?d.name:g.weaponId}</div>
+        <div style="font-size:10px;color:#aaa">${RANK_NAMES[g.rank]||g.rank} ×${cnt}</div>
+        ${can?`<div style="font-size:9px;color:#0f0;margin:2px 0">→ ${RANK_NAMES[nextR]}</div>
+          <button class="btn btn-green" style="padding:3px 10px;font-size:10px" onclick="mergeWeapons('${g.weaponId}','${g.rank}')">合成 ✅</button>`
+        :`<div style="font-size:9px;color:#888;margin:2px 0">${cnt}/3</div>`}
+      </div>`;
+    }
+    h+='</div>';
   }
   h+='</div>';
   return h;
@@ -2498,7 +2552,8 @@ function initBattle(){
   // Main-weapon ATK bonus (rank + level)
   if(mainW){
     const mwRank=save.weaponsOwned[mainW]||'gray';
-    const mwLv=(save.weaponLevels&&save.weaponLevels[mainW])||1;
+    const _bestItem=(save.weaponItems||[]).filter(w=>w.weaponId===mainW).sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.level||1)-(a.level||1))[0];
+    const mwLv=_bestItem?_bestItem.level||1:(save.weaponLevels&&save.weaponLevels[mainW])||1;
     const mwRankBonus={gray:0.02,green:0.04,blue:0.07,purple:0.11,gold:0.17,red:0.28}[mwRank]||0;
     const mwLvBonus=(mwLv-1)*0.02;
     player.baseMight*=(1+mwRankBonus)*(1+mwLvBonus);
