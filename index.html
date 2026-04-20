@@ -2322,7 +2322,7 @@ const _BASE_DMG={
   molotov:4,boomerang:10,garlic:4,bible:8,lightning:18,drone:6,
   hellfire:10,quantumBoomerang:17,soulEater:10,unholyBible:21,thunderWrath:28,destroyer:21};
 function wDmg(w){const def=WEAPON_DEFS[w.id];const base=_BASE_DMG[w.id]||10;
-  const mul=(def.dmgMul&&def.dmgMul[w.lv-1])||1;
+  const mul=(def&&def.dmgMul&&def.dmgMul[w.lv-1])||1;
   return base*mul*player.might;
 }
 
@@ -2584,6 +2584,7 @@ function fireBullet(b){
 function updateWeapons(){
   for(const w of player.weapons){
     const def=WEAPON_DEFS[w.id];const s=w.lv;
+    if(!def){continue;} // skip fusion/unknown weapons (no battle behavior yet)
     const dmg=wDmg(w);
     if(w.id==='kunai'||w.id==='spiritBlade'){
       const rate=w.id==='spiritBlade'?9:def.rate[s-1];
