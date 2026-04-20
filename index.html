@@ -2981,6 +2981,129 @@ function updateBossPet(){
   }
 }
 
+/* Fusion weapon attacks */
+function updateFusionWeapon(){
+  const mw=player.weapons.find(w=>w.id===player.mainWeaponId);
+  if(!mw)return;
+  const fr=FUSION_RECIPES.find(r=>r.id===mw.id);
+  if(!fr)return;
+  mw.timer=(mw.timer||0)+dt2;
+  const dmg=player.might*15;
+  const fid=mw.id;
+  // Each fusion weapon fires on its own cooldown
+  if(fid==='slashShot'){
+    if(mw.timer<1.2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):Math.atan2(player.lastDy,player.lastDx);
+    whipFx.push({x:player.x,y:player.y,dir:0,area:100,life:.15,maxLife:.15,color:'#fff',arcAng:ang});
+    for(const off of[-0.2,0,0.2])fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(ang+off)*400,vy:Math.sin(ang+off)*400,damage:dmg*1.5,pierce:3,life:1.5,color:'#fa0',wid:fid,kind:'pellet',angle:ang+off});
+  }
+  else if(fid==='spiralBlade'){
+    if(mw.timer<1.5)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    fireBullet({x:player.x,y:player.y,radius:14,vx:Math.cos(ang)*300,vy:Math.sin(ang)*300,damage:dmg*2,pierce:99,life:2,color:'#c8f',wid:fid,kind:'drill',angle:ang});
+  }
+  else if(fid==='collapseBlade'){
+    if(mw.timer<1.8)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    whipFx.push({x:player.x,y:player.y,dir:0,area:120,life:.18,maxLife:.18,color:'#a0f',arcAng:ang});
+    for(const e of enemies){const ea=Math.atan2(e.y-player.y,e.x-player.x);let da=ea-ang;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+      if(Math.abs(da)<0.5&&dist2(e,player)<130){applyDmg(e,dmg*2.5,fid);
+        bullets.push({x:e.x,y:e.y,radius:12,vx:0,vy:0,damage:dmg*0.5,pierce:99,life:2,color:'#a0f',wid:fid,kind:'blackhole',ttl:1.5,pull:60,burstDmg:dmg,burstR:60});}}
+  }
+  else if(fid==='chaosSlash'){
+    if(mw.timer<2)return;mw.timer=0;
+    for(let i=0;i<8;i++){const ang=Math.PI*2/8*i;
+      fireBullet({x:player.x,y:player.y,radius:10,vx:Math.cos(ang)*350,vy:Math.sin(ang)*350,damage:dmg*1.8,pierce:5,life:1.2,color:'#606',wid:fid,kind:'wave',angle:ang});}
+    levelUpFlash=0.15;
+  }
+  else if(fid==='drillShot'){
+    if(mw.timer<1.5)return;mw.timer=0;
+    const ba=(mw._sa||0);mw._sa=(ba+0.3)%(Math.PI*2);
+    for(let i=0;i<5;i++){const ang=ba+Math.PI*2/5*i;
+      fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(ang)*320,vy:Math.sin(ang)*320,damage:dmg*1.6,pierce:99,life:1.8,color:'#ccc',wid:fid,kind:'drill',angle:ang});}
+  }
+  else if(fid==='explodeBall'){
+    if(mw.timer<1.8)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    bullets.push({x:player.x,y:player.y,radius:12,vx:Math.cos(ang)*300,vy:Math.sin(ang)*300,damage:dmg*2,pierce:99,life:4,color:'#f60',wid:fid,kind:'soccer',angle:ang,bounces:4,bounceTeleport:false});
+  }
+  else if(fid==='gravityShot'){
+    if(mw.timer<1.5)return;mw.timer=0;
+    bullets.push({x:player.x+rnd(-100,100),y:player.y+rnd(-100,100),radius:12,vx:0,vy:0,damage:dmg*0.3,pierce:99,life:2,color:'#a0f',wid:fid,kind:'blackhole',ttl:1.5,pull:80,burstDmg:dmg,burstR:80});
+    for(let i=0;i<6;i++){const ang=Math.PI*2/6*i;
+      fireBullet({x:player.x,y:player.y,radius:6,vx:Math.cos(ang)*200,vy:Math.sin(ang)*200,damage:dmg*1.2,pierce:2,life:2,color:'#80a',wid:fid,kind:'pellet',angle:ang});}
+  }
+  else if(fid==='lightDrill'){
+    if(mw.timer<1.2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    fireBullet({x:player.x,y:player.y,radius:16,vx:Math.cos(ang)*600,vy:Math.sin(ang)*600,damage:dmg*2.2,pierce:99,life:1,color:'#0ff',wid:fid,kind:'drill',angle:ang,homing:true});
+  }
+  else if(fid==='photonCollapse'){
+    if(mw.timer<2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    whipFx.push({x:player.x,y:player.y,dir:0,area:250,life:.2,maxLife:.2,color:'#0ff',arcAng:ang});
+    for(const e of enemies){if(dist2(e,player)<250){const ea=Math.atan2(e.y-player.y,e.x-player.x);let da=ea-ang;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+      if(Math.abs(da)<0.4){applyDmg(e,dmg*2,fid);lightningFx.push({x:e.x,y:e.y,life:.3,maxLife:.3,kind:'explosion'});}}}
+  }
+  else if(fid==='lightChaos'){
+    if(mw.timer<2.2)return;mw.timer=0;
+    for(let i=0;i<6;i++){const ang=Math.PI*2/6*i;
+      fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(ang)*380,vy:Math.sin(ang)*380,damage:dmg*1.5,pierce:5,life:1,color:'#0ff',wid:fid,kind:'ray',angle:ang});
+      fireBullet({x:player.x,y:player.y,radius:10,vx:Math.cos(ang+Math.PI/6)*280,vy:Math.sin(ang+Math.PI/6)*280,damage:dmg*1.5,pierce:5,life:1.2,color:'#606',wid:fid,kind:'wave',angle:ang+Math.PI/6});}
+  }
+  else if(fid==='cosmicWill'){
+    if(mw.timer<4)return;mw.timer=0;
+    bullets.push({x:player.x,y:player.y,radius:20,vx:0,vy:0,damage:dmg*0.5,pierce:99,life:3,color:'#a0f',wid:fid,kind:'blackhole',ttl:2.5,pull:200,burstDmg:dmg*8,burstR:300});
+    dmgPopups.push({x:player.x,y:player.y-80,text:'💥 UNIVERSE!',life:2,maxLife:2,color:'#fc0',size:22});
+  }
+  else if(fid==='endChaos'){
+    if(mw.timer<3.5)return;mw.timer=0;
+    for(let i=0;i<8;i++){const ang=Math.PI*2/8*i;const bx=player.x+Math.cos(ang)*100,by=player.y+Math.sin(ang)*100;
+      bullets.push({x:bx,y:by,radius:10,vx:0,vy:0,damage:dmg,pierce:99,life:2.5,color:'#606',wid:fid,kind:'blackhole',ttl:2,pull:80,burstDmg:dmg*2,burstR:80});}
+    levelUpFlash=0.3;
+  }
+  else if(fid==='godChaos'){
+    if(mw.timer<3)return;mw.timer=0;
+    for(let i=0;i<12;i++){const ang=Math.PI*2/12*i;
+      fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(ang)*400,vy:Math.sin(ang)*400,damage:dmg*2,pierce:8,life:1.2,color:'#fc0',wid:fid,kind:'ray',angle:ang});}
+    whipFx.push({x:player.x,y:player.y,dir:0,area:200,life:.3,maxLife:.3,color:'#606'});
+  }
+  else if(fid==='spinBall'){
+    if(mw.timer<1.5)return;mw.timer=0;
+    const ang=(mw._fa||0);mw._fa=(ang+Math.PI/3)%(Math.PI*2);
+    bullets.push({x:player.x,y:player.y,radius:14,vx:Math.cos(ang)*280,vy:Math.sin(ang)*280,damage:dmg*1.8,pierce:99,life:3,color:'#ccc',wid:fid,kind:'soccer',angle:ang,bounces:5});
+  }
+  else if(fid==='gravityBall'){
+    if(mw.timer<2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    bullets.push({x:player.x,y:player.y,radius:16,vx:Math.cos(ang)*250,vy:Math.sin(ang)*250,damage:dmg*2,pierce:99,life:3.5,color:'#222',wid:fid,kind:'soccer',angle:ang,bounces:4});
+  }
+  else if(fid==='collapseDrill'){
+    if(mw.timer<2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    fireBullet({x:player.x,y:player.y,radius:12,vx:Math.cos(ang)*350,vy:Math.sin(ang)*350,damage:dmg*2,pierce:99,life:2,color:'#a8f',wid:fid,kind:'drill',angle:ang});
+    bullets.push({x:player.x,y:player.y,radius:10,vx:Math.cos(ang)*200,vy:Math.sin(ang)*200,damage:dmg*0.3,pierce:99,life:2,color:'#a0f',wid:fid,kind:'blackhole',ttl:1.5,pull:60,burstDmg:dmg,burstR:60});
+  }
+  else if(fid==='chaosSpiral'){
+    if(mw.timer<1.8)return;mw.timer=0;
+    const ba=(mw._sp||0);mw._sp=(ba+0.5)%(Math.PI*2);
+    for(let i=0;i<12;i++){const ang=ba+Math.PI*2/12*i;const spd=150+i*20;
+      fireBullet({x:player.x,y:player.y,radius:8,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,damage:dmg*1.4,pierce:3,life:1.5,color:'#808',wid:fid,kind:'wave',angle:ang});}
+  }
+  else if(fid==='curseBall'){
+    if(mw.timer<2)return;mw.timer=0;
+    const tgt=nearestEnemy();const ang=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):0;
+    bullets.push({x:player.x,y:player.y,radius:14,vx:Math.cos(ang)*260,vy:Math.sin(ang)*260,damage:dmg*1.5,pierce:99,life:4,color:'#404',wid:fid,kind:'soccer',angle:ang,bounces:6});
+  }
+  else if(fid==='hellfire'){
+    if(mw.timer<3)return;mw.timer=0;
+    const tgt=nearestEnemy();
+    const tx=tgt?tgt.x:player.x+100,ty=tgt?tgt.y:player.y;
+    fireZones.push({x:tx,y:ty,radius:80,life:3,maxLife:3,dmg:dmg*0.8,wid:fid,burst:true,poison:false,tickT:0});
+    for(let p=0;p<6;p++)particles.push({x:tx,y:ty,vx:rnd(-100,100),vy:rnd(-150,-30),life:.6,maxLife:.7,radius:4,color:'#f40'});
+  }
+}
+
 /* Artifact effects */
 function updateArtifact(){
   const aid=save.artifacts?save.artifacts.equipped:null;
@@ -3322,7 +3445,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
-  updateWeapons();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
+  updateWeapons();updateFusionWeapon();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
 
   // Spawn
   const tf=Math.min(gameTime/clearTime,1);
