@@ -570,9 +570,9 @@ const PET_DEFS={
 };
 
 const CHAPTER_DEFS={
-  1:{name:'Ch.1: Graveyard',time:180,diff:1,coinMult:1,clearReward:200,desc:'Survive 3 minutes'},
-  2:{name:'Ch.2: Dungeon',time:180,diff:1.8,coinMult:1.5,clearReward:500,desc:'Survive 3 minutes',cost:500},
-  3:{name:'Ch.3: Hell',time:180,diff:3.0,coinMult:2.5,clearReward:1500,desc:'Survive 3 minutes',cost:1500},
+  1:{name:'Ch.1: Graveyard',time:180,diff:0.6,coinMult:1,clearReward:200,desc:'Survive 3 minutes',hpM:0.6,dmgM:0.6,spdM:0.8,spawnM:0.7,bossHpM:0.6},
+  2:{name:'Ch.2: Dungeon',time:180,diff:1.0,coinMult:1.5,clearReward:500,desc:'Survive 3 minutes',cost:500,hpM:1,dmgM:1,spdM:1,spawnM:1,bossHpM:1},
+  3:{name:'Ch.3: Hell',time:180,diff:1.5,coinMult:2.5,clearReward:1500,desc:'Survive 3 minutes',cost:1500,hpM:1.5,dmgM:1.4,spdM:1.2,spawnM:1.3,bossHpM:1.5},
 };
 
 /* Boss schedule (game time → boss key) */
@@ -2324,9 +2324,9 @@ const HIDDEN_CHARS={
   yato:{name:'八十',icon:'⚡',color:'#fc0',sprite:'char_yato',unlockWeapon:null,kills:0,baseAtk:150,baseHp:150,desc:'All stats ×1.5, weapons ★3',skill:'godMode',initWeapon:'kunai'},
 };
 const SOUL_STAGES={
-  snow:{name:'❄️ 雪山',cost:100,time:180,diff:2,coinMult:2,clearReward:400,desc:'Survive 3 min (Ice Zombies)',bgColor:'#e0f0ff'},
-  ocean:{name:'🌊 海底',cost:250,time:180,diff:3,coinMult:3,clearReward:800,desc:'Survive 3 min (Depth Sharks)',bgColor:'#001a33'},
-  space:{name:'🌌 宇宙',cost:500,time:180,diff:4,coinMult:4,clearReward:1500,desc:'Survive 3 min (Aliens)',bgColor:'#000011'},
+  snow:{name:'❄️ 雪山',cost:100,time:180,diff:1.8,coinMult:2,clearReward:400,desc:'Survive 3 min (Ice Zombies)',bgColor:'#e0f0ff',hpM:1.8,dmgM:1.6,spdM:1.1,spawnM:1.4,bossHpM:1.8},
+  ocean:{name:'🌊 海底',cost:250,time:180,diff:2.2,coinMult:3,clearReward:800,desc:'Survive 3 min (Depth Sharks)',bgColor:'#001a33',hpM:2.2,dmgM:2.0,spdM:1.3,spawnM:1.6,bossHpM:2.2},
+  space:{name:'🌌 宇宙',cost:500,time:180,diff:2.8,coinMult:4,clearReward:1500,desc:'Survive 3 min (Aliens)',bgColor:'#000011',hpM:2.8,dmgM:2.5,spdM:1.5,spawnM:2.0,bossHpM:3.0},
 };
 const SOUL_ENEMIES={
   iceZombie:{name:'Ice Zombie',color:'#88ccff',sprite:'enemy_ice_zombie',radius:22,hp:300,speed:40,damage:15,xp:8},
@@ -2666,12 +2666,13 @@ function spawnEnemy2(typeId,opts){
   const tf=Math.min(gameTime/(chap.time||600),1);
   const mins=gameTime/60;
   const pwMult=getEnemyPowerMult();
-  const hpScale=(1+mins*0.20)*chap.diff*pwMult;
+  const chHp=chap.hpM||1,chDmg=chap.dmgM||1,chSpd=chap.spdM||1;
+  const hpScale=(1+mins*0.20)*chHp*pwMult;
   const isElite=!!opts.elite;
   const e={x:player.x+Math.cos(a)*d,y:player.y+Math.sin(a)*d,
     radius:def.radius*(isElite?1.5:1),
     hp:def.hp*hpScale*(isElite?6:1),maxHp:def.hp*hpScale*(isElite?6:1),
-    speed:def.speed*(1+mins*0.05)*(1+(pwMult-1)*0.3),damage:def.damage*chap.diff*(1+mins*0.10)*pwMult*(isElite?1.5:1),
+    speed:def.speed*(1+mins*0.05)*chSpd*(1+(pwMult-1)*0.3),damage:def.damage*chDmg*(1+mins*0.10)*pwMult*(isElite?1.5:1),
     flashTimer:0,color:def.color,typeId,isBoss:false,st:gameTime,
     xpValue:def.xp*(isElite?6:1),isElite,eliteName:isElite?('ELITE '+def.name.toUpperCase()):null};
   enemies.push(e);
@@ -2685,7 +2686,7 @@ function spawnBossByKey(key,isFinal){
   const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
   const a=Math.random()*Math.PI*2;
   const b={x:player.x+Math.cos(a)*700,y:player.y+Math.sin(a)*700,
-    radius:def.radius,hp:def.hp*chap.diff*getEnemyPowerMult(),maxHp:def.hp*chap.diff*getEnemyPowerMult(),
+    radius:def.radius,hp:def.hp*(chap.bossHpM||chap.diff)*getEnemyPowerMult(),maxHp:def.hp*(chap.bossHpM||chap.diff)*getEnemyPowerMult(),
     speed:def.speed,damage:def.damage*chap.diff*getEnemyPowerMult()*0.7,
     flashTimer:0,color:def.color,outline:def.outline,hasWings:def.hasWings,rainbow:def.rainbow,
     isBoss:true,bossName:def.name,typeId:'boss',st:gameTime,xpValue:def.xp,bossKey:key};
@@ -3630,7 +3631,7 @@ function updateBattle(){
   const si=Math.max(0.2,0.5-tf*0.3);
   enemySpawnTimer+=dt2;
   while(enemySpawnTimer>=si){enemySpawnTimer-=si;
-    const types=getWaveTypes(curMin);const cnt=3+Math.floor(tf*4);
+    const types=getWaveTypes(curMin);const cnt=Math.floor((3+Math.floor(tf*4))*(chap.spawnM||1));
     for(let i=0;i<cnt;i++)spawnEnemy2(types[Math.floor(Math.random()*types.length)]);
   }
   // Cap normal enemies at 60; keep bosses/elites even above cap
