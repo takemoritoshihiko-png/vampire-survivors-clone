@@ -1462,11 +1462,11 @@ window.doGacha=function(type,count){
     let rank;
     if(type==='normal'){
       const r=Math.random();
-      rank=r<0.60?'gray':r<0.85?'green':r<0.95?'blue':r<0.99?'purple':r<0.998?'gold':'red';
+      rank=r<0.65?'gray':r<0.87?'green':r<0.96?'blue':r<0.99?'purple':r<0.998?'gold':'red';
     }else{
       save.sgachaPity++;
       if(save.sgachaPity>=100){rank='red';save.sgachaPity=0;}
-      else{const r=Math.random();rank=r<0.50?'purple':r<0.85?'gold':'red';if(rank==='red')save.sgachaPity=0;}
+      else{const r=Math.random();rank=r<0.55?'purple':r<0.87?'gold':'red';if(rank==='red')save.sgachaPity=0;}
     }
     const res=_gachaResult(rank,type);
     results.push(res);
@@ -3300,6 +3300,8 @@ function pickChoices(){
   for(const w of player.weapons){
     const d=WEAPON_DEFS[w.id];
     if(!d||d.evolved||w.lv>=d.maxLv)continue;
+    // Exclude fusion/artifact IDs
+    if(FUSION_RECIPES.some(r=>r.id===w.id))continue;
     // Skip sub check for main weapon (it doesn't have .sub flag)
     if(w.id!==player.mainWeaponId&&!d.sub)continue;
     const ns=w.lv+1;
