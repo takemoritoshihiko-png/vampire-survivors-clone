@@ -570,21 +570,21 @@ const PET_DEFS={
 };
 
 const CHAPTER_DEFS={
-  1:{name:'Ch.1: Graveyard',time:300,diff:1,coinMult:1,clearReward:200,desc:'Survive 5 minutes'},
-  2:{name:'Ch.2: Dungeon',time:480,diff:1.8,coinMult:1.5,clearReward:500,desc:'Survive 8 minutes',cost:500},
-  3:{name:'Ch.3: Hell',time:600,diff:3.0,coinMult:2.5,clearReward:1500,desc:'Survive 10 minutes',cost:1500},
+  1:{name:'Ch.1: Graveyard',time:180,diff:1,coinMult:1,clearReward:200,desc:'Survive 3 minutes'},
+  2:{name:'Ch.2: Dungeon',time:180,diff:1.8,coinMult:1.5,clearReward:500,desc:'Survive 3 minutes',cost:500},
+  3:{name:'Ch.3: Hell',time:180,diff:3.0,coinMult:2.5,clearReward:1500,desc:'Survive 3 minutes',cost:1500},
 };
 
 /* Boss schedule (game time → boss key) */
 /* Per-chapter boss schedule (times in seconds, gameTime is in seconds) */
 /* Boss schedule: one final boss per chapter, no mini-bosses (gameTime is seconds) */
 const BOSS_SCHEDULE={
-  1:[{time:270,key:'giantZombie',final:true}],
-  2:[{time:450,key:'skeletonKing',final:true}],
-  3:[{time:570,key:'demonKing',final:true}],
-  snow:[{time:330,key:'iceKing',final:true}],
-  ocean:[{time:390,key:'deepRuler',final:true}],
-  space:[{time:450,key:'alienEmperor',final:true}],
+  1:[{time:150,key:'giantZombie',final:true}],
+  2:[{time:150,key:'skeletonKing',final:true}],
+  3:[{time:150,key:'demonKing',final:true}],
+  snow:[{time:150,key:'iceKing',final:true}],
+  ocean:[{time:150,key:'deepRuler',final:true}],
+  space:[{time:150,key:'alienEmperor',final:true}],
 };
 const BOSS_DEFS={
   giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:7500,speed:30,damage:30,xp:160,outline:'#0f0'},
@@ -2324,9 +2324,9 @@ const HIDDEN_CHARS={
   yato:{name:'八十',icon:'⚡',color:'#fc0',sprite:'char_yato',unlockWeapon:null,kills:0,baseAtk:150,baseHp:150,desc:'All stats ×1.5, weapons ★3',skill:'godMode',initWeapon:'kunai'},
 };
 const SOUL_STAGES={
-  snow:{name:'❄️ 雪山',cost:100,time:360,diff:2,coinMult:2,clearReward:400,desc:'Survive 6 min (Ice Zombies)',bgColor:'#e0f0ff'},
-  ocean:{name:'🌊 海底',cost:250,time:420,diff:3,coinMult:3,clearReward:800,desc:'Survive 7 min (Depth Sharks)',bgColor:'#001a33'},
-  space:{name:'🌌 宇宙',cost:500,time:480,diff:4,coinMult:4,clearReward:1500,desc:'Survive 8 min (Aliens)',bgColor:'#000011'},
+  snow:{name:'❄️ 雪山',cost:100,time:180,diff:2,coinMult:2,clearReward:400,desc:'Survive 3 min (Ice Zombies)',bgColor:'#e0f0ff'},
+  ocean:{name:'🌊 海底',cost:250,time:180,diff:3,coinMult:3,clearReward:800,desc:'Survive 3 min (Depth Sharks)',bgColor:'#001a33'},
+  space:{name:'🌌 宇宙',cost:500,time:180,diff:4,coinMult:4,clearReward:1500,desc:'Survive 3 min (Aliens)',bgColor:'#000011'},
 };
 const SOUL_ENEMIES={
   iceZombie:{name:'Ice Zombie',color:'#88ccff',sprite:'enemy_ice_zombie',radius:22,hp:300,speed:40,damage:15,xp:8},
