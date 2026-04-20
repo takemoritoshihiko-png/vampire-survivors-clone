@@ -572,6 +572,9 @@ const BOSS_SCHEDULE={
   1:[{time:270,key:'giantZombie',final:true}],
   2:[{time:450,key:'skeletonKing',final:true}],
   3:[{time:570,key:'demonKing',final:true}],
+  snow:[{time:330,key:'iceKing',final:true}],
+  ocean:[{time:390,key:'deepRuler',final:true}],
+  space:[{time:450,key:'alienEmperor',final:true}],
 };
 const BOSS_DEFS={
   giantZombie:{name:'Giant Zombie',color:'#5d3',radius:40,hp:7500,speed:30,damage:30,xp:160,outline:'#0f0'},
@@ -2202,6 +2205,9 @@ const ENEMY_TYPES={
     move:(e,px,py)=>{const a=Math.atan2(py-e.y,px-e.x)+Math.sin(gameTime*4+e.st*10)*1.5;e.x+=Math.cos(a)*e.speed*dt2;e.y+=Math.sin(a)*e.speed*dt2;}},
   demon:{name:'Demon',color:'#e22',radius:16,hp:112,speed:85,damage:27,xp:8,
     move:(e,px,py)=>{if(!e.ct)e.ct=0;e.ct+=dt2;const s=e.ct%3<0.5?e.speed*3.5:e.speed;const a=Math.atan2(py-e.y,px-e.x);e.x+=Math.cos(a)*s*dt2;e.y+=Math.sin(a)*s*dt2;}},
+  iceZombie:{name:'IceZombie',color:'#88ccff',radius:22,hp:300,speed:40,damage:15,xp:8,sprite:'enemy_ice_zombie'},
+  depthShark:{name:'DepthShark',color:'#048',radius:28,hp:180,speed:130,damage:25,xp:10,sprite:'enemy_depth_shark'},
+  alien:{name:'Alien',color:'#0f8',radius:24,hp:220,speed:90,damage:20,xp:15,sprite:'enemy_alien'},
 };
 
 const EVOLUTIONS=[
@@ -2231,6 +2237,9 @@ const BOSS_SKILLS={
   giantZombie:[{k:100,n:'腐敗オーラ',d:'AoE DoT'},{k:300,n:'突進',d:'3s charge'},{k:700,n:'毒液',d:'Poison atk'},{k:1500,n:'再生',d:'Kill→HP'},{k:3000,n:'腐敗爆発',d:'10s mega AoE'}],
   skeletonKing:[{k:100,n:'骨投げ',d:'Ranged atk'},{k:300,n:'骨の盾',d:'DMG-10%'},{k:700,n:'骨召喚',d:'Summon 2'},{k:1500,n:'死の宣告',d:'Random execute'},{k:3000,n:'骨嵐',d:'Screen bones'}],
   demonKing:[{k:100,n:'炎翼',d:'Fire aura'},{k:300,n:'魔弾',d:'Rapid fire'},{k:700,n:'恐怖',d:'Slow-20%'},{k:1500,n:'魔力爆発',d:'5s blast'},{k:3000,n:'地獄門',d:'Fire pillars'}],
+  iceKing:[{k:100,n:'凍結オーラ',d:'Slow -50%'},{k:300,n:'吹雪',d:'3s blizzard'},{k:700,n:'氷の盾',d:'DMG -15%'},{k:1500,n:'雪崩',d:'10s avalanche'},{k:3000,n:'絶対零度',d:'Freeze + 50dmg/s'}],
+  deepRuler:[{k:100,n:'毒液',d:'Poison 5dmg/3s'},{k:300,n:'触手攻撃',d:'Tentacle orbit'},{k:700,n:'大波',d:'5s tidal wave'},{k:1500,n:'深海の圧力',d:'Slow -30%'},{k:3000,n:'海の支配',d:'Poison sea + slow'}],
+  alienEmperor:[{k:100,n:'レーザー',d:'2s laser'},{k:300,n:'テレポート',d:'5s teleport'},{k:700,n:'隕石',d:'8s meteor'},{k:1500,n:'UFO召喚',d:'2 UFO drones'},{k:3000,n:'宇宙崩壊',d:'15s laser rain'}],
 };
 const PET_SKILLS={
   hachiko:[{k:50,n:'忠義',d:'+0.1 HP/s'},{k:150,n:'吠え声',d:'5s stun'},{k:400,n:'突撃',d:'Charge atk'},{k:900,n:'友情',d:'ATK+10%'},{k:2000,n:'英雄犬',d:'3× spd, 2× range'}],
@@ -3581,7 +3590,15 @@ function updateBattle(){
       if(killStreak===10)dmgPopups.push({x:player.x,y:player.y-80,text:'10 KILL STREAK! 🔥',life:2.5,maxLife:2.5,color:'#fa0',size:20});
       else if(killStreak===50)dmgPopups.push({x:player.x,y:player.y-80,text:'50 COMBO! 💥',life:3,maxLife:3,color:'#f44',size:24});
       else if(killStreak===100)dmgPopups.push({x:player.x,y:player.y-80,text:'100 COMBO!!! ⚡',life:3.5,maxLife:3.5,color:'#fc0',size:28});
-      if(player.mainWeaponId&&save.weaponMemory[player.mainWeaponId])save.weaponMemory[player.mainWeaponId].kills++;
+      if(player.mainWeaponId){
+        if(save.weaponMemory[player.mainWeaponId])save.weaponMemory[player.mainWeaponId].kills++;
+        // Fusion weapon kills count toward parent weapons
+        const _fr=FUSION_RECIPES.find(r=>r.id===player.mainWeaponId);
+        if(_fr){
+          if(save.weaponMemory[_fr.a])save.weaponMemory[_fr.a].kills++;
+          if(save.weaponMemory[_fr.b])save.weaponMemory[_fr.b].kills++;
+        }
+      }
       deadFx.push({x:e.x,y:e.y,life:0.3,maxLife:0.3,sprite:e.isBoss?'boss_zombie':'enemy_'+e.typeId,radius:e.radius,color:e.color});
       // Armor-gold: +1 HP per kill
       if(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=4)player.hp=Math.min(player.maxHp,player.hp+1);
@@ -3614,8 +3631,10 @@ function updateBattle(){
         bossVictoryT=2.0;bossVictoryX=e.x;bossVictoryY=e.y;
         save.fusionStones=(save.fusionStones||0)+(e.bossKey==='finalBoss'?3:1);
         runStones+=(e.bossKey==='finalBoss'?3:1);
+        // Soul points for boss kill
+        save.soulPoints=(save.soulPoints||0)+5;
         // Boss capture: final bosses only, 10% chance, max 1 per run
-        const CAPTURABLE_BOSSES={1:'giantZombie',2:'skeletonKing',3:'demonKing'};
+        const CAPTURABLE_BOSSES={1:'giantZombie',2:'skeletonKing',3:'demonKing',snow:'iceKing',ocean:'deepRuler',space:'alienEmperor'};
         const chapterFinal=CAPTURABLE_BOSSES[save.selectedChapter];
         if(!player.capturedThisRun&&e.bossKey===chapterFinal&&Math.random()<0.10){
           player.capturedThisRun=true;
@@ -3625,6 +3644,7 @@ function updateBattle(){
           player.captureRewardPenalty=true;
           levelUpFlash=0.4;
           saveSave();
+          save.soulPoints=(save.soulPoints||0)+15;
         }
       }
       enemies.splice(i,1);continue;
@@ -3927,6 +3947,37 @@ const MAP_RENDERERS={
     }
     // Red fog overlay
     ctx.fillStyle='rgba(120,0,0,0.18)';ctx.fillRect(camera.x,camera.y,W,H);
+  },
+  snow:function(){
+    ctx.fillStyle='#c8e8ff';ctx.fillRect(camera.x,camera.y,W,H);
+    const TS=120,sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
+    const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
+      const h=tileHash(tx,ty,4);const wx=tx*TS,wy=ty*TS;
+      ctx.fillStyle=h<0.3?'#b8d8f0':'#e0f0ff';ctx.fillRect(wx,wy,TS,TS);
+      if(h>0.85){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(wx+TS/2,wy+TS/2,12,0,Math.PI*2);ctx.fill();}
+    }
+  },
+  ocean:function(){
+    ctx.fillStyle='#001a33';ctx.fillRect(camera.x,camera.y,W,H);
+    const TS=120,sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
+    const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
+      const h=tileHash(tx,ty,5);const wx=tx*TS,wy=ty*TS;
+      ctx.fillStyle=h<0.4?'#001830':'#002244';ctx.fillRect(wx,wy,TS,TS);
+      if(h>0.9){const wob=Math.sin(gameTime*2+tx)*4;ctx.fillStyle='rgba(0,100,200,0.3)';ctx.beginPath();ctx.ellipse(wx+TS/2,wy+TS/2,20,10+wob,0,0,Math.PI*2);ctx.fill();}
+    }
+  },
+  space:function(){
+    ctx.fillStyle='#000011';ctx.fillRect(camera.x,camera.y,W,H);
+    const TS=120,sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
+    const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
+      const h=tileHash(tx,ty,6);const wx=tx*TS,wy=ty*TS;
+      ctx.fillStyle='#000022';ctx.fillRect(wx,wy,TS,TS);
+      if(h>0.92){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(wx+h*TS,wy+tileHash(tx,ty,7)*TS,1.5,0,Math.PI*2);ctx.fill();}
+      if(h>0.97){ctx.fillStyle=`hsl(${h*360},80%,60%)`;ctx.beginPath();ctx.arc(wx+TS/2,wy+TS/2,3,0,Math.PI*2);ctx.fill();}
+    }
   },
 };
 
