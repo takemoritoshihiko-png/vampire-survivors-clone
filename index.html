@@ -817,7 +817,8 @@ function renderChars(p){
   // Main weapon slot
   h+=`<div style="text-align:center;margin:14px 0 6px;color:#fa0;font-weight:bold;font-size:14px">🗡️ メイン武器</div>`;
   const mw=save.selectedWeapon;
-  const wd=mw?WEAPON_DEFS[mw]:null;
+  const _fr=mw?FUSION_RECIPES.find(r=>r.id===mw):null;
+  const wd=mw?(WEAPON_DEFS[mw]||(_fr?{name:_fr.name,icon:'⚗️',color:_fr.color||'#a0f',sprite:_fr.sprite,desc:()=>_fr.desc,tier:_fr.legendary?'S':'N'}:null)):null;
   const isOwned=mw&&save.weaponsOwned[mw];
   const mwRank=isOwned?save.weaponsOwned[mw]:'gray';
   const mwLv=(save.weaponLevels&&save.weaponLevels[mw])||1;
@@ -894,29 +895,37 @@ function renderChars(p){
 }
 
 window.openWeaponPicker=function(){
-  const owned=Object.keys(save.weaponsOwned).filter(id=>WEAPON_DEFS[id]&&!WEAPON_DEFS[id].evolved);
+  const isFusion=id=>FUSION_RECIPES.some(r=>r.id===id);
+  const owned=Object.keys(save.weaponsOwned).filter(id=>(WEAPON_DEFS[id]&&!WEAPON_DEFS[id].evolved)||isFusion(id));
   if(owned.length===0){flashMsg('No weapons owned');return;}
   const ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
   let inner=`<div style="max-width:780px;width:100%"><div style="text-align:center;color:#fa0;font-weight:bold;font-size:18px;margin-bottom:14px">⚔️ Select Main Weapon</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">`;
   for(const id of owned){
-    const d=WEAPON_DEFS[id];const r=save.weaponsOwned[id]||'gray';
+    const d=WEAPON_DEFS[id];
+    const fr=FUSION_RECIPES.find(x=>x.id===id);
+    const isFusW=!!fr;
+    const r=save.weaponsOwned[id]||'gray';
     const lv=(save.weaponLevels&&save.weaponLevels[id])||1;
-    const isS=d.tier==='S';
+    const isS=d&&d.tier==='S';
     const sel=save.selectedWeapon===id;
-    const src=d.sprite?`assets/${d.sprite}.png`:null;
+    const wName=d?d.name:fr?fr.name:id;
+    const wIcon=d?d.icon:isFusW?'⚗️':'?';
+    const wColor=d?d.color:fr?fr.color:'#fa0';
+    const src=d&&d.sprite?`assets/${d.sprite}.png`:fr&&fr.sprite?`assets/${fr.sprite}.png`:null;
     const rankAtk={gray:2,green:4,blue:7,purple:11,gold:17,red:28}[r]||0;
     const finalAtk=Math.round(rankAtk*(1+(lv-1)*0.02));
-    const evo=EVOLUTIONS.find(e=>e.weapon===id);
-    inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
+    const evo=d?EVOLUTIONS.find(e=>e.weapon===id):null;
+    inner+=`<div class="game-card rank-${r}" style="text-align:center;padding:14px 8px;margin:0;position:relative;${isS?'border-color:#fc0;border-width:3px;box-shadow:0 0 14px rgba(255,200,0,.55)':''}${isFusW?'border-color:#a0f;border-width:2px':''}${sel?';outline:2px solid #ff0;outline-offset:-1px':''}">
       ${isS?`<div style="position:absolute;top:5px;right:5px;background:#fc0;color:#000;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px">✨S</div>`:''}
+      ${isFusW?`<div style="position:absolute;top:5px;right:5px;background:#a0f;color:#fff;font-size:9px;font-weight:bold;padding:1px 6px;border-radius:4px">⚗️融合</div>`:''}
       ${sel?`<div style="position:absolute;top:5px;left:5px;background:#ff0;color:#000;font-size:9px;font-weight:bold;padding:1px 5px;border-radius:4px">装備中</div>`:''}
       ${src?`<img src="${src}" width="48" height="48" style="object-fit:contain;image-rendering:pixelated;display:block;margin:6px auto 2px" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-        <div style="font-size:36px;display:none">${d.icon}</div>`:`<div style="font-size:36px">${d.icon}</div>`}
-      <div style="font-size:13px;color:${d.color};font-weight:bold;margin-top:4px">${d.name}</div>
-      <div style="font-size:10px"><span style="color:${RANK_COLORS[r]}">${RANK_NAMES[r]}</span> · <span style="color:#aaa">Lv.${lv}</span></div>
+        <div style="font-size:36px;display:none">${wIcon}</div>`:`<div style="font-size:36px">${wIcon}</div>`}
+      <div style="font-size:13px;color:${wColor};font-weight:bold;margin-top:4px">${wName}</div>
+      <div style="font-size:10px"><span style="color:${RANK_COLORS[r]||'#a0f'}">${isFusW?'Fusion':RANK_NAMES[r]||'?'}</span> · <span style="color:#aaa">Lv.${lv}</span></div>
       <div style="font-size:11px;color:#0f0;margin-top:4px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
-      ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ EVO: ${WEAPON_DEFS[evo.evolved].name}</div>`:''}
+      ${evo?`<div style="font-size:9px;color:#fa0;margin-top:2px">⚡ EVO: ${WEAPON_DEFS[evo.evolved]?WEAPON_DEFS[evo.evolved].name:''}</div>`:''}
       <button class="btn btn-blue" style="margin-top:6px;padding:5px 14px;font-size:12px" ${sel?'disabled':''} onclick="pickWeapon('${id}')">${sel?'装備中':'セットする'}</button>
     </div>`;
   }
@@ -2357,7 +2366,8 @@ function initBattle(){
   };
   // Resolve main weapon: selected if owned + valid; null = no initial skill
   let mainW=save.selectedWeapon;
-  if(mainW&&(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW]))mainW=null;
+  const _mainFR=mainW?FUSION_RECIPES.find(r=>r.id===mainW):null;
+  if(mainW&&!_mainFR&&(!WEAPON_DEFS[mainW]||WEAPON_DEFS[mainW].evolved||!save.weaponsOwned[mainW]))mainW=null;
   // Main-weapon ATK bonus (rank + level)
   if(mainW){
     const mwRank=save.weaponsOwned[mainW]||'gray';
