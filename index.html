@@ -227,6 +227,13 @@ const SPRITE_FILES={
   artifact_axe:'assets/artifact_axe.png',artifact_necklace:'assets/artifact_necklace.png',artifact_gloves:'assets/artifact_gloves.png',
   artifact_armor:'assets/artifact_armor.png',artifact_boots:'assets/artifact_boots.png',artifact_boss:'assets/artifact_boss.png',
   artifact_belt:'assets/artifact_belt.png',artifact_ultimate:'assets/artifact_ultimate.png',
+  char_kagerou_awaken:'assets/char_kagerou_awaken.png',char_rex_awaken:'assets/char_rex_awaken.png',
+  char_gaia_awaken:'assets/char_gaia_awaken.png',char_void_awaken:'assets/char_void_awaken.png',
+  char_chaos_awaken:'assets/char_chaos_awaken.png',char_yato_awaken:'assets/char_yato_awaken.png',
+  boss_rot_god:'assets/boss_rot_god.png',boss_death_king:'assets/boss_death_king.png',
+  boss_demon_god:'assets/boss_demon_god.png',boss_ice_god:'assets/boss_ice_god.png',
+  boss_sea_god:'assets/boss_sea_god.png',boss_space_god:'assets/boss_space_god.png',
+  pet_hachiko_awaken:'assets/pet_hachiko_awaken.png',pet_frog_awaken:'assets/pet_frog_awaken.png',
 };
 let spritesLoaded=0,spritesTotal=Object.keys(SPRITE_FILES).length;
 function preloadSprites(cb){
@@ -2339,6 +2346,13 @@ const WEAPON_AWAKEN={
   lightChaserS:{name:'究極光神',cd:10,desc:'All enemies massive damage'},
   forceS:{name:'宇宙崩壊',cd:15,desc:'Mega blackhole'},
 };
+const AWAKEN_SPRITES={
+  kagerou:'char_kagerou_awaken',rex:'char_rex_awaken',gaia:'char_gaia_awaken',
+  voidChar:'char_void_awaken',chaosChar:'char_chaos_awaken',yato:'char_yato_awaken',
+  giantZombie:'boss_rot_god',skeletonKing:'boss_death_king',demonKing:'boss_demon_god',
+  iceKing:'boss_ice_god',deepRuler:'boss_sea_god',alienEmperor:'boss_space_god',
+  hachiko:'pet_hachiko_awaken',frog:'pet_frog_awaken',
+};
 const BOSS_AWAKEN={
   giantZombie:{name:'腐敗神',desc:'150r aura 25dmg/s + 10s mega blast'},
   skeletonKing:{name:'死の王',desc:'Bone wall + mass execute'},
@@ -3976,7 +3990,8 @@ function drawPlayer(){
   const blink=player.invTimer>0&&Math.floor(player.invTimer*10)%2;
   if(blink)return;
   const ch=CHARS[player.charId];
-  const sp=SPRITES['char_'+player.charId];
+  const _awkSp=save.awakened&&save.awakened.includes(player.charId)&&AWAKEN_SPRITES[player.charId];
+  const sp=(_awkSp&&SPRITES[_awkSp])||SPRITES['char_'+player.charId];
   const bob=playerMoving?Math.sin(gameTime*9)*3:0;
   // Faint white glow around player
   ctx.fillStyle='rgba(255,255,255,0.06)';
@@ -4487,7 +4502,8 @@ function drawBattle(){
     const bd=BOSS_DEFS[save.equippedBoss];
     if(bd){
       const bsz=bd.radius*0.7;
-      const bsp=bd.sprite&&SPRITES[bd.sprite];
+      const _bAwk=save.awakened&&save.awakened.includes(save.equippedBoss)&&AWAKEN_SPRITES[save.equippedBoss];
+      const bsp=(_bAwk&&SPRITES[_bAwk])||(bd.sprite&&SPRITES[bd.sprite]);
       if(bsp){ctx.drawImage(bsp,bossPet.x-bsz,bossPet.y-bsz,bsz*2,bsz*2);}
       else{ctx.fillStyle=bd.color||'#888';ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();}
       ctx.shadowBlur=0;
@@ -4505,7 +4521,8 @@ function drawBattle(){
   // Pet
   if(save.pets[save.selectedPet]&&save.pets[save.selectedPet].unlocked){
     const pi=PET_DEFS[save.selectedPet];
-    const sp=SPRITES['pet_'+save.selectedPet];
+    const _pAwk=save.awakened&&save.awakened.includes(save.selectedPet)&&AWAKEN_SPRITES[save.selectedPet];
+    const sp=(_pAwk&&SPRITES[_pAwk])||SPRITES['pet_'+save.selectedPet];
     const py2=pet.y-(pet.vy||0);
     const isGiant=pet.isGiant&&save.selectedPet==='frog';
     const sz=isGiant?64:32;
