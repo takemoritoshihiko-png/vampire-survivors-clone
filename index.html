@@ -63,6 +63,7 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 .rank-gold{border-color:#fc0;background:rgba(255,180,0,.22);box-shadow:0 0 12px rgba(255,204,0,.4);animation:gold-shine 2s infinite}
 .rank-red{border-color:#f22;background:rgba(255,40,40,.25);box-shadow:0 0 16px rgba(255,34,34,.4);animation:red-pulse 1.5s infinite}
 @keyframes gold-shine{0%,100%{box-shadow:0 0 12px rgba(255,204,0,.4)}50%{box-shadow:0 0 24px rgba(255,204,0,.67)}}
+.awaken-badge{display:inline-block;background:linear-gradient(135deg,#fc0,#f80);color:#000;font-weight:bold;padding:3px 10px;border-radius:6px;font-size:11px}
 @keyframes red-pulse{0%,100%{box-shadow:0 0 16px rgba(255,34,34,.4)}50%{box-shadow:0 0 32px rgba(255,34,34,.67)}}
 
 /* Common card */
@@ -840,6 +841,7 @@ function renderChars(p){
         <div style="font-size:15px;color:${wd.color};font-weight:bold;margin-top:6px">${wd.name}</div>
         <div style="font-size:11px;color:${RANK_COLORS[mwRank]};margin-top:2px">[${RANK_NAMES[mwRank]}] Lv.${mwLv}</div>
         <div style="font-size:13px;color:#0f0;margin-top:6px;font-weight:bold">⚔️ ATK +${finalAtk}%</div>
+        ${save.awakened&&save.awakened.includes(mw)?'<div style="margin-top:4px"><span class="awaken-badge">⚡ 覚醒済み</span></div>':''}
         <button class="btn btn-blue" style="margin-top:8px;padding:5px 16px;font-size:12px" onclick="openWeaponPicker()">変更する ▼</button>
       </div>
     </div>`;
@@ -1619,7 +1621,10 @@ function renderBossBox(p){
           <div style="font-size:15px;color:${bd.outline||'#fff'};font-weight:bold">${bd.name}</div>
           <div style="font-size:11px;color:#aaa">撃破数: <span style="color:#ff0">${(bb.kills||0).toLocaleString()}</span>体</div>
         </div>
-        <button class="btn ${isEq?'btn-red':'btn-blue'}" style="padding:5px 14px;font-size:12px" onclick="equipBoss('${bb.key}')">${isEq?'解除':'装備する'}</button>
+        <div style="text-align:right">
+          ${save.awakened&&save.awakened.includes(bb.key)?'<div class="awaken-badge" style="margin-bottom:4px">⚡ 覚醒</div>':''}
+          <button class="btn ${isEq?'btn-red':'btn-blue'}" style="padding:5px 14px;font-size:12px" onclick="equipBoss('${bb.key}')">${isEq?'解除':'装備する'}</button>
+        </div>
       </div>`;
     for(let i=0;i<sk.length;i++){
       const s=sk[i];const done=(bb.unlocked||[]).includes(s.k);
@@ -3066,7 +3071,8 @@ function updateBossPet(){
     let near=null,nd=Infinity;
     for(const e of enemies){const d=distXY(bossPet.x,bossPet.y,e.x,e.y);if(d<nd&&d<300){nd=d;near=e;}}
     if(near){
-      const dmg=20*player.might;
+      const _bossAwk=save.awakened&&save.awakened.includes(save.equippedBoss);
+      const dmg=(_bossAwk?50:20)*player.might;
       applyDmg(near,dmg,'bossPet');
       spawnParticles2(near.x,near.y,bd.color||'#fff',6);
       if(near.hp<=0){
@@ -3082,7 +3088,7 @@ function updateBossPet(){
   }
   // Tier 1 passive: AoE DoT every 3 seconds
   const bb=save.bossBox.find(b=>b.key===save.equippedBoss);
-  if(bb&&bb.unlocked.includes(100)){
+  if(bb&&(bb.unlocked.includes(100)||_bossAwk)){
     if((Math.floor(gameTime*10)%30)===0){
       for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<80)applyDmg(e,5*player.might,'bossPet');
     }
@@ -3319,6 +3325,9 @@ function updateArtifact(){
 /* Pet logic */
 function updatePet(){
   if(save.selectedPet==='hachiko'&&save.pets.hachiko.unlocked){
+    // Awakened hachiko: always giant + stronger
+    const _hkAwk=save.awakened&&save.awakened.includes('hachiko');
+    if(_hkAwk){pet.radius=40;player.baseMight=Math.max(player.baseMight,player.baseMight*1.002);}
     if(pet.state==='orbit'){
       pet.angle+=2.5*dt2;
       pet.x=player.x+Math.cos(pet.angle)*55;
@@ -3356,7 +3365,8 @@ function updatePet(){
     if(pet.giantT>=60){pet.giantT=0;pet.isGiant=true;pet.giantDur=10;
       dmgPopups.push({x:pet.x,y:pet.y-30,text:'🐸 GIANT FROG!',life:2.5,maxLife:2.5,color:'#4f4',size:24});}
     if(pet.isGiant){pet.giantDur-=dt2;if(pet.giantDur<=0)pet.isGiant=false;}
-    const petSz=pet.isGiant?60:20;
+    const _frogAwk=save.awakened&&save.awakened.includes('frog');
+    const petSz=_frogAwk?80:pet.isGiant?60:20;
     // Find nearest XP orb and chase it
     let nearOrb=null,nearDist=Infinity;
     for(const g of gems){const gd=distXY(pet.x,pet.y,g.x,g.y);if(gd<nearDist){nearDist=gd;nearOrb=g;}}
@@ -3377,7 +3387,7 @@ function updatePet(){
     if(distXY(pet.x,pet.y,player.x,player.y)>400){pet.x=player.x;pet.y=player.y;}
     // Magnet: pull gems toward frog (250px with super evo, 150px base)
     if(hasMagnet){
-      const magR=hasSuper?250:150;
+      const magR=_frogAwk?9999:hasSuper?250:150;
       for(const g of gems){const gd=distXY(pet.x,pet.y,g.x,g.y);
         if(gd<magR&&gd>2){const a=Math.atan2(pet.y-g.y,pet.x-g.x);g.x+=Math.cos(a)*180*dt2;g.y+=Math.sin(a)*180*dt2;}}
     }
@@ -3395,7 +3405,7 @@ function updatePet(){
     }
     // Contact damage (900XP+)
     if(hasToxic){
-      const dmgPerSec=hasSuper?50:10;
+      const dmgPerSec=_frogAwk?100:hasSuper?50:10;
       for(const e of enemies){if(distXY(pet.x,pet.y,e.x,e.y)<petSz+e.radius)e.hp-=dmgPerSec*dt2;}
     }
     // Giant: smash enemies for 50 dmg/s
@@ -4708,6 +4718,7 @@ function drawHUD(){
     } else {ctx.font='18px serif';ctx.textAlign='left';ctx.fillText(d.icon,px2+6,y+22);}
     ctx.fillStyle='#fff';ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillText(d.name.slice(0,10),px2+32,y+12);
     if(d.evolved){ctx.fillStyle='#fa0';ctx.font='bold 9px monospace';ctx.fillText('★EVOLVED',px2+32,y+24);}
+    else if(save.awakened&&save.awakened.includes(w.id)){ctx.fillStyle='#fc0';ctx.font='bold 9px monospace';ctx.fillText('⚡AWAKEN',px2+32,y+24);}
     else{ctx.font='bold 10px monospace';ctx.fillStyle='#fc0';ctx.fillText('★'.repeat(w.lv)+'☆'.repeat(5-w.lv),px2+32,y+25);}
   };
   // MAIN WEAPON section (1 slot)
