@@ -489,6 +489,8 @@ delete save.talents;
 if(!save.weaponMemory){save.weaponMemory={};for(const id of['kunai','katana','bat','shotgun','lightchaser','force','drill','soccer','lightChaserS','forceS','chaosBlade'])save.weaponMemory[id]={kills:0,unlocked:[]};}
 if(save.fusionStones===undefined)save.fusionStones=0;
 if(!save.artifacts)save.artifacts={created:[],equipped:null};
+if(!save.awakenMats)save.awakenMats=0;
+if(!save.awakened)save.awakened=[];
 if(!save.fusionBook)save.fusionBook={};
 if(!save.bossBox)save.bossBox=[];
 if(!save.equippedBoss)save.equippedBoss=null;
@@ -981,7 +983,7 @@ function renderEquip(p){
   h+='</div>';
 
   // Sub-tab bar
-  const subTabs=['Inventory','Merge','Astral','Artifact','Fusion'];
+  const subTabs=['Inventory','Merge','Astral','Artifact','Fusion','Awaken'];
   h+='<div style="display:flex;gap:4px;justify-content:center;margin:12px 0 8px;flex-wrap:wrap">';
   for(const t of subTabs)h+=`<button class="btn ${equipSubTab===t?'btn-orange':''}" style="padding:5px 12px;font-size:11px;background:${equipSubTab===t?'':'#333'}" onclick="setEquipTab('${t}')">${t}</button>`;
   h+='</div>';
@@ -991,6 +993,7 @@ function renderEquip(p){
   else if(equipSubTab==='Astral')h+=renderAstralTab();
   else if(equipSubTab==='Artifact')h+=renderArtifactsContent();
   else if(equipSubTab==='Fusion')h+=renderFusionTab();
+  else if(equipSubTab==='Awaken')h+=renderAwakenContent();
 
   p.innerHTML=h;
 }
@@ -1314,6 +1317,7 @@ window.decomposeEq=function(id){
   const eq=getEqById(id);if(!eq||eqIsEquipped(id))return;
   const v=DECOMPOSE_VAL[eq.rank];
   save.basetech+=v.bt;save.cores+=v.core;
+    if(eq.rank==='red')save.awakenMats=(save.awakenMats||0)+1;
   save.equipment=save.equipment.filter(e=>e.id!==id);
   saveSave();closeEqMenu();renderHome();flashMsg(`+${v.bt} BT${v.core?` +${v.core} Core`:''}`);
 };
@@ -1776,6 +1780,60 @@ function renderArtifactsContent(){
   }
   h+='</div>';
   return h;
+}
+function renderAwakenContent(){
+  let h=`<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:6px">⚡ 覚醒</div>`;
+  h+=`<div style="text-align:center;font-size:12px;color:#aaa;margin-bottom:12px">💎 覚醒素材: <b style="color:#f44">${save.awakenMats||0}</b> (赤装備解体で+1) | 必要: 5000撃破 + 素材5個</div>`;
+  h+='<div style="max-width:780px;margin:0 auto">';
+  // Weapons
+  h+='<div style="color:#fc0;font-weight:bold;margin:10px 0 6px">⚔️ 武器覚醒</div>';
+  for(const[wid,aw]of Object.entries(WEAPON_AWAKEN)){
+    const mem=save.weaponMemory&&save.weaponMemory[wid];
+    const kills=mem?mem.kills:0;const done=save.awakened.includes(wid);
+    const can=canAwaken(wid);const pct=Math.min(100,Math.floor(kills/5000*100));
+    const d=WEAPON_DEFS[wid];
+    h+=`<div class="game-card" style="margin:4px 0;padding:8px;${done?'border-color:#fc0':''}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:24px">${d?d.icon:'⚔️'}</div>
+        <div style="flex:1"><div style="font-size:12px;color:${done?'#fc0':'#aaa'};font-weight:bold">${aw.name} ${done?'✅':''}</div>
+          <div style="font-size:10px;color:#888">${aw.desc}</div>
+          ${done?'':`<div class="bar-bg" style="margin-top:2px"><div class="bar-fill" style="width:${pct}%;background:#f44"></div></div><div style="font-size:9px;color:#888">${kills}/5000</div>`}
+        </div>
+        ${done?'':can?`<button class="btn btn-red" style="padding:3px 10px;font-size:10px" onclick="doAwaken('${wid}')">覚醒</button>`:''}
+      </div></div>`;
+  }
+  // Bosses
+  h+='<div style="color:#fc0;font-weight:bold;margin:10px 0 6px">👾 ボス覚醒</div>';
+  for(const[bid,baw]of Object.entries(BOSS_AWAKEN)){
+    const bb=(save.bossBox||[]).find(b=>b.key===bid);
+    const kills=bb?bb.kills||0:0;const done=save.awakened.includes(bid);
+    const can=canAwaken(bid);const pct=Math.min(100,Math.floor(kills/5000*100));
+    h+=`<div class="game-card" style="margin:4px 0;padding:8px;${done?'border-color:#fc0':''}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:24px">👾</div>
+        <div style="flex:1"><div style="font-size:12px;color:${done?'#fc0':'#aaa'};font-weight:bold">${baw.name} ${done?'✅':''}</div>
+          <div style="font-size:10px;color:#888">${baw.desc}</div>
+          ${done?'':`<div style="font-size:9px;color:#888">${kills}/5000</div>`}
+        </div>
+        ${done?'':can?`<button class="btn btn-red" style="padding:3px 10px;font-size:10px" onclick="doAwaken('${bid}')">覚醒</button>`:''}
+      </div></div>`;
+  }
+  // Pets
+  h+='<div style="color:#fc0;font-weight:bold;margin:10px 0 6px">🐾 ペット覚醒</div>';
+  for(const[pid,paw]of Object.entries(PET_AWAKEN)){
+    const kills=pid==='frog'?(save.petXP?save.petXP.frog||0:0):(save.petKills?save.petKills[pid]||0:0);
+    const done=save.awakened.includes(pid);const can=canAwaken(pid);
+    h+=`<div class="game-card" style="margin:4px 0;padding:8px;${done?'border-color:#fc0':''}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:24px">${pid==='hachiko'?'🐕':'🐸'}</div>
+        <div style="flex:1"><div style="font-size:12px;color:${done?'#fc0':'#aaa'};font-weight:bold">${paw.name} ${done?'✅':''}</div>
+          <div style="font-size:10px;color:#888">${paw.desc}</div>
+          ${done?'':`<div style="font-size:9px;color:#888">${kills}/5000</div>`}
+        </div>
+        ${done?'':can?`<button class="btn btn-red" style="padding:3px 10px;font-size:10px" onclick="doAwaken('${pid}')">覚醒</button>`:''}
+      </div></div>`;
+  }
+  h+='</div>';return h;
 }
 window.equipArtifact=function(id){save.artifacts.equipped=id;saveSave();renderHome();};
 window.createArtifact=function(id){
@@ -2263,6 +2321,47 @@ const SOUL_ENEMIES={
   depthShark:{name:'Depth Shark',color:'#048',sprite:'enemy_depth_shark',radius:28,hp:180,speed:130,damage:25,xp:10},
   alien:{name:'Alien',color:'#0f8',sprite:'enemy_alien',radius:24,hp:220,speed:90,damage:20,xp:15},
 };
+const WEAPON_AWAKEN={
+  kunai:{name:'影千本',cd:8,desc:'50 kunai burst 360°'},
+  katana:{name:'天斬',cd:10,desc:'Screen-wide giant slash'},
+  shotgun:{name:'超散弾',cd:8,desc:'50 pellets 180° spread'},
+  drill:{name:'大地穿孔',cd:10,desc:'20 drills erupt from ground'},
+  soccer:{name:'超重力弾',cd:12,desc:'Giant bouncing gravity ball'},
+  lightchaser:{name:'光神剣',cd:10,desc:'24 light pillars'},
+  force:{name:'次元崩壊',cd:12,desc:'5 blackholes'},
+  bat:{name:'魔王棍',cd:8,desc:'5s giant high-speed orbit'},
+  chaosBlade:{name:'混沌解放',cd:15,desc:'All enemies chaos + 30% execute'},
+  lightChaserS:{name:'究極光神',cd:10,desc:'All enemies massive damage'},
+  forceS:{name:'宇宙崩壊',cd:15,desc:'Mega blackhole'},
+};
+const BOSS_AWAKEN={
+  giantZombie:{name:'腐敗神',desc:'150r aura 25dmg/s + 10s mega blast'},
+  skeletonKing:{name:'死の王',desc:'Bone wall + mass execute'},
+  demonKing:{name:'魔神',desc:'Screen-wide fire wings'},
+  iceKing:{name:'氷河神',desc:'Freeze all + ice pillars'},
+  deepRuler:{name:'海神',desc:'Tsunami + tentacles'},
+  alienEmperor:{name:'宇宙神',desc:'Laser rain + blackholes'},
+};
+const PET_AWAKEN={
+  hachiko:{name:'神犬',desc:'Always giant, ATK+50%, 1s bite'},
+  frog:{name:'蛙神',desc:'Always giant, screen magnet, 100 contact dmg'},
+};
+function canAwaken(id){
+  const mem=save.weaponMemory&&save.weaponMemory[id];
+  const bk=(save.bossBox||[]).find(b=>b.key===id);
+  const pk=save.petKills&&save.petKills[id];
+  const fxp=save.petXP&&save.petXP[id];
+  const kills=mem?mem.kills:(bk?bk.kills||0:(pk||fxp||0));
+  return kills>=5000&&(save.awakenMats||0)>=5&&!save.awakened.includes(id);
+}
+function doAwaken(id){
+  if(!canAwaken(id))return;
+  save.awakenMats-=5;save.awakened.push(id);saveSave();
+  SFX.evolution();flashRankUp('red');
+  setTimeout(()=>flashRankUp('gold'),400);
+  flashMsg('⚡ 覚醒！ '+((WEAPON_AWAKEN[id]||BOSS_AWAKEN[id]||PET_AWAKEN[id]||{}).name||id));
+}
+window.doAwaken=doAwaken;
 const ARTIFACTS={
   axe:{name:'神器・斧',icon:'🪓',sprite:'artifact_axe',recipe:{red_weapon:3,red_gloves:1},desc:'Orbit axes + 10s giant axe throw'},
   necklace:{name:'神器・ネックレス',icon:'📿',sprite:'artifact_necklace',recipe:{red_necklace:5},desc:'HP+300, 150dmg taken → 10s invincible'},
@@ -2991,6 +3090,50 @@ function updateBossPet(){
 }
 
 /* Fusion weapon attacks */
+/* Weapon awakening auto-attack */
+function updateWeaponAwaken(){
+  const mw=player.weapons.find(w=>w.id===player.mainWeaponId);
+  if(!mw||!save.awakened.includes(mw.id))return;
+  const aw=WEAPON_AWAKEN[mw.id];if(!aw)return;
+  mw._awT=(mw._awT||0)+dt2;
+  if(mw._awT<aw.cd)return;
+  mw._awT=0;
+  const dmg=player.might*12;
+  const id=mw.id;
+  if(id==='kunai'){
+    for(let i=0;i<50;i++){const ang=Math.PI*2/50*i;fireBullet({x:player.x,y:player.y,radius:6,vx:Math.cos(ang)*500,vy:Math.sin(ang)*500,damage:dmg*2,pierce:5,life:1.5,color:'#fe0',wid:'awaken',kind:'kunai',angle:ang});}
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 影千本！',life:2,maxLife:2,color:'#fe0',size:22});
+  }else if(id==='katana'){
+    whipFx.push({x:player.x,y:player.y,dir:0,area:400,life:.3,maxLife:.3,color:'#fff'});
+    for(const e of enemies)if(dist2(e,player)<400)applyDmg(e,dmg*5,'awaken');
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 天斬！',life:2,maxLife:2,color:'#fff',size:22});levelUpFlash=0.3;
+  }else if(id==='shotgun'){
+    const ba=Math.atan2(player.lastDy,player.lastDx);
+    for(let i=0;i<50;i++){const ang=ba-Math.PI/2+Math.PI/49*i;fireBullet({x:player.x,y:player.y,radius:6,vx:Math.cos(ang)*450,vy:Math.sin(ang)*450,damage:dmg*1.5,pierce:3,life:1.2,color:'#f60',wid:'awaken',kind:'pellet',angle:ang});}
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 超散弾！',life:2,maxLife:2,color:'#f60',size:22});
+  }else if(id==='drill'){
+    for(let i=0;i<20;i++){const tx=player.x+rnd(-200,200),ty=player.y+rnd(-200,200);
+      for(const e of enemies)if(distXY(e.x,e.y,tx,ty)<40)applyDmg(e,dmg*3,'awaken');
+      spawnParticles2(tx,ty,'#888',3);}
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 大地穿孔！',life:2,maxLife:2,color:'#888',size:22});
+  }else if(id==='soccer'){
+    bullets.push({x:player.x,y:player.y,radius:40,vx:rnd(-300,300),vy:rnd(-300,300),damage:dmg*4,pierce:99,life:5,color:'#fff',wid:'awaken',kind:'soccer',angle:0,bounces:20});
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 超重力弾！',life:2,maxLife:2,color:'#fff',size:22});
+  }else if(id==='lightchaser'||id==='lightChaserS'){
+    for(let i=0;i<24;i++){const ang=Math.PI*2/24*i;
+      fireBullet({x:player.x,y:player.y,radius:10,vx:Math.cos(ang)*400,vy:Math.sin(ang)*400,damage:dmg*(id==='lightChaserS'?10:3),pierce:99,life:1,color:'#fd0',wid:'awaken',kind:'ray',angle:ang});}
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ '+(id==='lightChaserS'?'究極光神':'光神剣')+'！',life:2,maxLife:2,color:'#fd0',size:22});levelUpFlash=0.4;
+  }else if(id==='force'||id==='forceS'){
+    const n=id==='forceS'?1:5;const r=id==='forceS'?500:120;
+    for(let i=0;i<n;i++)bullets.push({x:player.x+rnd(-200,200),y:player.y+rnd(-200,200),radius:18,vx:0,vy:0,damage:dmg*(id==='forceS'?20:1.5),pierce:99,life:2,color:'#a0f',wid:'awaken',kind:'blackhole',ttl:1.5,pull:r>200?1000:400,burstDmg:dmg*(id==='forceS'?20:3),burstR:r});
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ '+(id==='forceS'?'宇宙崩壊':'次元崩壊')+'！',life:2,maxLife:2,color:'#a0f',size:22});
+  }else if(id==='bat'){
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 魔王棍！',life:2,maxLife:2,color:'#c40',size:22});
+  }else if(id==='chaosBlade'){
+    for(const e of enemies){if(Math.random()<0.3)e.hp=0;else applyDmg(e,dmg*5,'awaken');}
+    dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 混沌解放！',life:2,maxLife:2,color:'#a0a',size:22});levelUpFlash=0.5;
+  }
+}
 function updateFusionWeapon(){
   const mw=player.weapons.find(w=>w.id===player.mainWeaponId);
   if(!mw)return;
@@ -3456,7 +3599,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
-  updateWeapons();updateFusionWeapon();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
+  updateWeapons();updateFusionWeapon();updateWeaponAwaken();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
 
   // Spawn
   const tf=Math.min(gameTime/clearTime,1);
