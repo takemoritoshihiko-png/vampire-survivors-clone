@@ -3156,12 +3156,65 @@ function updateBossPet(){
       }
     }
   }
-  // Tier 1 passive: AoE DoT every 3 seconds
+  // Execute unlocked boss skills
   const bb=save.bossBox.find(b=>b.key===save.equippedBoss);
   const _bossAwk2=save.awakened&&save.awakened.includes(save.equippedBoss);
-  if(bb&&(bb.unlocked.includes(100)||_bossAwk2)){
+  if(!bb)return;
+  const bk=save.equippedBoss;const ul=bb.unlocked||[];const dmgB=player.might*10;
+  // Tier 1 (100): AoE DoT
+  if(ul.includes(100)||_bossAwk2){
     if((Math.floor(gameTime*10)%30)===0){
-      for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<80)applyDmg(e,5*player.might,'bossPet');
+      for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<100)applyDmg(e,dmgB*0.5,'bossPet');
+    }
+  }
+  // Tier 2 (300): periodic attack
+  if(ul.includes(300)){
+    bossPet._t2=(bossPet._t2||0)+dt2;
+    if(bossPet._t2>=3){bossPet._t2=0;
+      const tgt=nearestEnemy();
+      if(tgt){
+        if(bk==='giantZombie'){bossPet.x+=(tgt.x-bossPet.x)*0.3;bossPet.y+=(tgt.y-bossPet.y)*0.3;applyDmg(tgt,dmgB*2,'bossPet');}
+        else if(bk==='skeletonKing'||bk==='deepRuler'){
+          const ang=Math.atan2(tgt.y-bossPet.y,tgt.x-bossPet.x);
+          fireBullet({x:bossPet.x,y:bossPet.y,radius:8,vx:Math.cos(ang)*300,vy:Math.sin(ang)*300,damage:dmgB*1.5,pierce:2,life:2,color:bd.color||'#fff',wid:'bossPet',kind:'pellet',angle:ang});
+        }
+        else if(bk==='demonKing'){
+          for(let i=0;i<3;i++){const ang=Math.PI*2/3*i;fireBullet({x:bossPet.x,y:bossPet.y,radius:10,vx:Math.cos(ang)*400,vy:Math.sin(ang)*400,damage:dmgB,pierce:1,life:1.5,color:'#f40',wid:'bossPet',kind:'pellet',angle:ang});}
+        }
+        else if(bk==='iceKing'){
+          for(let i=0;i<8;i++){const ang=rnd(0,Math.PI*2);fireBullet({x:bossPet.x,y:bossPet.y,radius:6,vx:Math.cos(ang)*350,vy:Math.sin(ang)*350,damage:dmgB,pierce:1,life:1.5,color:'#8cf',wid:'bossPet',kind:'pellet',angle:ang});}
+        }
+        else if(bk==='alienEmperor'){applyDmg(tgt,dmgB*2.5,'bossPet');spawnParticles2(tgt.x,tgt.y,'#0f8',3);}
+      }
+    }
+  }
+  // Tier 3 (700): passive effect
+  if(ul.includes(700)){
+    if(bk==='skeletonKing'||bk==='iceKing')player.armor=Math.max(player.armor,5);
+    if(bk==='demonKing')for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<150)e.speed=Math.max(20,e.speed*0.995);
+  }
+  // Tier 4 (1500): powerful periodic
+  if(ul.includes(1500)){
+    bossPet._t4=(bossPet._t4||0)+dt2;
+    const cd4=bk==='demonKing'?5:bk==='alienEmperor'?15:10;
+    if(bossPet._t4>=cd4){bossPet._t4=0;
+      if(bk==='giantZombie')player.hp=Math.min(player.maxHp,player.hp+20);
+      else if(bk==='skeletonKing'){const re=enemies[Math.floor(Math.random()*enemies.length)];if(re){re.hp=0;dmgPopups.push({x:re.x,y:re.y-20,text:'💀',life:1.5,maxLife:1.5,color:'#fff',size:20});}}
+      else if(bk==='demonKing'){for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<120)applyDmg(e,dmgB*4,'bossPet');lightningFx.push({x:bossPet.x,y:bossPet.y,life:.3,maxLife:.3,kind:'explosion'});}
+      else if(bk==='iceKing'){for(const e of enemies)e.speed=Math.max(10,e.speed*0.5);levelUpFlash=0.2;}
+      else if(bk==='deepRuler'){for(const e of enemies)e.speed=Math.max(15,e.speed*0.7);}
+      else if(bk==='alienEmperor'){dmgPopups.push({x:bossPet.x,y:bossPet.y-30,text:'🛸 UFO!',life:2,maxLife:2,color:'#0f8',size:16});}
+    }
+  }
+  // Tier 5 (3000): ultimate periodic
+  if(ul.includes(3000)){
+    bossPet._t5=(bossPet._t5||0)+dt2;
+    if(bossPet._t5>=15){bossPet._t5=0;
+      if(bk==='giantZombie'||bk==='demonKing'){for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<200)applyDmg(e,dmgB*6,'bossPet');lightningFx.push({x:bossPet.x,y:bossPet.y,life:.4,maxLife:.4,kind:'explosion'});}
+      else if(bk==='skeletonKing'){for(let i=0;i<20;i++){const ang=Math.PI*2/20*i;fireBullet({x:bossPet.x,y:bossPet.y,radius:6,vx:Math.cos(ang)*350,vy:Math.sin(ang)*350,damage:dmgB*1.5,pierce:3,life:1.5,color:'#fff',wid:'bossPet',kind:'pellet',angle:ang});}}
+      else if(bk==='iceKing'){for(const e of enemies){applyDmg(e,dmgB*3,'bossPet');e.speed=Math.max(5,e.speed*0.3);}levelUpFlash=0.4;}
+      else if(bk==='deepRuler'){for(const e of enemies){applyDmg(e,dmgB*2,'bossPet');e.speed=Math.max(10,e.speed*0.5);}}
+      else if(bk==='alienEmperor'){for(const e of enemies)applyDmg(e,dmgB*5,'bossPet');levelUpFlash=0.5;dmgPopups.push({x:bossPet.x,y:bossPet.y-40,text:'🌌 宇宙崩壊！',life:2.5,maxLife:2.5,color:'#0f8',size:20});}
     }
   }
 }
