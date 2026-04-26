@@ -3655,8 +3655,8 @@ function updateBattle(){
     }
   }
 
-  // Clear check (only when no active boss — final boss must be killed first)
-  if(gameTime>=clearTime&&!bossActive){bState='done';endBattle(true);return;}
+  // Clear check (only when no active boss AND not in capture dialog)
+  if(gameTime>=clearTime&&!bossActive&&bState==='playing'){bState='done';endBattle(true);return;}
 
   // Death warning starts 30 sec after clear time if boss still alive
   const deathSpawnTime=Math.max(clearTime+60,1800);
