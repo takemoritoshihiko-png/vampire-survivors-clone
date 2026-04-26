@@ -3158,7 +3158,8 @@ function updateBossPet(){
   }
   // Tier 1 passive: AoE DoT every 3 seconds
   const bb=save.bossBox.find(b=>b.key===save.equippedBoss);
-  if(bb&&(bb.unlocked.includes(100)||_bossAwk)){
+  const _bossAwk2=save.awakened&&save.awakened.includes(save.equippedBoss);
+  if(bb&&(bb.unlocked.includes(100)||_bossAwk2)){
     if((Math.floor(gameTime*10)%30)===0){
       for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<80)applyDmg(e,5*player.might,'bossPet');
     }
