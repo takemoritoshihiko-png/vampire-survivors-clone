@@ -3859,15 +3859,10 @@ function updateBattle(){
         // Boss capture: final bosses only, 10% chance, max 1 per run
         const CAPTURABLE_BOSSES={1:'giantZombie',2:'skeletonKing',3:'demonKing',snow:'iceKing',ocean:'deepRuler',space:'alienEmperor'};
         const chapterFinal=CAPTURABLE_BOSSES[save.selectedChapter];
-        if(!player.capturedThisRun&&e.bossKey===chapterFinal&&Math.random()<0.10){
-          player.capturedThisRun=true;
-          if(!save.bossBox.find(b=>b.key===e.bossKey))save.bossBox.push({key:e.bossKey,kills:0,unlocked:[]});
-          dmgPopups.push({x:e.x,y:e.y-40,text:'⚡ BOSS CAPTURED!',life:3,maxLife:3,color:'#fc0',size:28});
-          dmgPopups.push({x:e.x,y:e.y-10,text:'報酬 -50%',life:2.5,maxLife:2.5,color:'#f44',size:16});
-          player.captureRewardPenalty=true;
-          levelUpFlash=0.4;
-          saveSave();
-          save.soulPoints=(save.soulPoints||0)+15;
+        if(!player.capturedThisRun&&e.bossKey===chapterFinal&&!save.bossBox.find(b=>b.key===e.bossKey)){
+          // Show capture confirm dialog
+          player._pendingCaptureBoss=e.bossKey;
+          bState='capture';
         }
       }
       enemies.splice(i,1);continue;
@@ -4646,6 +4641,41 @@ function drawBattle(){
   if(bState==='levelup')drawLevelUp2();
   if(bState==='chest')drawChest2();
   if(bState==='paused')drawPaused2();
+  if(bState==='capture')drawCaptureDialog();
+}
+
+function drawCaptureDialog(){
+  ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  // Dialog box
+  ctx.fillStyle='#1a0a2a';ctx.strokeStyle='#a4f';ctx.lineWidth=3;
+  ctx.beginPath();ctx.roundRect(cx-180,cy-160,360,320,20);ctx.fill();ctx.stroke();
+  // Title
+  ctx.fillStyle='#a4f';ctx.font='bold 22px monospace';ctx.textAlign='center';
+  ctx.fillText('👾 ボスを支配しますか？',cx,cy-120);
+  // Boss name
+  const bk=player._pendingCaptureBoss;const bd=BOSS_DEFS[bk];
+  ctx.fillStyle='#fff';ctx.font='bold 18px monospace';
+  ctx.fillText(bd?bd.name:bk,cx,cy-80);
+  // Boss sprite
+  const bsp=bd&&bd.sprite&&SPRITES[bd.sprite];
+  if(bsp)ctx.drawImage(bsp,cx-40,cy-70,80,80);
+  else{ctx.font='60px serif';ctx.fillText('👾',cx,cy-10);}
+  // Warning
+  ctx.fillStyle='#fa0';ctx.font='13px monospace';
+  ctx.fillText('⚠ 支配成功率: 50%',cx,cy+30);
+  ctx.fillText('⚠ 成功時は報酬が半分',cx,cy+50);
+  // Buttons
+  const btnY1=cy+80,btnY2=cy+120,btnW=280,btnH=34;
+  // Yes button
+  ctx.fillStyle='#6a0';ctx.beginPath();ctx.roundRect(cx-btnW/2,btnY1,btnW,btnH,10);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 15px monospace';ctx.fillText('👾 支配する（50%）',cx,btnY1+23);
+  // No button
+  ctx.fillStyle='#444';ctx.beginPath();ctx.roundRect(cx-btnW/2,btnY2,btnW,btnH,10);ctx.fill();
+  ctx.fillStyle='#aaa';ctx.font='bold 15px monospace';ctx.fillText('💰 支配しない（報酬100%）',cx,btnY2+23);
+  // Store button rects for click
+  player._capBtnYes={x:cx-btnW/2,y:btnY1,w:btnW,h:btnH};
+  player._capBtnNo={x:cx-btnW/2,y:btnY2,w:btnW,h:btnH};
 }
 
 function drawHUD(){
@@ -4976,6 +5006,10 @@ window.addEventListener('keydown',e=>{
   else if(bState==='levelup'){
     if(e.key>='1'&&e.key<='3'){const i=+e.key-1;if(i<levelUpChoices.length){levelUpChoices[i].apply();if(pendingLvl>0){pendingLvl--;pickChoices();}else bState='playing';}}
   }else if(bState==='chest'){if(e.key===' '||e.key==='Enter')bState='playing';}
+  else if(bState==='capture'){
+    if(e.key==='1'){canvas2.dispatchEvent(new MouseEvent('click',{clientX:canvas2.getBoundingClientRect().left+W/2,clientY:canvas2.getBoundingClientRect().top+H/2+80*H/720}));}
+    if(e.key==='2'||e.key==='Escape'){bState='playing';}
+  }
 });
 
 canvas2.addEventListener('click',e=>{
@@ -4985,6 +5019,28 @@ canvas2.addEventListener('click',e=>{
     for(let i=0;i<levelUpChoices.length;i++){const bx=W/2-265+i*185,by=175;
       if(mx>=bx&&mx<=bx+165&&my>=by&&my<=by+240){levelUpChoices[i].apply();if(pendingLvl>0){pendingLvl--;pickChoices();}else bState='playing';break;}}
   }else if(bState==='chest')bState='playing';
+  else if(bState==='capture'){
+    const yb=player._capBtnYes,nb=player._capBtnNo;
+    if(yb&&mx>=yb.x&&mx<=yb.x+yb.w&&my>=yb.y&&my<=yb.y+yb.h){
+      // Attempt capture: 50% success
+      player.capturedThisRun=true;
+      if(Math.random()<0.50){
+        // Success
+        const bk=player._pendingCaptureBoss;
+        if(!save.bossBox.find(b=>b.key===bk))save.bossBox.push({key:bk,kills:0,unlocked:[]});
+        player.captureRewardPenalty=true;
+        save.soulPoints=(save.soulPoints||0)+15;
+        saveSave();SFX.evolution();levelUpFlash=0.5;
+        dmgPopups.push({x:player.x,y:player.y-60,text:'⚡ 支配成功！',life:3,maxLife:3,color:'#a4f',size:26});
+      } else {
+        dmgPopups.push({x:player.x,y:player.y-60,text:'💀 支配失敗...',life:3,maxLife:3,color:'#f44',size:22});
+      }
+      bState='playing';
+    } else if(nb&&mx>=nb.x&&mx<=nb.x+nb.w&&my>=nb.y&&my<=nb.y+nb.h){
+      // Skip capture
+      bState='playing';
+    }
+  }
   else if(bState==='paused'){
     const cx=W/2;
     for(const r of pauseBtnRects){
