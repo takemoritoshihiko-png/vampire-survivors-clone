@@ -4553,18 +4553,16 @@ function drawBattle(){
   if(save.equippedBoss){
     const bd=BOSS_DEFS[save.equippedBoss];
     if(bd){
-      const bsz=bd.radius*0.7;
+      const bsz=24;
       const _bAwk=save.awakened&&save.awakened.includes(save.equippedBoss)&&AWAKEN_SPRITES[save.equippedBoss];
-      const bsp=(_bAwk&&SPRITES[_bAwk])||(bd.sprite&&SPRITES[bd.sprite]);
-      if(bsp){ctx.drawImage(bsp,bossPet.x-bsz,bossPet.y-bsz,bsz*2,bsz*2);}
-      else{ctx.fillStyle=bd.color||'#888';ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();}
-      ctx.shadowBlur=0;
-      ctx.fillStyle='#000';const er=bsz*0.25;
-      ctx.beginPath();ctx.arc(bossPet.x-er,bossPet.y-er*0.4,er*0.35,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(bossPet.x+er,bossPet.y-er*0.4,er*0.35,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#f00';
-      ctx.beginPath();ctx.arc(bossPet.x-er,bossPet.y-er*0.4,er*0.15,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(bossPet.x+er,bossPet.y-er*0.4,er*0.15,0,Math.PI*2);ctx.fill();
+      const bsp=(_bAwk&&SPRITES[_bAwk])||(bd.sprite&&SPRITES[bd.sprite])||SPRITES['boss_zombie'];
+      if(bsp){
+        // Awakened: golden aura ring
+        if(_bAwk){ctx.strokeStyle='rgba(255,200,0,0.4)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz+6+Math.sin(gameTime*3)*3,0,Math.PI*2);ctx.stroke();}
+        ctx.drawImage(bsp,bossPet.x-bsz,bossPet.y-bsz,bsz*2,bsz*2);
+      } else {
+        ctx.fillStyle=bd.color||'#888';ctx.beginPath();ctx.arc(bossPet.x,bossPet.y,bsz,0,Math.PI*2);ctx.fill();
+      }
       ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';
       ctx.fillText(bd.name.slice(0,8),bossPet.x,bossPet.y+bsz+10);
     }
