@@ -1087,27 +1087,26 @@ window.setInvFilter=function(f){invFilter=f;renderHome();};
 function renderInventoryTab(){
   const ownedWeapons=Object.keys(save.weaponsOwned||{}).filter(id=>WEAPON_DEFS[id]&&!WEAPON_DEFS[id].evolved);
   let h=`<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px">
-    <button class="btn ${invFilter==='armor'?'btn-orange':''}" style="padding:6px 18px;font-size:13px;background:${invFilter==='armor'?'':'#333'}" onclick="setInvFilter('armor')">🛡️ 防具 (${save.equipment.length}/50)</button>
+    <button class="btn ${invFilter==='armor'?'btn-orange':''}" style="padding:6px 18px;font-size:13px;background:${invFilter==='armor'?'':'#333'}" onclick="setInvFilter('armor')">🛡️ 防具 (${save.equipment.length})</button>
     <button class="btn ${invFilter==='weapon'?'btn-orange':''}" style="padding:6px 18px;font-size:13px;background:${invFilter==='weapon'?'':'#333'}" onclick="setInvFilter('weapon')">⚔️ 武器 (${ownedWeapons.length})</button>
   </div>`;
   if(invFilter==='armor'){
     h+=`<div style="text-align:center;margin:6px 0;color:#fa0;font-weight:bold">ARMOR INVENTORY</div>`;
     h+='<div class="inv-grid">';
     const items=save.equipment.slice().sort((a,b)=>RANKS.indexOf(b.rank)-RANKS.indexOf(a.rank)||(b.sub||0)-(a.sub||0)||(b.level||0)-(a.level||0));
-    for(let i=0;i<50;i++){
+    for(let i=0;i<items.length;i++){
       const eq=items[i];
-      if(eq){
-        const isEq=eqIsEquipped(eq.id);
-        h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
-          <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
-          <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
-          <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]||'?'} Lv${eq.level}</div>
-          <div style="font-size:8px;color:#0f0">+${eqBonusPct(eq).toFixed(1)}%</div>
-          ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
-          ${eq.astral>0?`<div style="font-size:8px;color:#fa0;position:absolute;top:1px;left:3px">${'★'.repeat(eq.astral)}</div>`:''}
-        </div>`;
-      } else h+=`<div class="equip-slot" style="border-style:dashed;border-color:#222;opacity:.3;cursor:default"></div>`;
+      const isEq=eqIsEquipped(eq.id);
+      h+=`<div class="equip-slot rank-${eq.rank}" onclick="openEqMenu(${eq.id},event)" style="${isEq?'border-style:dashed':''}">
+        <div class="eq-icon">${SLOT_ICONS[eq.slot]}</div>
+        <div style="font-size:9px;color:${RANK_COLORS[eq.rank]};font-weight:bold">${eqLabel(eq)}</div>
+        <div style="font-size:8px;color:#ddd">${SLOT_NAMES[eq.slot]||'?'} Lv${eq.level}</div>
+        <div style="font-size:8px;color:#0f0">+${eqBonusPct(eq).toFixed(1)}%</div>
+        ${isEq?'<div style="font-size:7px;color:#ff0;position:absolute;top:2px;right:3px">★</div>':''}
+        ${eq.astral>0?`<div style="font-size:8px;color:#fa0;position:absolute;top:1px;left:3px">${'★'.repeat(eq.astral)}</div>`:''}
+      </div>`;
     }
+    if(items.length===0)h+='<div style="text-align:center;color:#888;padding:20px;grid-column:1/-1">No equipment yet.</div>';
     h+='</div>';
   } else {
     // Weapons
@@ -1360,7 +1359,7 @@ window.downgradeEquip=function(id){
   const sub=eq.sub;
   const refund=sub===1?1:sub===2?2:sub===3?3:0;
   eq.sub=sub-1;
-  for(let i=0;i<refund;i++)if(save.equipment.length<50)makeEquip(eq.slot,eq.rank);
+  for(let i=0;i<refund;i++)if(true/*no limit*/)makeEquip(eq.slot,eq.rank);
   saveSave();closeEqMenu();renderHome();flashMsg(`+${refund} ${RANK_NAMES[eq.rank]} returned`);
 };
 window.autoMerge=function(){
@@ -1533,11 +1532,11 @@ function _gachaResult(rank,gachaType){
 window.doGacha=function(type,count){
   const cost=type==='normal'?(count===1?150:1200):(count===1?500:4500);
   if(save.coins<cost){flashMsg('Not enough coins!');return;}
-  if(save.equipment.length>=50){flashMsg('Inventory full!');return;}
+  if(false/*no limit*/){flashMsg('Inventory full!');return;}
   save.coins-=cost;
   const results=[];
   for(let i=0;i<count;i++){
-    if(save.equipment.length>=50)break;
+    if(false/*no limit*/)break;
     let rank;
     if(type==='normal'){
       const r=Math.random();
@@ -3903,11 +3902,11 @@ function updateBattle(){
         // boss = blue+ guaranteed
         const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
         const ri=2+Math.floor(Math.random()*3); // blue/purple/gold
-        if(save.equipment.length<50){const id=makeEquip(sl,RANKS[ri]);const eq=getEqById(id);runEquipsDropped.push(eq);queueEquipPopup(eq);}
+        if(true/*no limit*/){const id=makeEquip(sl,RANKS[ri]);const eq=getEqById(id);runEquipsDropped.push(eq);queueEquipPopup(eq);}
       } else if(Math.random()<.01){
         // 1% normal drop = gray
         const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
-        if(save.equipment.length<50){const id=makeEquip(sl,'gray');const eq=getEqById(id);runEquipsDropped.push(eq);queueEquipPopup(eq);}
+        if(true/*no limit*/){const id=makeEquip(sl,'gray');const eq=getEqById(id);runEquipsDropped.push(eq);queueEquipPopup(eq);}
       }
       if(e.isBoss){
         chests2.push({x:e.x,y:e.y,radius:18,bob:0});
@@ -5216,7 +5215,7 @@ function endBattle(cleared,bossWin){
     // 30 min clear: golden equipment
     if(gameTime>=1800){
       const slots=Object.keys(SLOT_NAMES);const sl=slots[Math.floor(Math.random()*slots.length)];
-      if(save.equipment.length<50){const id=makeEquip(sl,'gold');runEquipsDropped.push(save.equipment.find(e=>e.id===id));}
+      if(true/*no limit*/){const id=makeEquip(sl,'gold');runEquipsDropped.push(save.equipment.find(e=>e.id===id));}
     }
   }
   // Check achievements
