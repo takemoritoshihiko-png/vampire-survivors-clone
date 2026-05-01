@@ -508,6 +508,7 @@ if(save.fusionStones===undefined)save.fusionStones=0;
 if(!save.artifacts)save.artifacts={created:[],equipped:null};
 if(!save.awakenMats)save.awakenMats=0;
 if(!save.awakened)save.awakened=[];
+if(!save.bossMemory){save.bossMemory={};['giantZombie','skeletonKing','demonKing','iceKing','deepRuler','alienEmperor'].forEach(id=>save.bossMemory[id]={battles:0,skills:[]});}
 if(!save.fusionBook)save.fusionBook={};
 if(!save.bossBox)save.bossBox=[];
 if(!save.equippedBoss)save.equippedBoss=null;
@@ -1711,6 +1712,7 @@ function renderBossBox(p){
         <div style="flex:1">
           <div style="font-size:15px;color:${bd.outline||'#fff'};font-weight:bold">${bd.name}</div>
           <div style="font-size:11px;color:#aaa">撃破数: <span style="color:#ff0">${(bb.kills||0).toLocaleString()}</span>体</div>
+          <div style="font-size:10px;color:#a4f">💫 記憶: <span style="color:#fc0">${(save.bossMemory&&save.bossMemory[bb.key]?save.bossMemory[bb.key].battles:0)}</span>バトル (${(save.bossMemory&&save.bossMemory[bb.key]?save.bossMemory[bb.key].skills.length:0)}/5技)</div>
         </div>
         <div style="text-align:right">
           ${save.awakened&&save.awakened.includes(bb.key)?'<div class="awaken-badge" style="margin-bottom:4px">⚡ 覚醒</div>':''}
@@ -2440,6 +2442,22 @@ const AWAKEN_SPRITES={
   giantZombie:'boss_rot_god',skeletonKing:'boss_death_king',demonKing:'boss_demon_god',
   iceKing:'boss_ice_god',deepRuler:'boss_sea_god',alienEmperor:'boss_space_god',
   hachiko:'pet_hachiko_awaken',frog:'pet_frog_awaken',
+};
+const BOSS_MEMORY={
+  giantZombie:[{b:1,n:'腐敗の足跡',d:'Trail DoT'},{b:100,n:'腐敗の息吹',d:'5s cone attack'},{b:500,n:'ゾンビ召喚',d:'Summon 5'},{b:1000,n:'腐敗の盾',d:'DMG -40% 10s'},{b:5000,n:'腐敗王の怒り',d:'Screen blast'}],
+  skeletonKing:[{b:1,n:'骨の障壁',d:'8-way bone wall'},{b:100,n:'骨の雨',d:'Bone rain'},{b:500,n:'死の軍団',d:'Summon 10'},{b:1000,n:'骨の鎧',d:'DMG -50% 5s'},{b:5000,n:'骨神の裁き',d:'50% mass execute'}],
+  demonKing:[{b:1,n:'炎の軌跡',d:'Fire trail'},{b:100,n:'魔王の怒り',d:'ATK ×3 8s'},{b:500,n:'地獄の扉',d:'5 enemy nuke'},{b:1000,n:'炎の盾',d:'Contact 100/s'},{b:5000,n:'魔王の終焉',d:'Screen fire'}],
+  iceKing:[{b:1,n:'氷の道',d:'Speed buff'},{b:100,n:'猛吹雪',d:'AoE freeze'},{b:500,n:'氷の分身',d:'Clone 10s'},{b:1000,n:'絶対防御',d:'Invincible 5s'},{b:5000,n:'氷河期',d:'Freeze all'}],
+  deepRuler:[{b:1,n:'毒の海流',d:'Poison trail'},{b:100,n:'大海嘯',d:'Tsunami'},{b:500,n:'深海の軍団',d:'Summon sharks'},{b:1000,n:'深海の盾',d:'DMG -60% 8s'},{b:5000,n:'海神の怒り',d:'Poison sea'}],
+  alienEmperor:[{b:1,n:'レーザー軌跡',d:'Laser trail'},{b:100,n:'UFO群',d:'5 UFO drones'},{b:500,n:'ブラックホール',d:'200r blackhole'},{b:1000,n:'宇宙盾',d:'Invincible 10s'},{b:5000,n:'宇宙の終焉',d:'Kill all'}],
+};
+const BOSS_DIALOGUE={
+  giantZombie:{start:['行くぞ','やるか','共に戦う'],death:['負けるな','まだだ','立て'],kill:['いいぞ','もっとだ','強いな'],boss:['邪魔者だ','潰せ','任せろ']},
+  skeletonKing:{start:['参ろうか','戦の時ぞ','共に征こう'],death:['まだ終わらぬ','立て戦士','諦めるな'],kill:['見事','骨があるな','その調子'],boss:['不届き者め','任せよ','骨にしてやる']},
+  demonKing:{start:['消し炭にしろ','燃やせ','楽しもうか'],death:['死ぬな雑魚め','立て','諦めるな'],kill:['いい殺しだ','快楽だ','もっと殺せ'],boss:['灰にしてやる','面白い','任せろ']},
+  iceKing:{start:['行くか','静かに戦え','共に行こう'],death:['立て','凍るな','まだだ'],kill:['悪くない','氷のようだ','その調子'],boss:['凍らせよう','任せろ','消してやる']},
+  deepRuler:{start:['深淵より来たれ','波に乗れ','行こう'],death:['沈むな','まだだ','諦めるな'],kill:['流れを感じろ','深みが増す','見事'],boss:['飲み込んでやろう','任せろ','消えろ']},
+  alienEmperor:{start:['計算通りだ','戦闘開始','効率的に行こう'],death:['エラー修正せよ','再起動するな','立て'],kill:['効率的だ','予測通り','最適だ'],boss:['排除する','計算済みだ','分析完了']},
 };
 const BOSS_AWAKEN={
   giantZombie:{name:'腐敗神',desc:'150r aura 25dmg/s + 10s mega blast'},
@@ -3249,6 +3267,31 @@ function updateBossPet(){
       else if(bk==='iceKing'){for(const e of enemies){applyDmg(e,dmgB*3,'bossPet');e.speed=Math.max(5,e.speed*0.3);}levelUpFlash=0.4;}
       else if(bk==='deepRuler'){for(const e of enemies){applyDmg(e,dmgB*2,'bossPet');e.speed=Math.max(10,e.speed*0.5);}}
       else if(bk==='alienEmperor'){for(const e of enemies)applyDmg(e,dmgB*5,'bossPet');levelUpFlash=0.5;dmgPopups.push({x:bossPet.x,y:bossPet.y-40,text:'🌌 宇宙崩壊！',life:2.5,maxLife:2.5,color:'#0f8',size:20});}
+    }
+  }
+  // Boss memory skills
+  if(save.bossMemory&&save.bossMemory[save.equippedBoss]){
+    const bm=save.bossMemory[save.equippedBoss];const ms=BOSS_MEMORY[save.equippedBoss];
+    if(ms)for(let i=0;i<ms.length;i++){
+      if(!bm.skills.includes(ms[i].n))continue;
+      // Tier 1: trail DoT
+      if(i===0){for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<40)e.hp-=8*dt2;}
+      // Tier 2: periodic attack (5s)
+      if(i===1){bossPet['_mem2']=(bossPet['_mem2']||0)+dt2;if(bossPet['_mem2']>=5){bossPet['_mem2']=0;
+        for(const e of enemies)if(distXY(bossPet.x,bossPet.y,e.x,e.y)<150)applyDmg(e,dmgB*1.5,'bossMem');
+        spawnParticles2(bossPet.x,bossPet.y,bd.color||'#fff',3);}}
+      // Tier 3: summon (15s)
+      if(i===2){bossPet['_mem3']=(bossPet['_mem3']||0)+dt2;if(bossPet['_mem3']>=15){bossPet['_mem3']=0;
+        for(let j=0;j<3;j++)spawnEnemy2('zombie');
+        dmgPopups.push({x:bossPet.x,y:bossPet.y-30,text:'👾 召喚！',life:2,maxLife:2,color:'#fa0',size:16});}}
+      // Tier 4: shield (20s, lasts 8s)
+      if(i===3){bossPet['_mem4']=(bossPet['_mem4']||0)+dt2;if(bossPet['_mem4']>=20){bossPet['_mem4']=-8;
+        player.invTimer=Math.max(player.invTimer,8);
+        dmgPopups.push({x:player.x,y:player.y-50,text:'🛡️ 防御！',life:2,maxLife:2,color:'#0ff',size:18});}}
+      // Tier 5: screen nuke (30s)
+      if(i===4){bossPet['_mem5']=(bossPet['_mem5']||0)+dt2;if(bossPet['_mem5']>=30){bossPet['_mem5']=0;
+        for(const e of enemies)applyDmg(e,dmgB*8,'bossMem');
+        levelUpFlash=0.5;dmgPopups.push({x:player.x,y:player.y-60,text:'💀 必殺技！',life:2.5,maxLife:2.5,color:'#fc0',size:24});}}
     }
   }
 }
@@ -4748,6 +4791,33 @@ function drawBattle(){
 
   drawPlayer();
 
+  // Boss dialogue
+  if(save.equippedBoss&&BOSS_DIALOGUE[save.equippedBoss]){
+    if(!player._bossDialogueT)player._bossDialogueT=0;
+    player._bossDialogueT+=dt2;
+    if(!player._bossMsg&&player._bossDialogueT>=3){
+      player._bossDialogueT=0;player._bossMsgLife=3;
+      const dl=BOSS_DIALOGUE[save.equippedBoss];
+      let sit='start';
+      if(player.hp<player.maxHp*0.2)sit='death';
+      else if(runKills>100)sit='kill';
+      else if(bossActive)sit='boss';
+      const pool=dl[sit]||dl.start;
+      player._bossMsg=pool[Math.floor(Math.random()*pool.length)];
+      player._bossDialogueT=-15-Math.random()*15;
+    }
+    if(player._bossMsg&&player._bossMsgLife>0){
+      player._bossMsgLife-=dt2;
+      const ba=Math.min(1,player._bossMsgLife);
+      ctx.globalAlpha=ba;ctx.fillStyle='rgba(0,0,0,0.7)';
+      ctx.beginPath();ctx.roundRect(bossPet.x-60,bossPet.y-50,120,28,8);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText(player._bossMsg,bossPet.x,bossPet.y-32);
+      ctx.globalAlpha=1;ctx.textAlign='left';
+      if(player._bossMsgLife<=0)player._bossMsg=null;
+    }
+  }
+
   for(const p of dmgPopups){
     ctx.globalAlpha=Math.min(1,p.life/p.maxLife*1.5);
     ctx.fillStyle=p.color;ctx.font=`bold ${p.size}px monospace`;ctx.textAlign='center';
@@ -5240,6 +5310,12 @@ function endBattle(cleared,bossWin){
     if(tiers){for(const t of tiers){if(mem.kills>=t.kills&&!mem.unlocked.includes(t.kills))mem.unlocked.push(t.kills);}}
   }
   save.records.totalKills+=runKills;
+  // Boss memory: increment battle count
+  if(save.equippedBoss&&save.bossMemory&&save.bossMemory[save.equippedBoss]){
+    const bm=save.bossMemory[save.equippedBoss];bm.battles++;
+    const ms=BOSS_MEMORY[save.equippedBoss];
+    if(ms)for(const s of ms)if(bm.battles>=s.b&&!bm.skills.includes(s.n)){bm.skills.push(s.n);flashMsg('💫 '+s.n+' 習得！');}
+  }
   // Check hidden character unlocks via weapon memory kills
   for(const[hid,hc]of Object.entries(HIDDEN_CHARS)){
     if(hc.unlockWeapon&&save.weaponMemory&&save.weaponMemory[hc.unlockWeapon]&&
