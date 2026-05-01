@@ -745,6 +745,27 @@ window.buySoulStage=function(sid){
   if(save.unlockedStages.includes(sid))return;
   save.soulPoints-=st.cost;save.unlockedStages.push(sid);saveSave();renderHome();SFX.evolution();flashRankUp('purple');
 };
+window.showSpecialStagePrompt=function(type){
+  const st=SPECIAL_STAGES[type];if(!st)return;
+  const ov=document.createElement('div');
+  ov.id='specialStageDialog';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:linear-gradient(135deg,#1a1a00,#2a2a00);border:2px solid #fc0;border-radius:20px;padding:24px;text-align:center;min-width:300px;max-width:400px">
+    <div style="font-size:14px;color:#fc0;margin-bottom:8px">⚡ 特別ステージ出現！</div>
+    <div style="font-size:22px;font-weight:bold;color:#fff;margin-bottom:8px">${st.name}</div>
+    <div style="font-size:13px;color:#aaa;margin-bottom:16px;line-height:1.6">${st.desc}</div>
+    <button onclick="startSpecialStage('${type}')" style="background:linear-gradient(135deg,#fc0,#f80);border:none;border-radius:12px;color:#000;font-size:16px;font-weight:bold;padding:14px 20px;cursor:pointer;width:100%;margin-bottom:8px">⚡ 挑戦する！</button>
+    <button onclick="document.getElementById('specialStageDialog').remove()" style="background:#333;border:none;border-radius:12px;color:#888;font-size:14px;padding:12px 20px;cursor:pointer;width:100%">スキップ</button>
+  </div>`;
+  document.body.appendChild(ov);
+};
+window.startSpecialStage=function(type){
+  const d=document.getElementById('specialStageDialog');if(d)d.remove();
+  _leaveResult();
+  save._specialStageType=type;
+  save.selectedChapter=type==='boss_rush'?'boss_rush_sp':'bonus_sp';
+  startBattle();
+};
 
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
@@ -759,6 +780,7 @@ function showHome(){
   document.getElementById('result').classList.remove('active');
   document.getElementById('battleBtn').style.display='block';
   _lastPower=null; // reset diff tracking
+  delete save._specialStageType;delete save._specialStageShown;
   // Sanitize a stale selectedWeapon from older saves (null = intentionally unequipped)
   if(save.selectedWeapon&&(!WEAPON_DEFS[save.selectedWeapon]||WEAPON_DEFS[save.selectedWeapon].evolved)){save.selectedWeapon='kunai';saveSave();}
   checkDaily();renderHome();
@@ -2385,6 +2407,10 @@ const HIDDEN_CHARS={
   chaosChar:{name:'カオス',icon:'🌀',color:'#1a0a2a',sprite:'char_chaos',unlockWeapon:'chaosBlade',kills:3000,baseAtk:140,baseHp:70,desc:'All skills start ★2',skill:'star2Start',initWeapon:'chaosBlade'},
   yato:{name:'八十',icon:'⚡',color:'#fc0',sprite:'char_yato',unlockWeapon:null,kills:0,baseAtk:150,baseHp:150,desc:'All stats ×1.5, weapons ★3',skill:'godMode',initWeapon:'kunai'},
 };
+const SPECIAL_STAGES={
+  bonus:{name:'💰 ボーナスステージ',time:180,diff:0.3,coinMult:1.3,clearReward:300,desc:'Weak enemies, 1.3× rewards!',hpM:0.3,dmgM:0.3,spdM:0.6,spawnM:0.4,bossHpM:0.3},
+  boss_rush:{name:'👾 ボスラッシュ',time:180,diff:1.0,coinMult:1,clearReward:500,desc:'3 random bosses in sequence!',hpM:0.5,dmgM:0.5,spdM:0.8,spawnM:0.3,bossHpM:1.0},
+};
 const SOUL_STAGES={
   snow:{name:'❄️ 雪山',cost:100,time:180,diff:1.8,coinMult:2,clearReward:400,desc:'Survive 3 min (Ice Zombies)',bgColor:'#e0f0ff',hpM:1.8,dmgM:1.6,spdM:1.1,spawnM:1.4,bossHpM:1.8},
   ocean:{name:'🌊 海底',cost:250,time:180,diff:2.2,coinMult:3,clearReward:800,desc:'Survive 3 min (Depth Sharks)',bgColor:'#001a33',hpM:2.2,dmgM:2.0,spdM:1.3,spawnM:1.6,bossHpM:2.2},
@@ -2581,7 +2607,7 @@ function initBattle(){
     if(artId==='boss'){player.baseMight*=1.3;player.might=player.baseMight;}
     if(artId==='ultimate'){player.baseMight*=1.3;player.might=player.baseMight;player.maxHp=Math.floor(player.maxHp*1.3);player.hp=player.maxHp;}
   }
-  player.capturedThisRun=false;player.captureRewardPenalty=false;
+  player.capturedThisRun=false;player.captureRewardPenalty=false;player._captureCount=0;
   // Pet skill buffs
   const petId=save.selectedPet;
   const pk=save.petKills[petId]||0;
@@ -2724,7 +2750,7 @@ function spawnEnemy2(typeId,opts){
   if(enemies.length>=60&&!(opts&&opts.elite))return;
   opts=opts||{};
   const def=ENEMY_TYPES[typeId];if(!def)return;
-  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
   const a=Math.random()*Math.PI*2,d=500+Math.random()*200;
   const tf=Math.min(gameTime/(chap.time||600),1);
   const mins=gameTime/60;
@@ -2746,7 +2772,7 @@ function spawnBossByKey(key,isFinal){
   const def=BOSS_DEFS[key];if(!def)return;
   // Clear normal enemies for final boss to guarantee visibility
   if(isFinal)enemies=enemies.filter(e=>e.isBoss||e.isElite);
-  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
   const a=Math.random()*Math.PI*2;
   const b={x:player.x+Math.cos(a)*700,y:player.y+Math.sin(a)*700,
     radius:def.radius,hp:def.hp*(chap.bossHpM||chap.diff)*getEnemyPowerMult(),maxHp:def.hp*(chap.bossHpM||chap.diff)*getEnemyPowerMult(),
@@ -3659,7 +3685,7 @@ function openChest2(){
 /* Update */
 function updateBattle(){
   if(bState!=='playing')return;
-  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
   const clearTime=chap.time;
 
   let dx=0,dy=0;
@@ -3706,7 +3732,16 @@ function updateBattle(){
   if(waveTimer>0)waveTimer-=dt2;
 
   // Bosses (chapter-specific schedule — checked BEFORE clear so final boss can spawn)
-  const chapSchedule=BOSS_SCHEDULE[save.selectedChapter]||BOSS_SCHEDULE[1];
+  let chapSchedule=BOSS_SCHEDULE[save.selectedChapter]||BOSS_SCHEDULE[1];
+  // Boss rush: generate 3 random bosses at 10s/70s/130s
+  if(save._specialStageType==='boss_rush'&&!player._bossRushQueue){
+    const allBKeys=['giantZombie','skeletonKing','demonKing','iceKing','deepRuler','alienEmperor'];
+    const q=allBKeys.sort(()=>Math.random()-.5).slice(0,3);
+    player._bossRushQueue=q;
+    chapSchedule=[{time:10,key:q[0],final:false},{time:70,key:q[1],final:false},{time:130,key:q[2],final:true}];
+    player._bossRushSchedule=chapSchedule;
+  }
+  if(player._bossRushSchedule)chapSchedule=player._bossRushSchedule;
   for(let i=0;i<chapSchedule.length;i++){
     const sc=chapSchedule[i];
     if(gameTime>=sc.time&&!bossesSpawned.includes(i)){
@@ -3921,7 +3956,10 @@ function updateBattle(){
         // Boss capture: final bosses only, 10% chance, max 1 per run
         const CAPTURABLE_BOSSES={1:'giantZombie',2:'skeletonKing',3:'demonKing',snow:'iceKing',ocean:'deepRuler',space:'alienEmperor'};
         const chapterFinal=CAPTURABLE_BOSSES[save.selectedChapter];
-        if(!player.capturedThisRun&&e.bossKey===chapterFinal&&!save.bossBox.find(b=>b.key===e.bossKey)){
+        const _isBossRush=save._specialStageType==='boss_rush';
+        const _captureLimit=_isBossRush?3:1;
+        const _captureCount=player._captureCount||0;
+        if(_captureCount<_captureLimit&&(_isBossRush||e.bossKey===chapterFinal)&&!save.bossBox.find(b=>b.key===e.bossKey)){
           // Show capture confirm dialog
           player._pendingCaptureBoss=e.bossKey;
           bState='capture';
@@ -4258,6 +4296,26 @@ const MAP_RENDERERS={
       ctx.fillStyle='#000022';ctx.fillRect(wx,wy,TS,TS);
       if(h>0.92){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(wx+h*TS,wy+tileHash(tx,ty,7)*TS,1.5,0,Math.PI*2);ctx.fill();}
       if(h>0.97){ctx.fillStyle=`hsl(${h*360},80%,60%)`;ctx.beginPath();ctx.arc(wx+TS/2,wy+TS/2,3,0,Math.PI*2);ctx.fill();}
+    }
+  },
+  bonus_sp:function(){
+    ctx.fillStyle='#1a1a00';ctx.fillRect(camera.x,camera.y,W,H);
+    const TS=120,sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
+    const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
+      const h=tileHash(tx,ty,8);const wx=tx*TS,wy=ty*TS;
+      ctx.fillStyle=h<0.4?'#2a2200':'#332a00';ctx.fillRect(wx,wy,TS,TS);
+      if(h>0.9){ctx.fillStyle='#fc0';ctx.beginPath();ctx.arc(wx+TS/2,wy+TS/2,4,0,Math.PI*2);ctx.fill();}
+    }
+  },
+  boss_rush_sp:function(){
+    ctx.fillStyle='#1a0a0a';ctx.fillRect(camera.x,camera.y,W,H);
+    const TS=120,sx=Math.floor(camera.x/TS)-1,sy=Math.floor(camera.y/TS)-1;
+    const ex=Math.ceil((camera.x+W)/TS)+1,ey=Math.ceil((camera.y+H)/TS)+1;
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++){
+      const h=tileHash(tx,ty,9);const wx=tx*TS,wy=ty*TS;
+      ctx.fillStyle=h<0.4?'#200a0a':'#2a1010';ctx.fillRect(wx,wy,TS,TS);
+      if(h>0.95){ctx.fillStyle='#f44';ctx.beginPath();ctx.arc(wx+TS/2,wy+TS/2,3,0,Math.PI*2);ctx.fill();}
     }
   },
 };
@@ -5116,7 +5174,7 @@ canvas2.addEventListener('click',e=>{
     const yb=player._capBtnYes,nb=player._capBtnNo;
     if(yb&&mx>=yb.x&&mx<=yb.x+yb.w&&my>=yb.y&&my<=yb.y+yb.h){
       // Attempt capture: 50% success
-      player.capturedThisRun=true;
+      player.capturedThisRun=true;player._captureCount=(player._captureCount||0)+1;
       if(Math.random()<0.50){
         // Success
         const bk=player._pendingCaptureBoss;
@@ -5199,7 +5257,7 @@ function endBattle(cleared,bossWin){
 
   let bonusGold=0;
   if(cleared){
-    const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||CHAPTER_DEFS[1]);
+    const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
     const chapSave=save.chapters[save.selectedChapter];
     if(!chapSave||!chapSave.cleared){
       bonusGold=chap.clearReward||0;
@@ -5227,6 +5285,14 @@ function endBattle(cleared,bossWin){
   document.getElementById('battle').classList.remove('active');
   document.getElementById('joystickArea').style.display='none';
   document.getElementById('muteBtn').style.display='none';
+  // 10% chance for special stage after clear
+  if(cleared&&!save._specialStageShown){
+    save._specialStageShown=true;
+    if(Math.random()<0.10){
+      const sType=Math.random()<0.5?'bonus':'boss_rush';
+      setTimeout(()=>showSpecialStagePrompt(sType),3000);
+    }
+  }
   showResult(cleared,bonusGold,ac,bossWin);
 }
 
