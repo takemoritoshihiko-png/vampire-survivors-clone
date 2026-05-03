@@ -782,6 +782,8 @@ function showHome(){
   document.getElementById('battleBtn').style.display='block';
   _lastPower=null; // reset diff tracking
   delete save._specialStageType;delete save._specialStageShown;
+  // Restore selectedChapter if it was a special stage key
+  if(save.selectedChapter&&!CHAPTER_DEFS[save.selectedChapter]&&!SOUL_STAGES[save.selectedChapter]){save.selectedChapter=1;saveSave();}
   // Sanitize a stale selectedWeapon from older saves (null = intentionally unequipped)
   if(save.selectedWeapon&&(!WEAPON_DEFS[save.selectedWeapon]||WEAPON_DEFS[save.selectedWeapon].evolved)){save.selectedWeapon='kunai';saveSave();}
   checkDaily();renderHome();
@@ -4002,7 +4004,8 @@ function updateBattle(){
         const _isBossRush=save._specialStageType==='boss_rush';
         const _captureLimit=_isBossRush?3:1;
         const _captureCount=player._captureCount||0;
-        if(_captureCount<_captureLimit&&(_isBossRush||e.bossKey===chapterFinal)&&!save.bossBox.find(b=>b.key===e.bossKey)){
+        const _isFinalBoss=chapterFinal&&e.bossKey===chapterFinal;
+        if(_captureCount<_captureLimit&&(_isBossRush||_isFinalBoss)&&!save.bossBox.find(b=>b.key===e.bossKey)){
           // Show capture confirm dialog
           player._pendingCaptureBoss=e.bossKey;
           bState='capture';
@@ -4848,7 +4851,8 @@ function drawBattle(){
 }
 
 function drawCaptureDialog(){
-  ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,W,H);
+  bossVictoryT=0; // Suppress victory fanfare while dialog is showing
+  ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,H);
   const cx=W/2,cy=H/2;
   // Dialog box
   ctx.fillStyle='#1a0a2a';ctx.strokeStyle='#a4f';ctx.lineWidth=3;
