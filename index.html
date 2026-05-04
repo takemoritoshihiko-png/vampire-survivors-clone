@@ -3723,8 +3723,11 @@ function pickChoices(){
 }
 
 function openChest2(){
-  // Boss chest just gives a level-up window now (evolution flows via pickChoices)
-  pickChoices();bState='levelup';SFX.levelUp();
+  // Boss chest gives coins + XP instead of free level-up
+  runGold+=Math.floor(rnd(20,50));
+  player.xp+=Math.floor(rnd(10,30));
+  while(player.xp>=player.xpToNext){player.xp-=player.xpToNext;player.level++;player.xpToNext=Math.floor(player.xpToNext*1.25)+8;pendingLvl++;}
+  dmgPopups.push({x:player.x,y:player.y-40,text:'📦 +Gold +XP',life:2,maxLife:2,color:'#fc0',size:16});
 }
 
 /* Update */
@@ -3967,7 +3970,7 @@ function updateBattle(){
       deadFx.push({x:e.x,y:e.y,life:0.3,maxLife:0.3,sprite:e.isBoss?'boss_zombie':'enemy_'+e.typeId,radius:e.radius,color:e.color});
       // Armor-gold: +1 HP per kill
       if(player.gskills&&player.gskills.armor&&player.gskills.armor.ri>=4)player.hp=Math.min(player.maxHp,player.hp+1);
-      gems.push({x:e.x,y:e.y,radius:e.isBoss?12:7,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
+      if(Math.random()<0.80)gems.push({x:e.x,y:e.y,radius:e.isBoss?12:7,value:Math.ceil(e.xpValue*player.xpMult),bob:Math.random()*6});
       // Coins: 3% normal, elite always, boss always
       const COIN_BY_TYPE={zombie:[0.15,1,3],skeleton:[0.2,2,4],armorZombie:[0.25,3,6],ghost:[0.2,2,5],demon:[0.3,5,10]};
       const ct=COIN_BY_TYPE[e.typeId];
