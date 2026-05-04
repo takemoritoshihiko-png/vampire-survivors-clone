@@ -508,6 +508,7 @@ if(save.fusionStones===undefined)save.fusionStones=0;
 if(!save.artifacts)save.artifacts={created:[],equipped:null};
 if(!save.awakenMats)save.awakenMats=0;
 if(!save.awakened)save.awakened=[];
+if(save.bossMateria===undefined)save.bossMateria=0;
 if(!save.bossMemory){save.bossMemory={};['giantZombie','skeletonKing','demonKing','iceKing','deepRuler','alienEmperor'].forEach(id=>save.bossMemory[id]={battles:0,skills:[]});}
 if(!save.fusionBook)save.fusionBook={};
 if(!save.bossBox)save.bossBox=[];
@@ -1736,6 +1737,28 @@ function renderBossBox(p){
   h+='</div>';
   p.innerHTML=h;
 }
+function renderBossBattleTab(){
+  let h='<div style="text-align:center;color:#fa0;font-weight:bold;font-size:16px;margin-bottom:8px">⚔️ Boss Battle</div>';
+  h+=`<div style="text-align:center;font-size:12px;color:#aaa;margin-bottom:12px">⚗️ Boss Materia: <b style="color:#fc0">${save.bossMateria||0}</b></div>`;
+  if(!save.bossBox||save.bossBox.length===0){
+    h+='<div style="text-align:center;color:#888;padding:30px">ボスを支配するとここで対決できます。</div>';
+    return h;
+  }
+  h+='<div style="color:#aaa;font-size:12px;text-align:center;margin-bottom:10px">ボスを選んでランダムな敵ボスと60秒バトル！</div>';
+  for(const bb of save.bossBox){
+    const bd=BOSS_DEFS[bb.key];if(!bd)continue;
+    const mem=save.bossMemory&&save.bossMemory[bb.key]?save.bossMemory[bb.key].battles:0;
+    h+=`<div class="game-card" style="margin:6px 0;padding:10px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:32px">👾</div>
+      <div style="flex:1">
+        <div style="font-size:13px;color:${bd.outline||'#fff'};font-weight:bold">${bd.name}${save.awakened&&save.awakened.includes(bb.key)?' ⚡':''}</div>
+        <div style="font-size:10px;color:#888">記憶: ${mem}バトル</div>
+      </div>
+      <button class="btn btn-orange" style="padding:8px 16px;font-size:13px" onclick="startBossDuel('${bb.key}')">⚔️ 出撃</button>
+    </div>`;
+  }
+  return h;
+}
 window.equipBoss=function(key){
   if(save.equippedBoss===key){save.equippedBoss=null;}
   else{save.equippedBoss=key;save.selectedPet=null;}
@@ -1991,8 +2014,12 @@ function renderGachaTab(p){
 }
 
 /* ── Boss tab (boss box + pets) ── */
+let bossSubTab='box';
+window.setBossSubTab=function(t){bossSubTab=t;renderHome();};
 function renderBossTab(p){
-  let h=renderBossBoxContent();
+  let h='<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px"><button class="btn '+(bossSubTab==='box'?'btn-orange':'')+'" style="padding:6px 16px;font-size:12px;background:'+(bossSubTab==='box'?'':'#333')+'" onclick="setBossSubTab(\'box\')">👾 ボスボックス</button><button class="btn '+(bossSubTab==='battle'?'btn-orange':'')+'" style="padding:6px 16px;font-size:12px;background:'+(bossSubTab==='battle'?'':'#333')+'" onclick="setBossSubTab(\'battle\')">⚔️ 対決</button></div>';
+  if(bossSubTab==='battle'){h+=renderBossBattleTab();p.innerHTML=h;return;}
+  h+=renderBossBoxContent();
   h+='<div style="margin-top:14px;border-top:1px solid #333;padding-top:10px">';
   h+='<div style="color:#fa0;font-weight:bold;font-size:13px;text-align:center;margin-bottom:6px">🐾 Pets</div>';
   const _p={innerHTML:''};renderPets(_p);
@@ -3298,6 +3325,69 @@ function updateBossPet(){
   }
 }
 
+/* Boss Duel Mode */
+let bossDuel=null;
+function startBossDuelBattle(){
+  if(!bossDuel)return;
+  const eid=bossDuel.enemyId;const def=BOSS_DEFS[eid];if(!def)return;
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
+  enemies.push({x:player.x+300,y:player.y,radius:def.radius,hp:bossDuel.enemyHp,maxHp:bossDuel.enemyHp,
+    speed:def.speed,damage:def.damage,flashTimer:0,color:def.color,outline:def.outline,
+    isBoss:true,bossName:def.name+'(DUEL)',typeId:'boss',st:gameTime,xpValue:0,bossKey:eid,isDuelEnemy:true});
+  bossActive=enemies[enemies.length-1];
+  dmgPopups.push({x:player.x,y:player.y-80,text:'⚔️ '+BOSS_DEFS[bossDuel.myId].name+' VS '+def.name,life:3,maxLife:3,color:'#fc0',size:20});
+}
+function updateBossDuel(){
+  if(!bossDuel||bossDuel.result)return;
+  bossDuel.time-=dt2;
+  // My boss attacks the duel enemy
+  const de=enemies.find(e=>e.isDuelEnemy);
+  if(de){
+    bossDuel.enemyHp=de.hp;
+    bossDuel._t=(bossDuel._t||0)+dt2;
+    if(bossDuel._t>=1.5){bossDuel._t=0;
+      const dmg=30+(save.bossMemory&&save.bossMemory[bossDuel.myId]?save.bossMemory[bossDuel.myId].battles*0.05:0);
+      applyDmg(de,dmg,'bossDuel');
+    }
+  }
+  // Check results
+  if(bossDuel.enemyHp<=0){bossDuel.result='win';}
+  else if(player.hp<=0){bossDuel.result='lose';}
+  else if(bossDuel.time<=0){bossDuel.result='draw';}
+  if(bossDuel.result){
+    const rw={win:{mat:1,coins:200,sp:20},draw:{mat:0,coins:50,sp:5},lose:{mat:0,coins:0,sp:0}};
+    const r=rw[bossDuel.result];
+    save.bossMateria=(save.bossMateria||0)+r.mat;save.coins+=r.coins;save.soulPoints=(save.soulPoints||0)+r.sp;saveSave();
+    const msg={win:'🏆 勝利！ +1素材 +200G +20SP',draw:'🤝 引き分け +50G +5SP',lose:'💀 敗北...'}[bossDuel.result];
+    dmgPopups.push({x:player.x,y:player.y-60,text:msg,life:4,maxLife:4,color:bossDuel.result==='win'?'#fc0':'#f44',size:18});
+    setTimeout(()=>{bState='done';endBattle(bossDuel.result==='win');},3000);
+    bossDuel=null;
+  }
+}
+function drawBossDuelHUD(){
+  if(!bossDuel)return;
+  const t=Math.ceil(bossDuel.time);
+  ctx.fillStyle=t<=10?'#f44':'#fc0';ctx.font='bold 20px monospace';ctx.textAlign='center';
+  ctx.fillText('⏱ '+t,W/2,38);
+  // Enemy boss HP
+  const er=Math.max(0,bossDuel.enemyHp/bossDuel.enemyMaxHp);
+  ctx.fillStyle='#333';ctx.fillRect(W/2-100,55,200,14);
+  ctx.fillStyle='#f44';ctx.fillRect(W/2-100,55,200*er,14);
+  ctx.fillStyle='#fff';ctx.font='10px monospace';
+  ctx.fillText((BOSS_DEFS[bossDuel.enemyId]||{}).name||'ENEMY',W/2,52);
+  ctx.textAlign='left';
+}
+window.startBossDuel=function(myBossId){
+  const all=['giantZombie','skeletonKing','demonKing','iceKing','deepRuler','alienEmperor'].filter(b=>b!==myBossId);
+  const enemyId=all[Math.floor(Math.random()*all.length)];
+  const myHp=3000+(save.bossMemory&&save.bossMemory[myBossId]?save.bossMemory[myBossId].battles*2:0);
+  const enemyHp=3500;
+  bossDuel={myId:myBossId,enemyId,myHp,myMaxHp:myHp,enemyHp,enemyMaxHp:enemyHp,time:60,result:null,_t:0};
+  save.selectedChapter=1;// Use ch1 settings
+  startBattle();
+  setTimeout(()=>startBossDuelBattle(),2000);
+};
+
 /* Fusion weapon attacks */
 /* Weapon awakening auto-attack */
 function updateWeaponAwaken(){
@@ -3824,6 +3914,7 @@ function updateBattle(){
     if(Math.random()<0.5)spawnParticles2(bossVictoryX+rnd(-200,200),bossVictoryY+rnd(-150,150),['#fc0','#ff0','#fff','#fa0'][Math.floor(Math.random()*4)],3);
   }
 
+  updateBossDuel();
   updateWeapons();updateFusionWeapon();updateWeaponAwaken();updateOrbits();updateFireZones();updateBurns();updatePoison();updateForceField();updatePet();updateBossPet();updateArtifact();
 
   // Spawn
@@ -4847,6 +4938,7 @@ function drawBattle(){
     ctx.beginPath();ctx.arc(player.x,player.y,r,0,Math.PI*2);ctx.stroke();
     ctx.restore();
   }
+  drawBossDuelHUD();
   if(bState==='levelup')drawLevelUp2();
   if(bState==='chest')drawChest2();
   if(bState==='paused')drawPaused2();
