@@ -164,6 +164,21 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 #eqMenu.show{display:block}
 #eqMenu button{display:block;width:100%;margin:4px 0;padding:8px 14px;border-radius:6px;border:none;color:#fff;cursor:pointer;font-size:13px;font-weight:bold}
 </style>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import{getFirestore,collection,addDoc,getDocs,query,orderBy,limit}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+// TODO: Replace with your Firebase project config from console.firebase.google.com
+const firebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"dada-survivor.firebaseapp.com",projectId:"dada-survivor",storageBucket:"dada-survivor.appspot.com",messagingSenderId:"000000000000",appId:"1:000:web:000"};
+try{const app=initializeApp(firebaseConfig);window._fbDb=getFirestore(app);window._fbOk=true;}catch(e){window._fbOk=false;console.warn('Firebase init failed:',e);}
+window.saveToRanking=async function(name,kills,combo,stage,weapon){
+  if(!window._fbOk||!window._fbDb)return;
+  try{await addDoc(collection(window._fbDb,'rankings'),{name,kills,combo,stage,weapon,ts:new Date()});}catch(e){console.error(e);}
+};
+window.fetchRanking=async function(){
+  if(!window._fbOk||!window._fbDb)return[];
+  try{const q2=query(collection(window._fbDb,'rankings'),orderBy('kills','desc'),limit(20));const s=await getDocs(q2);return s.docs.map((d,i)=>({rank:i+1,...d.data()}));}catch(e){return[];}
+};
+</script>
 </head>
 <body>
 
@@ -1701,6 +1716,46 @@ window.openChestAnim=function(type){
   },600);
 };
 
+/* Online Ranking */
+window.showRanking=async function(){
+  const ov=document.createElement('div');ov.id='rankingOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;flex-direction:column;align-items:center;padding:20px;overflow-y:auto';
+  ov.innerHTML='<div style="color:#fc0;font-size:18px;font-weight:bold;margin:16px 0">🏆 Loading...</div>';
+  document.body.appendChild(ov);
+  const data=await(window.fetchRanking?window.fetchRanking():[]);
+  let h='<div style="max-width:500px;width:100%"><div style="color:#fc0;font-size:20px;font-weight:bold;text-align:center;margin-bottom:16px">🏆 オンラインランキング</div>';
+  if(data.length===0)h+='<div style="text-align:center;color:#888;padding:20px">ランキングデータなし（Firebase未設定の可能性）</div>';
+  for(const r of data){
+    const medal=r.rank<=3?['🥇','🥈','🥉'][r.rank-1]:r.rank;
+    h+=`<div style="background:#12122a;border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid #333;display:flex;align-items:center;gap:12px">
+      <div style="color:${r.rank<=3?'#fc0':'#888'};font-size:18px;font-weight:bold;min-width:32px">${medal}</div>
+      <div style="flex:1"><div style="color:#fff;font-weight:bold">${r.name||'???'}</div><div style="font-size:11px;color:#888">${r.stage||''} | ${r.weapon||''}</div></div>
+      <div style="text-align:right"><div style="color:#f60;font-weight:bold">💀 ${r.kills||0}</div><div style="font-size:11px;color:#888">⚡ ${r.combo||0}</div></div>
+    </div>`;
+  }
+  h+='<button onclick="document.getElementById(\'rankingOv\').remove()" style="margin-top:16px;background:#333;border:none;border-radius:12px;color:#aaa;font-size:14px;padding:12px 28px;cursor:pointer;width:100%">閉じる</button></div>';
+  ov.innerHTML=h;
+};
+window.showScoreRegister=function(){
+  const ov=document.createElement('div');ov.id='scoreRegOv';
+  ov.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a2e,#2a2a4e);border:2px solid #fc0;border-radius:20px;padding:24px;text-align:center;z-index:99999;min-width:300px';
+  ov.innerHTML=`<div style="color:#fc0;font-size:18px;font-weight:bold;margin-bottom:12px">🏆 ランキングに登録</div>
+    <div style="color:#888;font-size:13px;margin-bottom:10px">💀 撃破数: ${runKills}体 | ⚡ ${killStreak||0}コンボ</div>
+    <input id="rkNameInput" type="text" placeholder="名前（最大10文字）" maxlength="10" style="width:100%;padding:10px;background:#0a0a1a;border:1px solid #444;border-radius:8px;color:#fff;font-size:14px;margin-bottom:12px;box-sizing:border-box">
+    <button onclick="submitRankScore()" style="background:linear-gradient(135deg,#fc0,#f80);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:bold;padding:12px 20px;cursor:pointer;width:100%;margin-bottom:8px">🏆 登録する</button>
+    <button onclick="document.getElementById('scoreRegOv').remove()" style="background:#333;border:none;border-radius:12px;color:#888;font-size:14px;padding:10px 20px;cursor:pointer;width:100%">スキップ</button>`;
+  document.body.appendChild(ov);
+};
+window.submitRankScore=async function(){
+  const name=(document.getElementById('rkNameInput')||{}).value?.trim();
+  if(!name){flashMsg('名前を入力してください');return;}
+  const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||{});
+  const wd=save.selectedWeapon&&WEAPON_DEFS[save.selectedWeapon];
+  await(window.saveToRanking||function(){})(name,runKills,killStreak||0,chap.name||'',wd?wd.name:'');
+  const el=document.getElementById('scoreRegOv');if(el)el.remove();
+  flashMsg('🏆 ランキングに登録しました！');
+};
+
 /* Score share */
 window.shareResult=function(){
   const cv=document.createElement('canvas');cv.width=600;cv.height=300;const c=cv.getContext('2d');
@@ -2124,6 +2179,7 @@ function renderDailyTab(p){
     </div>`;
   }
   h+='</div>';
+  h+='<div style="text-align:center;margin-top:14px"><button class="btn btn-orange" style="padding:10px 24px;font-size:14px" onclick="showRanking()">🏆 オンラインランキング</button></div>';
   p.innerHTML=h;
 }
 
@@ -5583,6 +5639,7 @@ function showResult(cleared,bonusGold,achievementsClaimed,bossWin){
       <button class="btn btn-orange" onclick="goHome()">🏠 Home</button>
       <button class="btn btn-green" onclick="retry()">↻ Retry</button>
       <button class="btn btn-blue" onclick="shareResult()" style="margin-top:6px">📤 Share</button>
+      <button class="btn btn-purple" onclick="showScoreRegister()" style="margin-top:6px">🏆 Ranking</button>
     </div>
   </div>`;
   if(cleared)spawnConfetti(70);
