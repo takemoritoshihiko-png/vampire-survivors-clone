@@ -171,12 +171,15 @@ import{getFirestore,collection,addDoc,getDocs,query,orderBy,limit}from'https://w
 const firebaseConfig={apiKey:"AIzaSyB_omu3ncNQQS-_QQvmucJx95U1t5uJAfw",authDomain:"dadasavier.firebaseapp.com",databaseURL:"https://dadasavier-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"dadasavier",storageBucket:"dadasavier.firebasestorage.app",messagingSenderId:"296195117868",appId:"1:296195117868:web:92cd08b83ec6f488095289",measurementId:"G-H918H3NHF4"};
 try{const app=initializeApp(firebaseConfig);window._fbDb=getFirestore(app);window._fbOk=true;}catch(e){window._fbOk=false;console.warn('Firebase init failed:',e);}
 window.saveToRanking=async function(name,kills,combo,stage,weapon){
-  if(!window._fbOk||!window._fbDb)return;
-  try{await addDoc(collection(window._fbDb,'rankings'),{name,kills,combo,stage,weapon,ts:new Date()});}catch(e){console.error(e);}
+  for(let i=0;i<20&&!window._fbOk;i++)await new Promise(r=>setTimeout(r,250));
+  if(!window._fbOk||!window._fbDb){console.warn('Firebase not ready for save');return false;}
+  try{await addDoc(collection(window._fbDb,'rankings'),{name,kills,combo,stage,weapon,ts:new Date()});return true;}catch(e){console.error('Save error:',e);return false;}
 };
 window.fetchRanking=async function(){
-  if(!window._fbOk||!window._fbDb)return[];
-  try{const q2=query(collection(window._fbDb,'rankings'),orderBy('kills','desc'),limit(20));const s=await getDocs(q2);return s.docs.map((d,i)=>({rank:i+1,...d.data()}));}catch(e){return[];}
+  // Wait up to 5s for Firebase module to initialize
+  for(let i=0;i<20&&!window._fbOk;i++)await new Promise(r=>setTimeout(r,250));
+  if(!window._fbOk||!window._fbDb){console.warn('Firebase not ready');return[];}
+  try{const q2=query(collection(window._fbDb,'rankings'),orderBy('kills','desc'),limit(20));const s=await getDocs(q2);return s.docs.map((d,i)=>({rank:i+1,...d.data()}));}catch(e){console.error('Ranking fetch error:',e);return[];}
 };
 </script>
 </head>
@@ -1724,7 +1727,7 @@ window.showRanking=async function(){
   document.body.appendChild(ov);
   const data=await(window.fetchRanking?window.fetchRanking():[]);
   let h='<div style="max-width:500px;width:100%"><div style="color:#fc0;font-size:20px;font-weight:bold;text-align:center;margin-bottom:16px">🏆 オンラインランキング</div>';
-  if(data.length===0)h+='<div style="text-align:center;color:#888;padding:20px">ランキングデータなし（Firebase未設定の可能性）</div>';
+  if(data.length===0)h+=`<div style="text-align:center;color:#888;padding:20px">${window._fbOk?'まだランキングがありません。最初のプレイヤーになろう！':'Firebase接続中...しばらく待ってから🔄更新を押してください'}</div>`;
   for(const r of data){
     const medal=r.rank<=3?['🥇','🥈','🥉'][r.rank-1]:r.rank;
     h+=`<div style="background:#12122a;border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid #333;display:flex;align-items:center;gap:12px">
