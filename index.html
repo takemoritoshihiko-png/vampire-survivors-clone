@@ -2690,14 +2690,14 @@ const FUSION_RECIPES=[
   {a:'shotgun',b:'soccer',id:'explodeBall',name:'爆発弾',sprite:'fusion_bomb',desc:'Bouncing explosive shots',color:'#f80'},
   {a:'shotgun',b:'force',id:'gravityShot',name:'重力散弾',sprite:'fusion_gravity_shot',desc:'Each pellet spawns mini-hole',color:'#a0f'},
   {a:'lightchaser',b:'drill',id:'lightDrill',name:'光速ドリル',sprite:'fusion_light_drill',desc:'Homing light drill',color:'#0ff'},
-  {a:'lightchaser',b:'force',id:'photonCollapse',name:'光子崩壊',sprite:'fusion_photon_collapse',desc:'Rays drag blackholes',color:'#8af'},
-  {a:'lightchaser',b:'chaosBlade',id:'lightChaos',name:'光と混沌',sprite:'fusion_light_chaos',desc:'Light rays + chaos waves',color:'#a8f'},
+  {a:'lightchaser',b:'force',id:'photonCollapse',name:'光子崩壊',desc:'Rays drag blackholes',color:'#8af'},
+  {a:'lightchaser',b:'chaosBlade',id:'lightChaos',name:'光と混沌',desc:'Light rays + chaos waves',color:'#a8f'},
   {a:'lightChaserS',b:'forceS',id:'cosmicWill',name:'宇宙の意志',sprite:'fusion_universe_will',desc:'Full-screen light + chain holes',color:'#fc0',legendary:true},
   {a:'forceS',b:'chaosBlade',id:'endChaos',name:'終焉の混沌',sprite:'fusion_final_chaos',desc:'Chaos blackhole covers screen',color:'#606',legendary:true},
   {a:'lightChaserS',b:'chaosBlade',id:'godChaos',name:'神と混沌',desc:'Divine strike + chaos wave',color:'#fa0',legendary:true},
   {a:'drill',b:'soccer',id:'spinBall',name:'回転弾',sprite:'fusion_rotating_ball',desc:'Bouncing drill ball',color:'#ccc'},
   {a:'soccer',b:'force',id:'gravityBall',name:'重力ボール',sprite:'fusion_gravity_ball',desc:'Bounce spawns blackholes',color:'#a0f'},
-  {a:'drill',b:'force',id:'collapseDrill',name:'崩壊ドリル',sprite:'fusion_collapse_drill',desc:'Drill fires blackholes',color:'#a8f'},
+  {a:'drill',b:'force',id:'collapseDrill',name:'崩壊ドリル',desc:'Drill fires blackholes',color:'#a8f'},
   {a:'drill',b:'chaosBlade',id:'chaosSpiral',name:'混沌螺旋',sprite:'fusion_chaos_spiral',desc:'Pierce + chaos scatter',color:'#808'},
   {a:'soccer',b:'chaosBlade',id:'curseBall',name:'呪いのボール',sprite:'fusion_cursed_ball',desc:'Bounce curse: slow+DoT',color:'#404'},
 ];
@@ -5547,7 +5547,7 @@ function endBattle(cleared,bossWin){
   save.coins+=runGold;
   // Soul points
   let spEarned=0;
-  if(cleared){spEarned+=10;if(!save.chapters[save.selectedChapter]||!save.chapters[save.selectedChapter].cleared)spEarned+=50;}
+  if(cleared){spEarned+=10;if(save.chapters&&save.chapters[save.selectedChapter]&&!save.chapters[save.selectedChapter].cleared)spEarned+=50;}
   if(save.records.bossesKilled>0)spEarned+=5;
   save.soulPoints=(save.soulPoints||0)+spEarned;
   // Check weapon memory unlocks
@@ -5616,12 +5616,12 @@ function endBattle(cleared,bossWin){
       setTimeout(()=>showSpecialStagePrompt(sType),3000);
     }
   }
-  showResult(cleared,bonusGold,ac,bossWin);
+  showResult(cleared,bonusGold,ac,bossWin,spEarned);
   // Show score registration after 3s if cleared
   if(cleared)setTimeout(()=>showScoreRegister(),3000);
 }
 
-function showResult(cleared,bonusGold,achievementsClaimed,bossWin){
+function showResult(cleared,bonusGold,achievementsClaimed,bossWin,spEarned){
   const r=document.getElementById('result');r.classList.add('active');
   r.classList.remove('clear-bg','gameover-bg');
   r.classList.add(cleared?'clear-bg':'gameover-bg');
@@ -5657,6 +5657,7 @@ function showResult(cleared,bonusGold,achievementsClaimed,bossWin){
     ${achievementsClaimed>0?`<div class="stat-row"><span>🏅 Achievements</span><span style="color:#0f0">+${achievementsClaimed}!</span></div>`:''}
     <div class="stat-row"><span>💼 Total Gold</span><span style="color:#fc0">${save.coins}</span></div>
     ${runStones>0?`<div class="stat-row"><span>⚗️ Fusion Stones</span><span class="number-up" style="color:#fc0">+${runStones}</span></div>`:''}
+    ${spEarned>0?`<div class="stat-row"><span>✨ Soul Points</span><span class="number-up" style="color:#a4f">+${spEarned} SP</span></div>`:''}
     ${dropHtml}
     <div class="result-btns">
       <button class="btn btn-blue" onclick="goEquip()">🛡 Equipment</button>
