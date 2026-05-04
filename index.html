@@ -793,7 +793,7 @@ window.startSpecialStage=function(type){
 /* ═══════════════════════════════════════════════════════
    HOME SCREEN
    ═══════════════════════════════════════════════════════ */
-const tabs=['Characters','Equipment','Gacha','Boss','Daily','Sortie'];
+const tabs=['Characters','Equipment','Gacha','Boss','🏆Rank','Daily','Sortie'];
 
 let currentTab='Characters';
 
@@ -837,6 +837,7 @@ function renderHome(){
     case'Equipment':renderEquipTab(panel);break;
     case'Gacha':renderGachaTab(panel);break;
     case'Boss':renderBossTab(panel);break;
+    case'🏆Rank':renderRankingTab(panel);break;
     case'Daily':renderDailyTab(panel);break;
     case'Sortie':renderSortie(panel);break;
   }
@@ -2156,6 +2157,26 @@ function renderBossTab(p){
 }
 
 /* ── Daily tab (missions + achievements + records) ── */
+/* ── Ranking Tab ── */
+async function renderRankingTab(p){
+  p.innerHTML='<div style="text-align:center;color:#fc0;font-size:20px;font-weight:bold;margin:16px 0">🏆 オンラインランキング</div><div id="rankList" style="max-width:560px;margin:0 auto"><div style="text-align:center;color:#888;padding:30px">読み込み中...</div></div><div style="text-align:center;margin-top:10px"><button class="btn" style="background:#333;padding:8px 20px;font-size:13px" onclick="renderRankingTab(document.getElementById(\'homePanel\'))">🔄 更新</button></div>';
+  const data=await(window.fetchRanking?window.fetchRanking():[]);
+  const el=document.getElementById('rankList');if(!el)return;
+  if(data.length===0){el.innerHTML=`<div style="text-align:center;color:#888;padding:30px">${window._fbOk?'まだランキングがありません。最初のプレイヤーになろう！':'Firebase接続中... 🔄更新を押してください'}</div>`;return;}
+  let h='';
+  for(const r of data){
+    const medal=r.rank<=3?['🥇','🥈','🥉'][r.rank-1]:r.rank;
+    const bg=r.rank<=3?'linear-gradient(135deg,#1a1500,#2a2200)':'#12122a';
+    const bc=r.rank===1?'#fc0':r.rank===2?'#888':r.rank===3?'#a60':'#333';
+    h+=`<div style="background:${bg};border:1px solid ${bc};border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:${r.rank<=3?'26':'16'}px;font-weight:bold;min-width:36px;text-align:center;color:${r.rank===1?'#fc0':r.rank===2?'#ccc':r.rank===3?'#a60':'#666'}">${medal}</div>
+      <div style="flex:1"><div style="color:#fff;font-weight:bold;font-size:15px">${r.name||'???'}</div><div style="font-size:11px;color:#666">${r.stage||''} ${r.weapon?'| ⚔️'+r.weapon:''} ${r.capturedBoss?'| 👾'+r.capturedBoss:''}</div></div>
+      <div style="text-align:right"><div style="color:#f60;font-weight:bold;font-size:18px">💀 ${(r.kills||0).toLocaleString()}</div><div style="font-size:11px;color:#888">⚡ ${r.combo||r.maxCombo||0}</div></div>
+    </div>`;
+  }
+  el.innerHTML=h;
+}
+
 function renderDailyTab(p){
   const _d={innerHTML:''};renderDaily(_d);
   const _r={innerHTML:''};renderRecords(_r);
@@ -2182,7 +2203,6 @@ function renderDailyTab(p){
     </div>`;
   }
   h+='</div>';
-  h+='<div style="text-align:center;margin-top:14px"><button class="btn btn-orange" style="padding:10px 24px;font-size:14px" onclick="showRanking()">🏆 オンラインランキング</button></div>';
   p.innerHTML=h;
 }
 
