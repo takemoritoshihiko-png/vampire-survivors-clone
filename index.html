@@ -168,7 +168,7 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
 import{getFirestore,collection,addDoc,getDocs,query,orderBy,limit}from'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 // TODO: Replace with your Firebase project config from console.firebase.google.com
-const firebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"dada-survivor.firebaseapp.com",projectId:"dada-survivor",storageBucket:"dada-survivor.appspot.com",messagingSenderId:"000000000000",appId:"1:000:web:000"};
+const firebaseConfig={apiKey:"AIzaSyB_omu3ncNQQS-_QQvmucJx95U1t5uJAfw",authDomain:"dadasavier.firebaseapp.com",databaseURL:"https://dadasavier-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"dadasavier",storageBucket:"dadasavier.firebasestorage.app",messagingSenderId:"296195117868",appId:"1:296195117868:web:92cd08b83ec6f488095289",measurementId:"G-H918H3NHF4"};
 try{const app=initializeApp(firebaseConfig);window._fbDb=getFirestore(app);window._fbOk=true;}catch(e){window._fbOk=false;console.warn('Firebase init failed:',e);}
 window.saveToRanking=async function(name,kills,combo,stage,weapon){
   if(!window._fbOk||!window._fbDb)return;
@@ -5594,6 +5594,8 @@ function endBattle(cleared,bossWin){
     }
   }
   showResult(cleared,bonusGold,ac,bossWin);
+  // Show score registration after 3s if cleared
+  if(cleared)setTimeout(()=>showScoreRegister(),3000);
 }
 
 function showResult(cleared,bonusGold,achievementsClaimed,bossWin){
