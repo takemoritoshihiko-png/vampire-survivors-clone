@@ -73,6 +73,9 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 .rank-red{border-color:#f22;background:rgba(255,40,40,.25);box-shadow:0 0 16px rgba(255,34,34,.4);animation:red-pulse 1.5s infinite}
 @keyframes gold-shine{0%,100%{box-shadow:0 0 12px rgba(255,204,0,.4)}50%{box-shadow:0 0 24px rgba(255,204,0,.67)}}
 .awaken-badge{display:inline-block;background:linear-gradient(135deg,#fc0,#f80);color:#000;font-weight:bold;padding:3px 10px;border-radius:6px;font-size:11px}
+@keyframes flashAnim{0%{opacity:.4}100%{opacity:0}}
+@keyframes chestFloat{from{transform:translateY(0) scale(1)}to{transform:translateY(-10px) scale(1.05)}}
+@keyframes chestOpen{0%{transform:scale(1)}50%{transform:scale(1.5) rotate(10deg)}100%{transform:scale(0);opacity:0}}
 @keyframes red-pulse{0%,100%{box-shadow:0 0 16px rgba(255,34,34,.4)}50%{box-shadow:0 0 32px rgba(255,34,34,.67)}}
 
 /* Common card */
@@ -1584,7 +1587,7 @@ window.doGacha=function(type,count){
   // Trigger S-rank intro if any S-weapon was pulled
   const sPull=results.find(r=>r.kind==='weapon'&&WEAPON_DEFS[r.id]&&WEAPON_DEFS[r.id].tier==='S');
   if(sPull){flashSWeapon(sPull.id);}
-  showGachaPopup(results);
+  showGachaCardFlip(results);showGachaPopup(results);
   renderHome();
 };
 
@@ -1648,6 +1651,72 @@ function showGachaPopup(results){
   document.getElementById('gachaPopup').classList.add('show');
 }
 window.closeGachaPopup=function(){document.getElementById('gachaPopup').classList.remove('show');};
+
+/* Gacha card flip overlay */
+window.showGachaCardFlip=function(results){
+  const ov=document.createElement('div');ov.id='gachaFlipOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+  let cards='';
+  results.forEach((_,i)=>{cards+=`<div style="width:75px;height:110px;margin:4px;display:inline-block;cursor:pointer;perspective:600px" onclick="revealCard(${i})"><div id="gcf_${i}" style="width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .6s;border-radius:10px"><div style="position:absolute;width:100%;height:100%;background:linear-gradient(135deg,#1a1a3a,#2a2a5a);border:2px solid #44a;border-radius:10px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;font-size:28px">❓</div><div id="gcff_${i}" style="position:absolute;width:100%;height:100%;border-radius:10px;backface-visibility:hidden;transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#fff;padding:4px;text-align:center"></div></div></div>`;});
+  ov.innerHTML=`<div style="color:#fc0;font-size:18px;font-weight:bold;margin-bottom:16px">🎰 タップして開封！</div><div style="display:flex;flex-wrap:wrap;justify-content:center;max-width:500px">${cards}</div><button onclick="revealAllCards()" style="margin-top:16px;background:linear-gradient(135deg,#f60,#f40);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:bold;padding:12px 24px;cursor:pointer">⚡ 全部開封</button><button id="gcfClose" onclick="document.getElementById('gachaFlipOverlay').remove()" style="margin-top:8px;background:#333;border:none;border-radius:12px;color:#888;font-size:13px;padding:10px 24px;cursor:pointer;display:none">閉じる</button>`;
+  document.body.appendChild(ov);
+  window._gcfItems=results;window._gcfRevealed=0;
+};
+window.revealCard=function(i){
+  const el=document.getElementById('gcf_'+i);const fr=document.getElementById('gcff_'+i);
+  if(!el||el.dataset.r)return;el.dataset.r='1';el.style.transform='rotateY(180deg)';
+  const it=window._gcfItems[i];
+  const rc={gray:'#888',green:'#4f4',blue:'#48f',purple:'#a4f',gold:'#fc0',red:'#f22'};
+  const c=rc[it.rank]||'#fff';
+  fr.style.background=it.rank==='red'?'linear-gradient(135deg,#2a0000,#4a0800)':it.rank==='gold'?'linear-gradient(135deg,#2a2000,#4a3800)':'linear-gradient(135deg,#1a1a2e,#2a2a4e)';
+  fr.style.border='2px solid '+c;
+  const icon=it.kind==='weapon'&&WEAPON_DEFS[it.id]?WEAPON_DEFS[it.id].icon:SLOT_ICONS[it.eq?it.eq.slot:'armor']||'⚔️';
+  fr.innerHTML=`<div style="font-size:28px">${icon}</div><div style="color:${c};font-size:9px;margin-top:2px">${RANK_NAMES[it.rank]||it.rank}</div><div style="font-size:9px;margin-top:1px">${it.kind==='weapon'?(WEAPON_DEFS[it.id]||{}).name||it.id:'Equip'}</div>`;
+  if(it.rank==='gold'||it.rank==='red')fr.style.boxShadow='0 0 20px '+c;
+  window._gcfRevealed++;
+  if(window._gcfRevealed>=window._gcfItems.length)document.getElementById('gcfClose').style.display='block';
+};
+window.revealAllCards=function(){(window._gcfItems||[]).forEach((_,i)=>setTimeout(()=>revealCard(i),i*120));};
+
+/* Chest open animation */
+window.showChestOpen=function(type){
+  const ch={normal:{icon:'📦',color:'#8B4513',coins:[50,150]},silver:{icon:'🥈',color:'#C0C0C0',coins:[150,350]},gold:{icon:'🏆',color:'#FFD700',coins:[400,800]},boss:{icon:'💀',color:'#a4f',coins:[800,1400]}};
+  const c=ch[type]||ch.normal;
+  const ov=document.createElement('div');ov.id='chestOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="color:#aaa;font-size:13px;margin-bottom:12px">タップして開封！</div><div id="chestI" onclick="openChestAnim('${type}')" style="font-size:80px;cursor:pointer;animation:chestFloat 1s infinite alternate;filter:drop-shadow(0 0 20px ${c.color})">${c.icon}</div><div style="color:${c.color};font-size:16px;font-weight:bold;margin-top:12px">${type==='boss'?'ボス宝箱':type==='gold'?'金箱':type==='silver'?'銀箱':'木箱'}</div>`;
+  document.body.appendChild(ov);
+};
+window.openChestAnim=function(type){
+  const ci=document.getElementById('chestI');if(!ci||ci.dataset.o)return;ci.dataset.o='1';
+  ci.style.animation='chestOpen .5s forwards';
+  const ch={normal:{coins:[50,150]},silver:{coins:[150,350]},gold:{coins:[400,800]},boss:{coins:[800,1400]}};
+  const c=ch[type]||ch.normal;
+  const coins=c.coins[0]+Math.floor(Math.random()*(c.coins[1]-c.coins[0]));
+  const fs=type==='boss'||type==='gold'?1:Math.random()<0.3?1:0;
+  save.coins+=coins;if(fs)save.fusionStones=(save.fusionStones||0)+fs;saveSave();
+  setTimeout(()=>{
+    const ov=document.getElementById('chestOv');if(!ov)return;
+    ov.innerHTML=`<div style="color:#fc0;font-size:22px;font-weight:bold;margin-bottom:12px">✨ 開封！</div><div style="color:#fc0;font-size:24px;font-weight:bold">💰 +${coins}G</div>${fs?'<div style="color:#a4f;font-size:16px;margin-top:6px">⚗️ 融合石 ×1</div>':''}<button onclick="document.getElementById(\'chestOv\').remove();renderHome()" style="margin-top:20px;background:#fc0;border:none;border-radius:12px;color:#000;font-size:15px;font-weight:bold;padding:12px 28px;cursor:pointer">OK！</button>`;
+  },600);
+};
+
+/* Score share */
+window.shareResult=function(){
+  const cv=document.createElement('canvas');cv.width=600;cv.height=300;const c=cv.getContext('2d');
+  c.fillStyle='#080818';c.fillRect(0,0,600,300);
+  c.strokeStyle='#f60';c.lineWidth=3;c.strokeRect(3,3,594,294);
+  c.fillStyle='#fc0';c.font='bold 28px monospace';c.textAlign='center';c.fillText('⚔️ DADA SURVIVOR',300,45);
+  c.fillStyle='#fff';c.font='bold 18px monospace';c.fillText('💀 '+runKills+' kills | 💰 '+runGold+' coins',300,100);
+  c.fillStyle='#aaa';c.font='14px monospace';
+  c.fillText('Lv '+player.level+' | '+Math.floor(gameTime/60)+'m '+Math.floor(gameTime%60)+'s',300,140);
+  if(save.selectedWeapon){const wd=WEAPON_DEFS[save.selectedWeapon];c.fillStyle='#f80';c.fillText('⚔️ '+(wd?wd.name:save.selectedWeapon),300,180);}
+  c.fillStyle='#888';c.font='12px monospace';c.fillText('#ダダサバイバー',300,270);
+  const url=cv.toDataURL('image/png');
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=`<div style="color:#fc0;font-size:16px;font-weight:bold;margin-bottom:12px">📤 結果をシェア</div><img src="${url}" style="max-width:100%;border-radius:10px;margin-bottom:12px"><div style="display:flex;gap:8px"><button onclick="(()=>{const a=document.createElement('a');a.href='${url}';a.download='dada_result.png';a.click();})()" style="background:#48f;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:bold;padding:10px 18px;cursor:pointer">💾 保存</button><button onclick="this.closest('div[style*=fixed]').remove()" style="background:#333;border:none;border-radius:10px;color:#aaa;font-size:13px;padding:10px 18px;cursor:pointer">閉じる</button></div>`;
+  document.body.appendChild(ov);
+};
 function showLegendaryText(t){const el=document.getElementById('legendaryText');el.textContent=t;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
 
 function flashMsg(t){
@@ -5513,6 +5582,7 @@ function showResult(cleared,bonusGold,achievementsClaimed,bossWin){
       <button class="btn btn-purple" onclick="goGacha()">🎰 Gacha</button>
       <button class="btn btn-orange" onclick="goHome()">🏠 Home</button>
       <button class="btn btn-green" onclick="retry()">↻ Retry</button>
+      <button class="btn btn-blue" onclick="shareResult()" style="margin-top:6px">📤 Share</button>
     </div>
   </div>`;
   if(cleared)spawnConfetti(70);
