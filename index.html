@@ -76,6 +76,9 @@ img{image-rendering:pixelated;image-rendering:crisp-edges}
 @keyframes flashAnim{0%{opacity:.4}100%{opacity:0}}
 @keyframes chestFloat{from{transform:translateY(0) scale(1)}to{transform:translateY(-10px) scale(1.05)}}
 @keyframes chestOpen{0%{transform:scale(1)}50%{transform:scale(1.5) rotate(10deg)}100%{transform:scale(0);opacity:0}}
+@keyframes warningPulse{from{opacity:1;transform:scale(1)}to{opacity:.6;transform:scale(1.05)}}
+@keyframes bossIconPulse{from{transform:scale(1)}to{transform:scale(1.1)}}
+@keyframes bossNameSlide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes red-pulse{0%,100%{box-shadow:0 0 16px rgba(255,34,34,.4)}50%{box-shadow:0 0 32px rgba(255,34,34,.67)}}
 
 /* Common card */
@@ -2963,6 +2966,19 @@ function spawnEnemy2(typeId,opts){
   if(isElite){waveText='⚠ '+e.eliteName+' APPROACHING!';waveTimer=2.5;}
 }
 
+let bossAppearing=false;
+function playBossAppearAnim(key,cb){
+  bossAppearing=true;
+  const bd=BOSS_DEFS[key];const name=bd?bd.name:key;
+  const img=bd&&bd.sprite?'assets/'+bd.sprite+'.png':'';
+  const ov=document.createElement('div');ov.id='bossAppearOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;transition:background .5s';
+  document.body.appendChild(ov);
+  setTimeout(()=>{ov.style.background='rgba(0,0,0,.85)';},50);
+  setTimeout(()=>{ov.innerHTML=`<div style="color:#f22;font-size:42px;font-weight:bold;font-family:monospace;letter-spacing:8px;animation:warningPulse .3s infinite alternate;text-shadow:0 0 30px #f00">⚠️ WARNING ⚠️</div>`;},500);
+  setTimeout(()=>{ov.innerHTML=`<div style="text-align:center"><div style="color:#f22;font-size:16px;font-family:monospace;letter-spacing:4px;margin-bottom:14px;opacity:.8">⚠️ WARNING ⚠️</div>${img?`<img src="${img}" style="width:96px;height:96px;image-rendering:pixelated;filter:drop-shadow(0 0 20px #f22);animation:bossIconPulse .5s infinite alternate;margin-bottom:14px">`:'<div style="font-size:60px;margin-bottom:14px">👾</div>'}<div style="color:#f44;font-size:30px;font-weight:bold;font-family:monospace;text-shadow:0 0 20px #f00;animation:bossNameSlide .3s ease-out">${name}</div><div style="color:#888;font-size:13px;margin-top:8px;animation:bossNameSlide .5s ease-out">BOSS APPROACHING...</div></div>`;},1200);
+  setTimeout(()=>{ov.style.background='rgba(0,0,0,0)';setTimeout(()=>{ov.remove();bossAppearing=false;if(cb)cb();},500);},2500);
+}
 function spawnBossByKey(key,isFinal){
   const def=BOSS_DEFS[key];if(!def)return;
   // Clear normal enemies for final boss to guarantee visibility
@@ -3971,6 +3987,7 @@ function openChest2(){
 /* Update */
 function updateBattle(){
   if(bState!=='playing')return;
+  if(bossAppearing)return;
   const chap=(CHAPTER_DEFS[save.selectedChapter]||SOUL_STAGES[save.selectedChapter]||SPECIAL_STAGES[save._specialStageType]||CHAPTER_DEFS[1]);
   const clearTime=chap.time;
 
@@ -4032,7 +4049,7 @@ function updateBattle(){
     const sc=chapSchedule[i];
     if(gameTime>=sc.time&&!bossesSpawned.includes(i)){
       bossesSpawned.push(i);
-      spawnBossByKey(sc.key,!!sc.final);SFX.bossSpawn();
+      if(sc.final){playBossAppearAnim(sc.key,()=>{spawnBossByKey(sc.key,true);SFX.bossSpawn();});}else{spawnBossByKey(sc.key,false);SFX.bossSpawn();}
       bgmStartBoss(save.selectedChapter);for(let f=0;f<3;f++)setTimeout(()=>{levelUpFlash=0.15;},f*300);
       if(sc.final)waveText='👑 FINAL BOSS!';waveTimer=3;
     }
