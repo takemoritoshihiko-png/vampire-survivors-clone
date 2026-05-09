@@ -1101,7 +1101,7 @@ window.unequipWeapon=function(){
   save.selectedWeapon=null;saveSave();
   _closeWeaponPicker();renderHome();
 };
-window.selectChar=function(id){if(!save.chars[id].unlocked)return;save.selectedChar=id;saveSave();renderHome();};
+window.selectChar=function(id){if(save.hiddenChars&&save.hiddenChars.includes(id)){save.selectedChar=id;saveSave();renderHome();return;}if(!save.chars[id]||!save.chars[id].unlocked)return;save.selectedChar=id;saveSave();renderHome();};
 window.unlockChar=function(id){const c=CHARS[id].cost||0;if(save.coins<c)return;save.coins-=c;save.chars[id].unlocked=true;saveSave();renderHome();};
 window.upgradeChar=function(id){const d=save.chars[id];if(!d.unlocked||d.lv>=MAX_CHAR_LV)return;const c=charLvCost(d.lv);if(save.coins<c)return;save.coins-=c;d.lv++;saveSave();renderHome();};
 
