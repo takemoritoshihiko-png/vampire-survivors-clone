@@ -782,7 +782,10 @@ function eqIsEquipped(id){return Object.values(save.equipped).includes(id);}
 function getEqById(id){return save.equipment.find(e=>e.id===id);}
 
 function calcPower(){
-  const cd=save.chars[save.selectedChar];const ch=CHARS[save.selectedChar];
+  const hc=HIDDEN_CHARS[save.selectedChar];
+  const cd=save.chars[save.selectedChar]||{lv:1,unlocked:true};
+  const ch=CHARS[save.selectedChar]||(hc?{baseAtk:hc.baseAtk,baseHp:hc.baseHp}:null);
+  if(!ch)return 0;
   let atk=ch.baseAtk*(1+(cd.lv-1)*0.08);
   let hp=ch.baseHp*(1+(cd.lv-1)*0.05);
   let speed=200,crit=5,bonus=0;
