@@ -2436,7 +2436,8 @@ function renderRecords(p){
    START BATTLE
    ═══════════════════════════════════════════════════════ */
 window.startBattle=function(){
-  if(!save.chars[save.selectedChar].unlocked)return;
+  const _isHidden=save.hiddenChars&&save.hiddenChars.includes(save.selectedChar);
+  if(!_isHidden&&(!save.chars[save.selectedChar]||!save.chars[save.selectedChar].unlocked))return;
   closeEqMenu();
   audioInit();
   document.getElementById('home').classList.remove('active');
